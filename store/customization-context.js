@@ -16,6 +16,8 @@ const DEFAULT_PREFS = {
   reduceMotion: false,
   showCategoryTag: true,
   showPaymentTag: true,
+  recurringRemindersEnabled: false,
+  recurringReminderHour: 9,
 };
 
 export const CustomizationContext = createContext({
@@ -27,6 +29,8 @@ export const CustomizationContext = createContext({
   setReduceMotion: async (_v) => {},
   setShowCategoryTag: async (_v) => {},
   setShowPaymentTag: async (_v) => {},
+  setRecurringRemindersEnabled: async (_v) => {},
+  setRecurringReminderHour: async (_v) => {},
   ready: false,
   version: 0,
 });
@@ -55,6 +59,10 @@ export default function CustomizationContextProvider({ children }) {
               parsed.showPaymentTag !== undefined
                 ? !!parsed.showPaymentTag
                 : true,
+            recurringRemindersEnabled: !!parsed.recurringRemindersEnabled,
+            recurringReminderHour: Number.isFinite(Number(parsed.recurringReminderHour))
+              ? Math.min(23, Math.max(0, Number(parsed.recurringReminderHour)))
+              : 9,
           });
         }
       } catch {
@@ -123,6 +131,23 @@ export default function CustomizationContextProvider({ children }) {
     [prefs, persist],
   );
 
+  const setRecurringRemindersEnabled = useCallback(
+    async (v) => {
+      const next = { ...prefs, recurringRemindersEnabled: !!v };
+      await persist(next);
+    },
+    [prefs, persist],
+  );
+
+  const setRecurringReminderHour = useCallback(
+    async (v) => {
+      const numeric = Math.min(23, Math.max(0, Math.round(Number(v) || 0)));
+      const next = { ...prefs, recurringReminderHour: numeric };
+      await persist(next);
+    },
+    [prefs, persist],
+  );
+
   const value = useMemo(
     () => ({
       ...prefs,
@@ -133,6 +158,8 @@ export default function CustomizationContextProvider({ children }) {
       setReduceMotion,
       setShowCategoryTag,
       setShowPaymentTag,
+      setRecurringRemindersEnabled,
+      setRecurringReminderHour,
       ready,
       version,
     }),
@@ -144,6 +171,8 @@ export default function CustomizationContextProvider({ children }) {
       setReduceMotion,
       setShowCategoryTag,
       setShowPaymentTag,
+      setRecurringRemindersEnabled,
+      setRecurringReminderHour,
       ready,
       version,
     ],

@@ -16,6 +16,7 @@ import ErrorOverlay from "../../components/ui/ErrorOverlay";
 
 import { ExpensesContext } from "../../store/expenses-context";
 import { AuthContext } from "../../store/auth-context";
+import { CustomizationContext } from "../../store/customization-context";
 
 import RecurringOutput from "../../components/RecurringOutput/RecurringOutput";
 import RecurringList from "../../components/RecurringOutput/RecurringList";
@@ -32,6 +33,8 @@ import {
   removeRecurringItem,
   upsertRecurringItem,
 } from "../../util/recurring/recurring-storage";
+import { syncRecurringReminderNotifications } from "../../util/notifications/recurring-reminders";
+import { logger } from "../../util/logger";
 
 const RETRY_DELAYS_MS = [0, 450, 900];
 const LOAD_TIMEOUT_MS = 6000;
@@ -99,6 +102,7 @@ export default function RecurringScreen() {
   const insets = useSafeAreaInsets();
   const expensesCtx = useContext(ExpensesContext);
   const authCtx = useContext(AuthContext);
+  const { recurringRemindersEnabled, recurringReminderHour } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 
@@ -227,6 +231,23 @@ export default function RecurringScreen() {
       return isDueTodayOrPast(x.nextDue);
     });
   }, [normalized, showPaidSubscriptions]);
+
+  useEffect(() => {
+    if (!userId || !token) return;
+
+    syncRecurringReminderNotifications(items, {
+      enabled: recurringRemindersEnabled,
+      hour: recurringReminderHour,
+    }).catch((error) => {
+      logger.warn("Recurring reminders sync failed", error);
+    });
+  }, [
+    items,
+    recurringRemindersEnabled,
+    recurringReminderHour,
+    userId,
+    token,
+  ]);
 
   const openCreateHabit = () => {
     setModalDefaults({
