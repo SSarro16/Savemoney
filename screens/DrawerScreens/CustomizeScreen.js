@@ -1,9 +1,8 @@
 import React, { useContext } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ThemeContext } from "../../store/theme-context";
-import { CustomizationContext } from "../../store/customization-context";
 import { THEMES, GlobalStyles } from "../../constants/styles";
 
 function ThemeButton({ label, icon, active, onPress, colors, styles }) {
@@ -26,23 +25,6 @@ function ThemeButton({ label, icon, active, onPress, colors, styles }) {
         <Ionicons name="checkmark-circle" size={18} color={colors.textTitle} />
       ) : null}
     </Pressable>
-  );
-}
-
-function ToggleRow({ title, subtitle, value, onValueChange, colors, styles }) {
-  return (
-    <View
-      style={[
-        styles.toggleRow,
-        { backgroundColor: colors.white06, borderColor: colors.white10 },
-      ]}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={styles.toggleTitle}>{title}</Text>
-        {!!subtitle && <Text style={[styles.toggleSub, { color: colors.textMuted }]}>{subtitle}</Text>}
-      </View>
-      <Switch value={value} onValueChange={onValueChange} />
-    </View>
   );
 }
 
@@ -77,21 +59,6 @@ const THEME_GROUPS = [
 
 export default function CustomizeScreen() {
   const { themeKey, setThemeKey } = useContext(ThemeContext);
-  const {
-    compactMode,
-    highContrast,
-    largeText,
-    reduceMotion,
-    showCategoryTag,
-    showPaymentTag,
-    setCompactMode,
-    setHighContrast,
-    setLargeText,
-    setReduceMotion,
-    setShowCategoryTag,
-    setShowPaymentTag,
-  } = useContext(CustomizationContext);
-
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 
@@ -109,7 +76,7 @@ export default function CustomizeScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Personalizza</Text>
           <Text style={[styles.sub, { color: colors.textMuted }]}>
-            Tema e preferenze UI persistenti.
+            Temi persistenti per cambiare il look dell'app.
           </Text>
         </View>
       </View>
@@ -139,66 +106,6 @@ export default function CustomizeScreen() {
           </View>
         ))}
       </View>
-
-      <View style={{ height: 14 }} />
-
-      <Text style={[styles.section, { color: colors.textMuted, marginBottom: 10 }]}>
-        Preferenze UI
-      </Text>
-
-      <ToggleRow
-        title="Modalita compatta"
-        subtitle="Riduce padding e spaziature in alcune schermate"
-        value={compactMode}
-        onValueChange={setCompactMode}
-        colors={colors}
-        styles={styles}
-      />
-
-      <ToggleRow
-        title="Contrasto elevato"
-        subtitle="Bordi e separatori piu evidenti"
-        value={highContrast}
-        onValueChange={setHighContrast}
-        colors={colors}
-        styles={styles}
-      />
-
-      <ToggleRow
-        title="Testo piu grande"
-        subtitle="Aumenta dimensioni testo e header"
-        value={largeText}
-        onValueChange={setLargeText}
-        colors={colors}
-        styles={styles}
-      />
-
-      <ToggleRow
-        title="Riduci animazioni"
-        subtitle="Riduce animazioni su modal e sheet"
-        value={reduceMotion}
-        onValueChange={setReduceMotion}
-        colors={colors}
-        styles={styles}
-      />
-
-      <ToggleRow
-        title="Mostra categoria nelle spese"
-        subtitle="Visualizza tag categoria su ogni riga spesa"
-        value={showCategoryTag}
-        onValueChange={setShowCategoryTag}
-        colors={colors}
-        styles={styles}
-      />
-
-      <ToggleRow
-        title="Mostra metodo pagamento"
-        subtitle="Visualizza Carta/Contanti nella lista spese"
-        value={showPaymentTag}
-        onValueChange={setShowPaymentTag}
-        colors={colors}
-        styles={styles}
-      />
 
       <View
         style={[
@@ -285,19 +192,6 @@ function makeStyles(colors) {
     },
     themeBtnText: { color: colors.textTitle, fontWeight: "900", flex: 1 },
     pressed: { opacity: 0.85 },
-
-    toggleRow: {
-      borderRadius: 18,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderWidth: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      marginBottom: 10,
-    },
-    toggleTitle: { color: colors.textTitle, fontWeight: "900" },
-    toggleSub: { marginTop: 3, fontWeight: "700", fontSize: 12 },
 
     preview: { marginTop: 14, borderRadius: 18, padding: 14, borderWidth: 1 },
     previewTitle: { color: colors.textTitle, fontWeight: "900", marginBottom: 10 },
