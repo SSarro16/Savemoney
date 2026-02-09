@@ -30,12 +30,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "extra": {
       "eas": {
-        "projectId": "d5476ada-f8df-4319-bdf8-b724cfceab81"
+        "projectId": "e760bcc4-3693-427e-a3ba-7971fc99ab5a"
       }
-    }
+    },
+    "owner": "simonesarro"
   }
 }
