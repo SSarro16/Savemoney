@@ -23,6 +23,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { ExpensesContext } from "../../store/expenses-context";
 import { PaymentContext } from "../../store/payment-context";
 import { useTranslation } from "../../store/language-context";
@@ -67,6 +68,7 @@ function ManageExpenses({ route, navigation }) {
   const [favoriteSaved, setFavoriteSaved] = useState(false);
   const [favoriteTemplateId, setFavoriteTemplateId] = useState("");
 
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 

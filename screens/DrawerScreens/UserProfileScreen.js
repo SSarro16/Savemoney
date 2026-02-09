@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { AuthContext } from "../../store/auth-context";
 import { PaymentContext } from "../../store/payment-context";
 import { ExpensesContext } from "../../store/expenses-context";
@@ -138,6 +139,7 @@ function GenderSelector({ value, onChange, styles }) {
 }
 
 export default function UserProfileScreen({ navigation }) {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t, localeTag } = useTranslation();

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { PaymentContext } from "../../store/payment-context";
 import { ExpensesContext } from "../../store/expenses-context";
 import { useTranslation } from "../../store/language-context";
@@ -21,6 +22,7 @@ function AmountCard({ title, value, icon, colors, styles }) {
 }
 
 export default function PaymentMethodDetailScreen({ route, navigation }) {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 

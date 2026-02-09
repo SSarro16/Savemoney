@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { ExpensesContext } from "../../store/expenses-context";
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { CustomizationContext } from "../../store/customization-context";
 import { exportCurrentMonthCsv } from "../../util/reports/monthly-csv-export";
 import { logger } from "../../util/logger";
@@ -109,6 +110,7 @@ function SectionCard({ title, icon, children, styles, colors }) {
 export default function InsightsScreen() {
   const expensesCtx = useContext(ExpensesContext);
   const { compactMode } = useContext(CustomizationContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors, compactMode);
   const { t } = useTranslation();

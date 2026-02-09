@@ -3,11 +3,13 @@ import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import ManageBudget from "../../components/ManageBudget/ManageBudget";
 import { BudgetContext } from "../../store/budget-context";
 import { useTranslation } from "../../store/language-context";
 
 export default function BudgetScreen({ navigation, route }) {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const budgetCtx = useContext(BudgetContext);

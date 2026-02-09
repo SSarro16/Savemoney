@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { useTranslation } from "../../store/language-context";
 
 function NavCard({ icon, title, subtitle, onPress, accent, styles, colors }) {
@@ -112,6 +113,7 @@ function LanguageToggleCard({ language, onChange, t, styles, colors }) {
 }
 
 export default function SettingsScreen({ navigation }) {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t, language, setLanguage } = useTranslation();

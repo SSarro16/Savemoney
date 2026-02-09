@@ -14,12 +14,14 @@ import { fetchUserProfile } from "../../util/profile-http";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { AuthContext } from "../../store/auth-context";
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { useTranslation } from "../../store/language-context";
 
 function LoginScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const authCtx = useContext(AuthContext);
   const { t } = useTranslation();
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 

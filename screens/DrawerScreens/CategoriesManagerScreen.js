@@ -11,10 +11,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { ExpenseCategoriesContext } from "../../store/expense-categories-context";
 import { useTranslation } from "../../store/language-context";
 
 export default function CategoriesManagerScreen() {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t } = useTranslation();

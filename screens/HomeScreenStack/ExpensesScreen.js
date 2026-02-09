@@ -17,6 +17,7 @@ import { AuthContext } from "../../store/auth-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { saveUserProfile } from "../../util/profile-http";
 import CustomDatePicker from "../../components/ui/DatePicker";
 import { useTranslation } from "../../store/language-context";
@@ -186,6 +187,7 @@ function getWelcomePrefix(firstName, language, t) {
 function ExpensesScreen() {
   const expensesCtx = useContext(ExpensesContext);
   const authCtx = useContext(AuthContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t, language, localeTag } = useTranslation();

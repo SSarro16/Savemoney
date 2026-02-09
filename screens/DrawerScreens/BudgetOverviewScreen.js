@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BudgetContext } from "../../store/budget-context";
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { CustomizationContext } from "../../store/customization-context";
 import { useTranslation } from "../../store/language-context";
 
@@ -20,6 +21,7 @@ const categoryIcons = {
 export default function BudgetOverviewScreen({ route, navigation }) {
   const budgetCtx = useContext(BudgetContext);
   const { compactMode } = useContext(CustomizationContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors, compactMode);
   const { t } = useTranslation();

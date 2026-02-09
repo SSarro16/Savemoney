@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { PaymentContext } from "../../store/payment-context";
 import { ExpensesContext } from "../../store/expenses-context";
 import { useTranslation } from "../../store/language-context";
@@ -89,6 +90,7 @@ function SectionHeader({ icon, title, subtitle, onAdd, colors, styles }) {
 }
 
 export default function PaymentsScreen({ navigation }) {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const paymentCtx = useContext(PaymentContext);

@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { AuthContext } from "../../store/auth-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
@@ -74,6 +75,7 @@ function BudgetCard({ item, onOpen, onDelete, styles, colors, t }) {
 }
 
 export default function BudgetsHubScreen({ navigation }) {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const authCtx = useContext(AuthContext);

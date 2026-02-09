@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { CustomizationContext } from "../../store/customization-context";
 import { useTranslation } from "../../store/language-context";
 
@@ -36,6 +37,7 @@ function SectionBlock({ icon, title, subtitle, children, styles, colors }) {
 }
 
 export default function QuickSettingsScreen() {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t } = useTranslation();

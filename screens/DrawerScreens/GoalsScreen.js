@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { GoalsContext } from "../../store/goals-context";
 import { CustomizationContext } from "../../store/customization-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
@@ -43,6 +44,7 @@ function StatTile({ icon, label, value, styles, colors }) {
 export default function GoalsScreen() {
   const goalsCtx = useContext(GoalsContext);
   const { compactMode } = useContext(CustomizationContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors, compactMode);
   const { t } = useTranslation();

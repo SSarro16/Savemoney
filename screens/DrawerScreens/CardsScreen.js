@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { PaymentContext } from "../../store/payment-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 
@@ -20,6 +21,7 @@ function emptyDraft() {
 }
 
 export default function CardsScreen() {
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const paymentCtx = useContext(PaymentContext);

@@ -1,6 +1,7 @@
 import React, {
   createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -68,4 +69,12 @@ export default function ThemeContextProvider({ children }) {
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
+}
+
+export function useThemeColors() {
+  return useContext(ThemeContext).colors;
+}
+
+export function useThemeRefresh() {
+  useContext(ThemeContext);
 }

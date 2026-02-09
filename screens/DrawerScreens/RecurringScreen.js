@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 
@@ -104,6 +105,7 @@ export default function RecurringScreen() {
   const expensesCtx = useContext(ExpensesContext);
   const authCtx = useContext(AuthContext);
   const { recurringRemindersEnabled, recurringReminderHour } = useContext(CustomizationContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t } = useTranslation();
