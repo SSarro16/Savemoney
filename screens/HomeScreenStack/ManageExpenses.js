@@ -9,7 +9,6 @@ import {
 } from "react";
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -29,6 +28,7 @@ import { PaymentContext } from "../../store/payment-context";
 import ExpenseForm from "../../components/ManageExpense/ExpenseForm";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
+import AppLogo from "../../components/ui/AppLogo";
 
 import {
   addExpenseTemplate,
@@ -356,13 +356,7 @@ function ManageExpenses({ route, navigation }) {
           />
 
           <View style={styles.heroTopRow}>
-            <View style={styles.logoWrap}>
-              <Image
-                source={require("../../assets/icon.png")}
-                style={styles.logoImage}
-                resizeMode="cover"
-              />
-            </View>
+            <AppLogo size={42} style={styles.logoWrap} />
             <View style={styles.heroBadge}>
               <Ionicons
                 name={isEditing ? "create-outline" : "add-circle-outline"}
@@ -457,17 +451,8 @@ function makeStyles(colors) {
       gap: 10,
     },
     logoWrap: {
-      width: 42,
-      height: 42,
-      borderRadius: 14,
-      overflow: "hidden",
-      borderWidth: 1,
       borderColor: colors.accent30,
-      backgroundColor: colors.white10,
-    },
-    logoImage: {
-      width: "100%",
-      height: "100%",
+      borderWidth: 1,
     },
     heroBadge: {
       flexDirection: "row",
