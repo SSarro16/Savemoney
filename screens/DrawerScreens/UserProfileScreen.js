@@ -454,6 +454,14 @@ export default function UserProfileScreen({ navigation }) {
       <Text style={styles.sectionTitle}>Azioni rapide</Text>
       <View style={styles.actionsWrap}>
         <QuickAction
+          icon="settings-outline"
+          title="Impostazioni complete"
+          subtitle="Centro configurazione generale dell'app"
+          onPress={() => navigation.navigate("SettingsHome")}
+          colors={colors}
+          styles={styles}
+        />
+        <QuickAction
           icon={isExporting ? "time-outline" : "download-outline"}
           title={isExporting ? "Export in corso..." : "Esporta report mese"}
           subtitle="CSV con spese del mese corrente"
