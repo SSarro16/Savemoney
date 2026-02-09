@@ -43,6 +43,7 @@ import CustomizeScreen from "./screens/DrawerScreens/CustomizeScreen";
 import PaymentsScreen from "./screens/DrawerScreens/PaymentsScreen";
 import PaymentMethodDetailScreen from "./screens/DrawerScreens/PaymentMethodDetailScreen";
 import SettingsScreen from "./screens/DrawerScreens/SettingsScreen";
+import QuickSettingsScreen from "./screens/DrawerScreens/QuickSettingsScreen";
 import CategoriesManagerScreen from "./screens/DrawerScreens/CategoriesManagerScreen";
 import UserProfileScreen from "./screens/DrawerScreens/UserProfileScreen";
 import GoalsScreen from "./screens/DrawerScreens/GoalsScreen";
@@ -776,6 +777,11 @@ function SettingsStack() {
             />
           ),
         })}
+      />
+      <Stack.Screen
+        name="QuickSettings"
+        component={QuickSettingsScreen}
+        options={{ title: "Impostazioni rapide" }}
       />
       <Stack.Screen
         name="CustomizeHome"
