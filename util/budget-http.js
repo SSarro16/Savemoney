@@ -1,7 +1,4 @@
-import axios from "axios";
-
-const BACKEND_URL =
-  "https://react-native-section10-d8ef4-default-rtdb.europe-west1.firebasedatabase.app";
+import { dbUrl, firebaseApi as api, safeId, requestConfig } from "./firebase-rest";
 
 const DEFAULT_BUDGET = {
   total: 0,
@@ -12,12 +9,6 @@ const DEFAULT_BUDGET = {
     Altro: 0,
   },
 };
-
-function requestConfig(token) {
-  return {
-    timeout: 15000,
-  };
-}
 
 function sanitizeBudgetData(budgetData) {
   const total = Number(budgetData?.total || 0);
@@ -35,7 +26,10 @@ function sanitizeBudgetData(budgetData) {
   return { total, categories };
 }
 
-// ---------- Salva il budget ----------
+function legacyBudgetUrl(userId, token) {
+  return dbUrl(`budget/${safeId(userId)}`, token);
+}
+
 export async function saveBudgetFirebase(userId, token, budgetData) {
   if (!userId || !token) {
     throw new Error("Utente non autenticato: impossibile salvare il budget!");
@@ -43,9 +37,8 @@ export async function saveBudgetFirebase(userId, token, budgetData) {
 
   try {
     const payload = sanitizeBudgetData(budgetData);
-
-    const response = await axios.put(
-      `${BACKEND_URL}/budget/${userId}.json?auth=${encodeURIComponent(token)}`,
+    const response = await api.put(
+      legacyBudgetUrl(userId, token),
       payload,
       requestConfig(token),
     );
@@ -61,17 +54,13 @@ export async function saveBudgetFirebase(userId, token, budgetData) {
   }
 }
 
-// ---------- Recupera il budget ----------
 export async function fetchBudgetFirebase(userId, token) {
   if (!userId || !token) {
     throw new Error("Utente non autenticato: impossibile recuperare il budget!");
   }
 
   try {
-    const response = await axios.get(
-      `${BACKEND_URL}/budget/${userId}.json?auth=${encodeURIComponent(token)}`,
-      requestConfig(token),
-    );
+    const response = await api.get(legacyBudgetUrl(userId, token), requestConfig(token));
 
     if (response.status !== 200) {
       throw new Error("Errore nel recupero del budget da Firebase");

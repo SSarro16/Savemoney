@@ -1,25 +1,10 @@
-import axios from "axios";
-
-const BACKEND_URL =
-  "https://react-native-section10-d8ef4-default-rtdb.europe-west1.firebasedatabase.app";
-
-const api = axios.create({
-  timeout: 15000,
-});
-
-function safeId(value) {
-  return encodeURIComponent(String(value || "").trim());
-}
-
-function authQuery(token) {
-  return `auth=${encodeURIComponent(String(token || ""))}`;
-}
-
-function requestConfig(token) {
-  return {
-    timeout: 15000,
-  };
-}
+import {
+  dbUrl,
+  firebaseApi as api,
+  safeId,
+  requestConfig,
+  withLegacyFallback,
+} from "./firebase-rest";
 
 function ensureAuth(userId, token) {
   if (!userId || !token) {
@@ -29,59 +14,30 @@ function ensureAuth(userId, token) {
 
 function cardsUrl(userId, token, legacy = false) {
   if (legacy) {
-    return `${BACKEND_URL}/cards/${safeId(userId)}.json?${authQuery(token)}`;
+    return dbUrl(`cards/${safeId(userId)}`, token);
   }
-  return `${BACKEND_URL}/users/${safeId(userId)}/cards.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/cards`, token);
 }
 
 function cardUrl(userId, token, id, legacy = false) {
   if (legacy) {
-    return `${BACKEND_URL}/cards/${safeId(userId)}/${safeId(id)}.json?${authQuery(token)}`;
+    return dbUrl(`cards/${safeId(userId)}/${safeId(id)}`, token);
   }
-  return `${BACKEND_URL}/users/${safeId(userId)}/cards/${safeId(id)}.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/cards/${safeId(id)}`, token);
 }
 
 function cashUrl(userId, token, legacy = false) {
   if (legacy) {
-    return `${BACKEND_URL}/cash/${safeId(userId)}.json?${authQuery(token)}`;
+    return dbUrl(`cash/${safeId(userId)}`, token);
   }
-  return `${BACKEND_URL}/users/${safeId(userId)}/cash.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/cash`, token);
 }
 
 function cashItemUrl(userId, token, id, legacy = false) {
   if (legacy) {
-    return `${BACKEND_URL}/cash/${safeId(userId)}/${safeId(id)}.json?${authQuery(token)}`;
+    return dbUrl(`cash/${safeId(userId)}/${safeId(id)}`, token);
   }
-  return `${BACKEND_URL}/users/${safeId(userId)}/cash/${safeId(id)}.json?${authQuery(token)}`;
-}
-
-function shouldTryLegacyPath(error) {
-  const status = Number(error?.response?.status || 0);
-  const rawError = error?.response?.data?.error;
-  const raw =
-    typeof rawError === "string"
-      ? rawError.toLowerCase()
-      : String(rawError?.message || "").toLowerCase();
-
-  if (status === 404 || status === 401 || status === 403) return true;
-  if (
-    raw.includes("permission_denied") ||
-    raw.includes("permission denied") ||
-    raw.includes("access denied") ||
-    raw.includes("unauthorized")
-  ) {
-    return true;
-  }
-  return false;
-}
-
-async function withLegacyFallback(runPrimary, runLegacy) {
-  try {
-    return await runPrimary();
-  } catch (error) {
-    if (!shouldTryLegacyPath(error)) throw error;
-    return await runLegacy();
-  }
+  return dbUrl(`users/${safeId(userId)}/cash/${safeId(id)}`, token);
 }
 
 function normalizeCard(raw, id) {
@@ -142,8 +98,7 @@ export async function upsertCard(userId, token, card) {
   if (id) {
     await withLegacyFallback(
       () => api.put(cardUrl(userId, token, id), clean, requestConfig(token)),
-      () =>
-        api.put(cardUrl(userId, token, id, true), clean, requestConfig(token)),
+      () => api.put(cardUrl(userId, token, id, true), clean, requestConfig(token)),
     );
     return id;
   }
@@ -189,14 +144,8 @@ export async function upsertCashWallet(userId, token, wallet) {
 
   if (id) {
     await withLegacyFallback(
-      () =>
-        api.put(cashItemUrl(userId, token, id), clean, requestConfig(token)),
-      () =>
-        api.put(
-          cashItemUrl(userId, token, id, true),
-          clean,
-          requestConfig(token),
-        ),
+      () => api.put(cashItemUrl(userId, token, id), clean, requestConfig(token)),
+      () => api.put(cashItemUrl(userId, token, id, true), clean, requestConfig(token)),
     );
     return id;
   }
@@ -213,8 +162,7 @@ export async function removeCashWallet(userId, token, id) {
   if (!id) return;
   await withLegacyFallback(
     () => api.delete(cashItemUrl(userId, token, id), requestConfig(token)),
-    () =>
-      api.delete(cashItemUrl(userId, token, id, true), requestConfig(token)),
+    () => api.delete(cashItemUrl(userId, token, id, true), requestConfig(token)),
   );
 }
 
@@ -227,15 +175,23 @@ export async function setDefaultCashWallet(userId, token, walletId, wallets) {
     list.map((w) =>
       withLegacyFallback(
         () =>
-          api.patch(cashItemUrl(userId, token, w.id), {
-            isDefault: String(w.id) === String(walletId),
-            updatedAt: new Date().toISOString(),
-          }, requestConfig(token)),
+          api.patch(
+            cashItemUrl(userId, token, w.id),
+            {
+              isDefault: String(w.id) === String(walletId),
+              updatedAt: new Date().toISOString(),
+            },
+            requestConfig(token),
+          ),
         () =>
-          api.patch(cashItemUrl(userId, token, w.id, true), {
-            isDefault: String(w.id) === String(walletId),
-            updatedAt: new Date().toISOString(),
-          }, requestConfig(token)),
+          api.patch(
+            cashItemUrl(userId, token, w.id, true),
+            {
+              isDefault: String(w.id) === String(walletId),
+              updatedAt: new Date().toISOString(),
+            },
+            requestConfig(token),
+          ),
       ),
     ),
   );

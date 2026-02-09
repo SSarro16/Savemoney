@@ -1,69 +1,25 @@
-import axios from "axios";
-
-const BACKEND_URL =
-  "https://react-native-section10-d8ef4-default-rtdb.europe-west1.firebasedatabase.app";
-
-const api = axios.create({
-  timeout: 15000,
-});
-
-function safeId(value) {
-  return encodeURIComponent(String(value || "").trim());
-}
-
-function authQuery(token) {
-  return `auth=${encodeURIComponent(String(token || ""))}`;
-}
-
-function requestConfig(token) {
-  return {
-    timeout: 15000,
-  };
-}
+import {
+  dbUrl,
+  firebaseApi as api,
+  safeId,
+  requestConfig,
+  withLegacyFallback,
+} from "./firebase-rest";
 
 function primaryCollectionUrl(userId, token) {
-  return `${BACKEND_URL}/users/${safeId(userId)}/expenses.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/expenses`, token);
 }
 
 function legacyCollectionUrl(userId, token) {
-  return `${BACKEND_URL}/expenses/${safeId(userId)}.json?${authQuery(token)}`;
+  return dbUrl(`expenses/${safeId(userId)}`, token);
 }
 
 function primaryItemUrl(userId, token, id) {
-  return `${BACKEND_URL}/users/${safeId(userId)}/expenses/${safeId(id)}.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/expenses/${safeId(id)}`, token);
 }
 
 function legacyItemUrl(userId, token, id) {
-  return `${BACKEND_URL}/expenses/${safeId(userId)}/${safeId(id)}.json?${authQuery(token)}`;
-}
-
-function shouldTryLegacyPath(error) {
-  const status = Number(error?.response?.status || 0);
-  const rawError = error?.response?.data?.error;
-  const raw =
-    typeof rawError === "string"
-      ? rawError.toLowerCase()
-      : String(rawError?.message || "").toLowerCase();
-
-  if (status === 404 || status === 401 || status === 403) return true;
-  if (
-    raw.includes("permission_denied") ||
-    raw.includes("permission denied") ||
-    raw.includes("access denied") ||
-    raw.includes("unauthorized")
-  ) {
-    return true;
-  }
-  return false;
-}
-
-async function withLegacyFallback(runPrimary, runLegacy) {
-  try {
-    return await runPrimary();
-  } catch (error) {
-    if (!shouldTryLegacyPath(error)) throw error;
-    return await runLegacy();
-  }
+  return dbUrl(`expenses/${safeId(userId)}/${safeId(id)}`, token);
 }
 
 function toFirebaseExpense(expenseData) {

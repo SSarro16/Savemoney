@@ -1,8 +1,11 @@
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const BACKEND_URL =
-  "https://react-native-section10-d8ef4-default-rtdb.europe-west1.firebasedatabase.app";
+import {
+  dbUrl,
+  firebaseApi as api,
+  requestConfig,
+  safeId,
+  shouldTryLegacyPath,
+} from "../firebase-rest";
 
 const LEGACY_LOCAL_KEY = "BUDGETS_V1";
 const ACTIVE_KEY = "BUDGETS_ACTIVE_ID_V1";
@@ -11,20 +14,6 @@ const DEFAULT_CATEGORIES = { Risparmio: 0, Spese: 0, Svago: 0, Altro: 0 };
 
 function uid() {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function safeId(value) {
-  return encodeURIComponent(String(value || "").trim());
-}
-
-function authQuery(token) {
-  return `auth=${encodeURIComponent(String(token || ""))}`;
-}
-
-function requestConfig(token) {
-  return {
-    timeout: 15000,
-  };
 }
 
 function activeKey(userId) {
@@ -46,35 +35,15 @@ function ensureAuth(userId, token) {
 }
 
 function budgetsPath(userId, token) {
-  return `${BACKEND_URL}/users/${safeId(userId)}/budgets.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/budgets`, token);
 }
 
 function budgetPath(userId, token, id) {
-  return `${BACKEND_URL}/users/${safeId(userId)}/budgets/${safeId(id)}.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/budgets/${safeId(id)}`, token);
 }
 
 function legacyBudgetPath(userId, token) {
-  return `${BACKEND_URL}/budget/${safeId(userId)}.json?${authQuery(token)}`;
-}
-
-function shouldTryLegacyPath(error) {
-  const status = Number(error?.response?.status || 0);
-  const rawError = error?.response?.data?.error;
-  const raw =
-    typeof rawError === "string"
-      ? rawError.toLowerCase()
-      : String(rawError?.message || "").toLowerCase();
-
-  if (status === 404 || status === 401 || status === 403) return true;
-  if (
-    raw.includes("permission_denied") ||
-    raw.includes("permission denied") ||
-    raw.includes("access denied") ||
-    raw.includes("unauthorized")
-  ) {
-    return true;
-  }
-  return false;
+  return dbUrl(`budget/${safeId(userId)}`, token);
 }
 
 function normalizeBudget(raw) {
@@ -120,7 +89,7 @@ function sortBudgets(list) {
 }
 
 async function getLegacyBudgets(userId, token) {
-  const response = await axios.get(legacyBudgetPath(userId, token), requestConfig(token));
+  const response = await api.get(legacyBudgetPath(userId, token), requestConfig(token));
   const legacy = response.data;
   if (!legacy || typeof legacy !== "object") return [];
 
@@ -133,12 +102,12 @@ async function getLegacyBudgets(userId, token) {
 
 async function saveLegacyBudget(userId, token, budget) {
   const payload = normalizeBudget({ ...budget, id: budget?.id || "legacy_budget" });
-  await axios.put(legacyBudgetPath(userId, token), payload, requestConfig(token));
+  await api.put(legacyBudgetPath(userId, token), payload, requestConfig(token));
 }
 
 async function getRemoteBudgets(userId, token) {
   try {
-    const response = await axios.get(budgetsPath(userId, token), requestConfig(token));
+    const response = await api.get(budgetsPath(userId, token), requestConfig(token));
     const data = response.data || {};
     const list = Object.keys(data).map((id) =>
       normalizeBudget({ ...(data[id] || {}), id }),
@@ -157,7 +126,7 @@ async function uploadBudgets(userId, token, list) {
   try {
     await Promise.all(
       safe.map((b) =>
-        axios.put(budgetPath(userId, token, b.id), b, requestConfig(token)),
+        api.put(budgetPath(userId, token, b.id), b, requestConfig(token)),
       ),
     );
     return safe;
@@ -247,7 +216,7 @@ export async function upsertBudget(userId, token, budget) {
   });
 
   try {
-    await axios.put(budgetPath(userId, token, incoming.id), incoming, {
+    await api.put(budgetPath(userId, token, incoming.id), incoming, {
       ...requestConfig(token),
     });
   } catch (error) {
@@ -265,10 +234,10 @@ export async function removeBudget(userId, token, id) {
 
   if (id) {
     try {
-      await axios.delete(budgetPath(userId, token, id), requestConfig(token));
+      await api.delete(budgetPath(userId, token, id), requestConfig(token));
     } catch (error) {
       if (!shouldTryLegacyPath(error)) throw error;
-      await axios.delete(legacyBudgetPath(userId, token), requestConfig(token));
+      await api.delete(legacyBudgetPath(userId, token), requestConfig(token));
     }
   }
 
