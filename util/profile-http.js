@@ -8,11 +8,20 @@ function normalizeProfile(raw) {
   const firstName = String(raw?.firstName || "").trim();
   const lastName = String(raw?.lastName || "").trim();
   const email = String(raw?.email || "").trim();
+  const genderRaw = String(raw?.gender || "").trim().toUpperCase();
+  const gender = genderRaw === "MALE" || genderRaw === "FEMALE" ? genderRaw : "";
+  const dobCandidate = raw?.dateOfBirth ? new Date(raw.dateOfBirth) : null;
+  const dateOfBirth =
+    dobCandidate instanceof Date && !Number.isNaN(dobCandidate.getTime())
+      ? dobCandidate.toISOString()
+      : "";
 
   return {
     firstName,
     lastName,
     email,
+    gender,
+    dateOfBirth,
     updatedAt: raw?.updatedAt || new Date().toISOString(),
   };
 }

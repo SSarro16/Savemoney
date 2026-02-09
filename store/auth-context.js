@@ -17,6 +17,8 @@ export const AuthContext = createContext({
   profile: null,
   firstName: "",
   lastName: "",
+  gender: "",
+  dateOfBirth: "",
   fullName: "",
   isAuthenticated: false,
   isBootstrapping: true,
@@ -33,8 +35,16 @@ function normalizeProfile(input) {
   const firstName = String(source?.firstName || "").trim();
   const lastName = String(source?.lastName || "").trim();
   const email = String(source?.email || "").trim();
+  const genderRaw = String(source?.gender || "").trim().toUpperCase();
+  const gender = genderRaw === "MALE" || genderRaw === "FEMALE" ? genderRaw : "";
+  const dobCandidate = source?.dateOfBirth ? new Date(source.dateOfBirth) : null;
+  const dateOfBirth =
+    dobCandidate instanceof Date && !Number.isNaN(dobCandidate.getTime())
+      ? dobCandidate.toISOString()
+      : "";
+  const updatedAt = String(source?.updatedAt || "").trim() || new Date().toISOString();
 
-  return { firstName, lastName, email };
+  return { firstName, lastName, email, gender, dateOfBirth, updatedAt };
 }
 
 function withProfile(data) {
@@ -191,6 +201,8 @@ function AuthContextProvider({ children }) {
       profile: authData?.profile || null,
       firstName: authData?.profile?.firstName || "",
       lastName: authData?.profile?.lastName || "",
+      gender: authData?.profile?.gender || "",
+      dateOfBirth: authData?.profile?.dateOfBirth || "",
       fullName: [authData?.profile?.firstName, authData?.profile?.lastName]
         .map((x) => String(x || "").trim())
         .filter(Boolean)

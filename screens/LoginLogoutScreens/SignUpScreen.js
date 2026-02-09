@@ -37,7 +37,14 @@ function SignupScreen() {
 
       await authCtx.authenticate({
         ...response,
-        profile: { firstName, lastName, email, gender, dateOfBirth },
+        profile: {
+          firstName,
+          lastName,
+          email,
+          gender,
+          dateOfBirth,
+          updatedAt: new Date().toISOString(),
+        },
       });
 
       try {
