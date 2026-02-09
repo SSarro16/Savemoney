@@ -22,6 +22,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import Button from "../ui/CButton";
+import AppLogo from "../ui/AppLogo";
 import CustomDatePicker from "../ui/DatePicker";
 import { GlobalStyles } from "../../constants/styles";
 import { EXPENSE_ICONS } from "../../constants/expense-icons";
@@ -42,6 +43,15 @@ function isEmoji(value) {
 
 function safePayMethod(v) {
   return v === PAYMENT_METHOD.CARD ? PAYMENT_METHOD.CARD : PAYMENT_METHOD.CASH;
+}
+
+function formatCompactDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("it-IT", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 const ExpenseForm = forwardRef(function ExpenseForm(
@@ -258,6 +268,20 @@ const ExpenseForm = forwardRef(function ExpenseForm(
 
   return (
     <View style={styles.wrapper}>
+      <View style={styles.brandBar}>
+        <View style={styles.brandLeft}>
+          <AppLogo size={34} borderRadius={12} />
+          <View>
+            <Text style={styles.brandTitle}>Expense Studio</Text>
+            <Text style={styles.brandSub}>Stile premium, stessa precisione</Text>
+          </View>
+        </View>
+        <View style={styles.brandBadge}>
+          <Ionicons name="sparkles-outline" size={12} color={colors.textOnAccentStrong} />
+          <Text style={styles.brandBadgeText}>NEW UI</Text>
+        </View>
+      </View>
+
       <View style={styles.header}>
         <View style={styles.headerIcon}>
           {isEmoji(inputs.icon) ? (
@@ -272,8 +296,27 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         </View>
       </View>
 
+      <View style={styles.previewRow}>
+        <View style={styles.previewChip}>
+          <Ionicons name="cash-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.previewText}>
+            {Number.isFinite(amountNumber) && amountNumber > 0
+              ? `${amountNumber.toFixed(2)} EUR`
+              : "Importo da definire"}
+          </Text>
+        </View>
+        <View style={styles.previewChip}>
+          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.previewText}>{formatCompactDate(inputs.date)}</Text>
+        </View>
+        <View style={styles.previewChip}>
+          <Ionicons name="card-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.previewText}>{payLabel}</Text>
+        </View>
+      </View>
+
       <View style={styles.card}>
-        <View style={styles.section}>
+        <View style={styles.sectionCard}>
           <Text style={styles.label}>Come hai pagato</Text>
 
           <Pressable
@@ -307,7 +350,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           ) : null}
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.sectionCard}>
           <Text style={styles.label}>Categoria</Text>
 
           <Pressable
@@ -334,7 +377,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           </Pressable>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.sectionCard}>
           <Text style={styles.label}>Icona</Text>
 
           <Pressable
@@ -365,64 +408,68 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           </Pressable>
         </View>
 
-        <View style={[styles.row, stackDateField && styles.rowStack]}>
-          <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Importo EUR</Text>
-              <View style={styles.labelSpacer} />
+        <View style={styles.sectionCard}>
+          <View style={[styles.row, stackDateField && styles.rowStack]}>
+            <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Importo EUR</Text>
+                <View style={styles.labelSpacer} />
+              </View>
+
+              <Animated.View
+                style={[
+                  styles.field,
+                  { borderColor: amountBorderColor },
+                  showAmountError && styles.fieldError,
+                ]}
+              >
+                <Ionicons name="cash-outline" size={18} color={iconColor} />
+                <TextInput
+                  ref={amountRef}
+                  style={styles.input}
+                  keyboardType="decimal-pad"
+                  value={inputs.amount}
+                  onChangeText={(t) => inputChangedHandler("amount", t)}
+                  editable={!disabled}
+                  placeholder="12,50"
+                  placeholderTextColor={placeholder}
+                  onFocus={() => {
+                    Animated.timing(amountFocus, {
+                      toValue: 1,
+                      duration: 160,
+                      useNativeDriver: false,
+                    }).start();
+                  }}
+                  onBlur={() => {
+                    Animated.timing(amountFocus, {
+                      toValue: 0,
+                      duration: 160,
+                      useNativeDriver: false,
+                    }).start();
+                    markTouched("amount");
+                  }}
+                  returnKeyType="done"
+                />
+                <Text style={styles.suffix}>EUR</Text>
+              </Animated.View>
+
+              {showAmountError ? (
+                <Text style={styles.errorText}>Inserisci un importo valido.</Text>
+              ) : null}
             </View>
 
-            <Animated.View
-              style={[
-                styles.field,
-                { borderColor: amountBorderColor },
-                showAmountError && styles.fieldError,
-              ]}
-            >
-              <Ionicons name="cash-outline" size={18} color={iconColor} />
-              <TextInput
-                ref={amountRef}
-                style={styles.input}
-                keyboardType="decimal-pad"
-                value={inputs.amount}
-                onChangeText={(t) => inputChangedHandler("amount", t)}
-                editable={!disabled}
-                placeholder="12,50"
-                placeholderTextColor={placeholder}
-                onFocus={() => {
-                  Animated.timing(amountFocus, {
-                    toValue: 1,
-                    duration: 160,
-                    useNativeDriver: false,
-                  }).start();
-                }}
-                onBlur={() => {
-                  Animated.timing(amountFocus, {
-                    toValue: 0,
-                    duration: 160,
-                    useNativeDriver: false,
-                  }).start();
-                  markTouched("amount");
-                }}
-                returnKeyType="done"
+            <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
+              <CustomDatePicker
+                label="Data"
+                value={inputs.date}
+                onChange={(date) => inputChangedHandler("date", date)}
+                disabled={disabled}
               />
-              <Text style={styles.suffix}>EUR</Text>
-            </Animated.View>
-
-            {showAmountError && <Text style={styles.errorText}>Inserisci un importo valido.</Text>}
-          </View>
-
-          <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
-            <CustomDatePicker
-              label="Data"
-              value={inputs.date}
-              onChange={(date) => inputChangedHandler("date", date)}
-              disabled={disabled}
-            />
+            </View>
           </View>
         </View>
 
-        <View style={styles.sectionLast}>
+        <View style={styles.sectionCard}>
           <Text style={styles.label}>Titolo della spesa</Text>
           <View style={[styles.fieldTextArea, showDescriptionError && styles.fieldError]}>
             <Ionicons
@@ -684,41 +731,118 @@ export default ExpenseForm;
 
 function makeStyles(colors) {
   return StyleSheet.create({
-    wrapper: { marginTop: 2, gap: 12 },
+    wrapper: { marginTop: 2, gap: 10 },
+    brandBar: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      paddingVertical: 9,
+      paddingHorizontal: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    brandLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    brandTitle: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 13,
+    },
+    brandSub: {
+      marginTop: 1,
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 11,
+    },
+    brandBadge: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.accent500,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    brandBadgeText: {
+      color: colors.textOnAccentStrong,
+      fontWeight: "900",
+      fontSize: 10,
+      letterSpacing: 0.3,
+    },
     header: {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
-      paddingHorizontal: 2,
-      paddingVertical: 2,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
     },
     headerIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 13,
+      width: 44,
+      height: 44,
+      borderRadius: 15,
       backgroundColor: colors.accent500,
       alignItems: "center",
       justifyContent: "center",
     },
     headerEmoji: { fontSize: 22 },
-    title: { fontSize: 18, fontWeight: "900", color: colors.textTitle },
+    title: { fontSize: 17, fontWeight: "900", color: colors.textTitle },
     subtitle: {
       marginTop: 2,
       color: colors.textMuted,
       fontSize: 12,
       fontWeight: "700",
     },
+    previewRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    previewChip: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.white06,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+    },
+    previewText: {
+      color: colors.textMuted,
+      fontWeight: "800",
+      fontSize: 11,
+    },
 
     card: {
-      backgroundColor: colors.primary700,
-      borderRadius: 18,
-      paddingHorizontal: 14,
-      paddingVertical: 14,
+      backgroundColor: colors.surface,
+      borderRadius: 22,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
       borderWidth: 1,
-      borderColor: colors.white08,
+      borderColor: colors.white10,
     },
-    section: { marginBottom: 14 },
-    sectionLast: { marginTop: 14 },
+    sectionCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      marginBottom: 10,
+    },
 
     row: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
     rowStack: { flexDirection: "column", gap: 14 },
@@ -737,7 +861,7 @@ function makeStyles(colors) {
       fontWeight: "800",
       letterSpacing: 0.2,
     },
-    sectionControl: { marginTop: 8 },
+    sectionControl: { marginTop: 6 },
     labelSpacer: { width: 86, height: 22, opacity: 0 },
 
     field: {
@@ -747,7 +871,7 @@ function makeStyles(colors) {
       paddingVertical: 12,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: colors.primary800,
+      backgroundColor: colors.surface2,
       borderWidth: 1.5,
       borderColor: colors.white22,
     },
@@ -758,7 +882,7 @@ function makeStyles(colors) {
       paddingVertical: 12,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: colors.primary800,
+      backgroundColor: colors.surface2,
       borderWidth: 1.5,
       borderColor: colors.white22,
     },
@@ -788,13 +912,14 @@ function makeStyles(colors) {
       fontSize: 12,
     },
     hintText: {
-      margin: 6,
+      marginTop: 6,
+      marginHorizontal: 2,
       color: colors.textMuted,
       fontWeight: "700",
       fontSize: 12,
     },
 
-    buttons: { marginTop: 18, flexDirection: "row", gap: 10 },
+    buttons: { marginTop: 4, flexDirection: "row", gap: 10 },
 
     iconPreview: {
       width: 34,
