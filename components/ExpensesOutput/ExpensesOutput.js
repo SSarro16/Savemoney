@@ -95,6 +95,7 @@ function ExpensesOutput({
   const tabBarHeight = useBottomTabBarHeight();
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(rangeFrom ?? new Date());
   const [draftTo, setDraftTo] = useState(rangeTo ?? new Date());
   const pickerThemeVariant = colors.textTitle === "#ffffff" ? "dark" : "light";
@@ -111,6 +112,10 @@ function ExpensesOutput({
     if (from && to && from > to) [from, to] = [to, from];
     onChangeRange?.(from, to);
     setModalOpen(false);
+  };
+
+  const openFilters = () => {
+    setFiltersModalOpen(true);
   };
 
   const rangeLabel = useMemo(() => {
@@ -225,6 +230,33 @@ function ExpensesOutput({
 
           <Pressable
             style={({ pressed }) => [
+              styles.toolbarBtn,
+              {
+                backgroundColor: isAdvancedFilterActive
+                  ? colors.accent18
+                  : colors.surface2,
+                borderColor: isAdvancedFilterActive
+                  ? colors.accent35
+                  : highContrast
+                    ? colors.borderStrong
+                    : colors.border,
+                paddingVertical: compactMode ? 10 : 12,
+              },
+              pressed && styles.pressed,
+            ]}
+            onPress={openFilters}
+          >
+            <Ionicons name="options-outline" size={18} color={colors.textTitle} />
+            <Text style={[styles.toolbarBtnText, { color: colors.textTitle }]}>
+              Filtri
+            </Text>
+            {isAdvancedFilterActive ? (
+              <View style={[styles.filterDot, { backgroundColor: colors.accent500 }]} />
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
               styles.iconBtn,
               {
                 backgroundColor: colors.surface2,
@@ -247,89 +279,6 @@ function ExpensesOutput({
         expenses={expenses}
         periodName={expensesPeriod ?? rangeLabel}
       />
-
-      <View
-        style={[
-          styles.filtersCard,
-          {
-            backgroundColor: colors.surface,
-            borderColor: highContrast ? colors.borderStrong : colors.border,
-          },
-        ]}
-      >
-        <View style={styles.filtersTopRow}>
-          <Text style={[styles.filtersTitle, { color: colors.textMuted }]}>
-            Ricerca e filtri
-          </Text>
-          {isAdvancedFilterActive ? (
-            <Pressable
-              onPress={onResetAdvancedFilters}
-              style={({ pressed }) => [
-                styles.clearFiltersBtn,
-                { borderColor: colors.border, backgroundColor: colors.surface2 },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={[styles.clearFiltersText, { color: colors.textBody }]}>
-                Reset
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <TextInput
-          value={searchQuery}
-          onChangeText={onChangeSearchQuery}
-          placeholder="Cerca descrizione o categoria"
-          placeholderTextColor={colors.textFaint}
-          style={[
-            styles.searchInput,
-            {
-              borderColor: highContrast ? colors.borderStrong : colors.border,
-              backgroundColor: colors.surface2,
-              color: colors.textTitle,
-            },
-          ]}
-        />
-
-        <View style={styles.methodRow}>
-          <Chip
-            label="Tutti"
-            active={selectedMethod === "ALL"}
-            onPress={() => onSelectMethod?.("ALL")}
-          />
-          <Chip
-            label="Contanti"
-            active={selectedMethod === "CASH"}
-            onPress={() => onSelectMethod?.("CASH")}
-          />
-          <Chip
-            label="Carta"
-            active={selectedMethod === "CARD"}
-            onPress={() => onSelectMethod?.("CARD")}
-          />
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesRow}
-        >
-          <Chip
-            label="Tutte le categorie"
-            active={selectedCategory === "ALL"}
-            onPress={() => onSelectCategory?.("ALL")}
-          />
-          {(categoryOptions || []).map((category) => (
-            <Chip
-              key={category}
-              label={category}
-              active={selectedCategory === category}
-              onPress={() => onSelectCategory?.(category)}
-            />
-          ))}
-        </ScrollView>
-      </View>
 
       <QuickAddLauncherCard />
 
@@ -537,6 +486,141 @@ function ExpensesOutput({
           </View>
         </View>
       </Modal>
+
+      <Modal visible={filtersModalOpen} transparent animationType="slide">
+        <View
+          style={[styles.modalBackdropBottom, { backgroundColor: colors.overlay60 }]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setFiltersModalOpen(false)}
+          />
+
+          <View
+            style={[
+              styles.filtersSheet,
+              {
+                backgroundColor: colors.bg,
+                borderColor: highContrast ? colors.borderStrong : colors.border,
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.textTitle }]}>
+                Ricerca e filtri
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.closeBtn,
+                  {
+                    backgroundColor: colors.surface2,
+                    borderColor: colors.border,
+                  },
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => setFiltersModalOpen(false)}
+              >
+                <Ionicons name="close" size={18} color={colors.textTitle} />
+              </Pressable>
+            </View>
+
+            <View style={styles.filtersTopRow}>
+              <Text style={[styles.filtersTitle, { color: colors.textMuted }]}>
+                Personalizza i risultati
+              </Text>
+              {isAdvancedFilterActive ? (
+                <Pressable
+                  onPress={onResetAdvancedFilters}
+                  style={({ pressed }) => [
+                    styles.clearFiltersBtn,
+                    { borderColor: colors.border, backgroundColor: colors.surface2 },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.clearFiltersText, { color: colors.textBody }]}>
+                    Reset
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            <TextInput
+              value={searchQuery}
+              onChangeText={onChangeSearchQuery}
+              placeholder="Cerca descrizione o categoria"
+              placeholderTextColor={colors.textFaint}
+              style={[
+                styles.searchInput,
+                {
+                  borderColor: highContrast ? colors.borderStrong : colors.border,
+                  backgroundColor: colors.surface2,
+                  color: colors.textTitle,
+                },
+              ]}
+            />
+
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              Metodo di pagamento
+            </Text>
+            <View style={styles.methodRow}>
+              <Chip
+                label="Tutti"
+                active={selectedMethod === "ALL"}
+                onPress={() => onSelectMethod?.("ALL")}
+              />
+              <Chip
+                label="Contanti"
+                active={selectedMethod === "CASH"}
+                onPress={() => onSelectMethod?.("CASH")}
+              />
+              <Chip
+                label="Carta"
+                active={selectedMethod === "CARD"}
+                onPress={() => onSelectMethod?.("CARD")}
+              />
+            </View>
+
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              Categoria
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesRow}
+            >
+              <Chip
+                label="Tutte le categorie"
+                active={selectedCategory === "ALL"}
+                onPress={() => onSelectCategory?.("ALL")}
+              />
+              {(categoryOptions || []).map((category) => (
+                <Chip
+                  key={category}
+                  label={category}
+                  active={selectedCategory === category}
+                  onPress={() => onSelectCategory?.(category)}
+                />
+              ))}
+            </ScrollView>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.applyFiltersBtn,
+                {
+                  backgroundColor: colors.accent18,
+                  borderColor: colors.accent35,
+                },
+                pressed && styles.pressed,
+              ]}
+              onPress={() => setFiltersModalOpen(false)}
+            >
+              <Text style={[styles.actionText, { color: colors.textOnAccent }]}>
+                Chiudi filtri
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -611,14 +695,8 @@ const styles = StyleSheet.create({
   },
   toolbarBtnText: { fontWeight: "800", letterSpacing: 0.2 },
   iconBtn: { padding: 12, borderRadius: 14, borderWidth: 1 },
+  filterDot: { width: 7, height: 7, borderRadius: 99 },
 
-  filtersCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 10,
-    marginBottom: 12,
-    gap: 8,
-  },
   filtersTopRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -675,7 +753,17 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
 
   modalBackdrop: { flex: 1, justifyContent: "center", padding: 18 },
+  modalBackdropBottom: { flex: 1, justifyContent: "flex-end", padding: 0 },
   modalCard: { borderRadius: 18, padding: 16, borderWidth: 1 },
+  filtersSheet: {
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    maxHeight: "80%",
+  },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -725,4 +813,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionText: { fontWeight: "900", letterSpacing: 0.2 },
+  applyFiltersBtn: {
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+  },
 });
