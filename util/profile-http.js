@@ -15,6 +15,8 @@ function normalizeProfile(raw) {
     dobCandidate instanceof Date && !Number.isNaN(dobCandidate.getTime())
       ? dobCandidate.toISOString()
       : "";
+  const profileCompletionV2 =
+    raw?.profileCompletionV2 === true || raw?.profileCompletionV2 === "true";
 
   return {
     firstName,
@@ -22,6 +24,7 @@ function normalizeProfile(raw) {
     email,
     gender,
     dateOfBirth,
+    profileCompletionV2,
     updatedAt: raw?.updatedAt || new Date().toISOString(),
   };
 }

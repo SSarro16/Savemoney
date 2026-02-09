@@ -43,6 +43,7 @@ function SignupScreen() {
           email,
           gender,
           dateOfBirth,
+          profileCompletionV2: true,
           updatedAt: new Date().toISOString(),
         },
       });
@@ -54,6 +55,7 @@ function SignupScreen() {
           email,
           gender,
           dateOfBirth,
+          profileCompletionV2: true,
         });
       } catch (profileError) {
         logger.warn("saveUserProfile signup warning", profileError);

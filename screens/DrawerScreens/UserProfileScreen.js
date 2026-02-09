@@ -287,6 +287,7 @@ export default function UserProfileScreen({ navigation }) {
       gender: String(draftGender || "").trim().toUpperCase(),
       dateOfBirth: safeDate(draftDob).toISOString(),
       email: authCtx.profile?.email || "",
+      profileCompletionV2: true,
     };
 
     try {

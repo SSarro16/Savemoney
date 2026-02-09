@@ -19,6 +19,7 @@ export const AuthContext = createContext({
   lastName: "",
   gender: "",
   dateOfBirth: "",
+  profileCompletionV2: false,
   fullName: "",
   isAuthenticated: false,
   isBootstrapping: true,
@@ -42,9 +43,19 @@ function normalizeProfile(input) {
     dobCandidate instanceof Date && !Number.isNaN(dobCandidate.getTime())
       ? dobCandidate.toISOString()
       : "";
+  const profileCompletionV2 =
+    source?.profileCompletionV2 === true || source?.profileCompletionV2 === "true";
   const updatedAt = String(source?.updatedAt || "").trim() || new Date().toISOString();
 
-  return { firstName, lastName, email, gender, dateOfBirth, updatedAt };
+  return {
+    firstName,
+    lastName,
+    email,
+    gender,
+    dateOfBirth,
+    profileCompletionV2,
+    updatedAt,
+  };
 }
 
 function withProfile(data) {
@@ -203,6 +214,7 @@ function AuthContextProvider({ children }) {
       lastName: authData?.profile?.lastName || "",
       gender: authData?.profile?.gender || "",
       dateOfBirth: authData?.profile?.dateOfBirth || "",
+      profileCompletionV2: !!authData?.profile?.profileCompletionV2,
       fullName: [authData?.profile?.firstName, authData?.profile?.lastName]
         .map((x) => String(x || "").trim())
         .filter(Boolean)

@@ -36,6 +36,7 @@ function LoginScreen() {
           email: profile?.email || email,
           gender: profile?.gender || "",
           dateOfBirth: profile?.dateOfBirth || "",
+          profileCompletionV2: !!profile?.profileCompletionV2,
           updatedAt: profile?.updatedAt || new Date().toISOString(),
         },
       });
