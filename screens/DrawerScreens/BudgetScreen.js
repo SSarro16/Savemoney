@@ -1,12 +1,14 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
 import ManageBudget from "../../components/ManageBudget/ManageBudget";
 import { BudgetContext } from "../../store/budget-context";
 
 export default function BudgetScreen({ navigation, route }) {
   const colors = GlobalStyles.colors;
+  const styles = makeStyles(colors);
   const budgetCtx = useContext(BudgetContext);
 
   useEffect(() => {
@@ -20,19 +22,47 @@ export default function BudgetScreen({ navigation, route }) {
       budgetCtx.activeBudgetMeta?.name ||
       "Nuovo budget",
   );
-  const styles = makeStyles(colors);
+
+  const stats = useMemo(() => {
+    const total = Number(budgetCtx.total || 0);
+    const allocated = Object.values(budgetCtx.categories || {}).reduce(
+      (sum, value) => sum + Number(value || 0),
+      0,
+    );
+    const remaining = total - allocated;
+    const pct = total > 0 ? Math.round((allocated / total) * 100) : 0;
+    return { total, allocated, remaining, pct };
+  }, [budgetCtx.total, budgetCtx.categories]);
 
   return (
     <View style={styles.screen}>
-      <View style={styles.hero}>
-        <View style={styles.heroIcon}>
-          <Ionicons name="wallet-outline" size={18} color={colors.textTitle} />
+      <View style={styles.heroCard}>
+        <View style={[styles.heroBubble, styles.heroBubbleTop]} />
+        <View style={[styles.heroBubble, styles.heroBubbleBottom]} />
+        <View style={styles.heroTop}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="construct-outline" size={17} color={colors.textTitle} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroTitle} numberOfLines={1}>
+              {title}
+            </Text>
+            <Text style={styles.heroSub}>Editor completo di totale e categorie</Text>
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.heroTitle} numberOfLines={1}>
-            {title}
-          </Text>
-          <Text style={styles.heroSub}>Regola totale e categorie del budget</Text>
+        <View style={styles.kpisRow}>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Allocato</Text>
+            <Text style={styles.kpiValue}>{stats.allocated.toFixed(2)} EUR</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Residuo</Text>
+            <Text style={styles.kpiValue}>{stats.remaining.toFixed(2)} EUR</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>Uso</Text>
+            <Text style={styles.kpiValue}>{stats.pct}%</Text>
+          </View>
         </View>
       </View>
 
@@ -46,35 +76,61 @@ export default function BudgetScreen({ navigation, route }) {
 function makeStyles(colors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg, padding: 12, gap: 10 },
-    hero: {
-      borderRadius: 18,
+    heroCard: {
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface,
+      paddingVertical: 12,
       paddingHorizontal: 12,
-      paddingVertical: 10,
+      position: "relative",
+      overflow: "hidden",
+    },
+    heroBubble: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent18,
+      backgroundColor: colors.accent12,
+    },
+    heroBubbleTop: { width: 100, height: 100, right: -28, top: -30 },
+    heroBubbleBottom: { width: 58, height: 58, right: 38, bottom: -24 },
+    heroTop: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
     },
     heroIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
+      width: 38,
+      height: 38,
+      borderRadius: 13,
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface2,
       alignItems: "center",
       justifyContent: "center",
     },
-    heroTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 15 },
+    heroTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 16 },
     heroSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 12 },
+    kpisRow: { marginTop: 10, flexDirection: "row", gap: 8 },
+    kpiBox: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      paddingVertical: 8,
+      paddingHorizontal: 8,
+    },
+    kpiLabel: { color: colors.textMuted, fontWeight: "800", fontSize: 11 },
+    kpiValue: { marginTop: 3, color: colors.textTitle, fontWeight: "900", fontSize: 12 },
     formWrap: {
       flex: 1,
-      borderRadius: 18,
+      borderRadius: 20,
       overflow: "hidden",
       borderWidth: 1,
-      borderColor: colors.white08,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
     },
   });
 }

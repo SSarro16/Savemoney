@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BudgetContext } from "../../store/budget-context";
 import { GlobalStyles } from "../../constants/styles";
@@ -18,10 +18,10 @@ const categoryIcons = {
 
 export default function BudgetOverviewScreen({ route, navigation }) {
   const budgetCtx = useContext(BudgetContext);
-  const { compactMode, highContrast } = useContext(CustomizationContext);
-
+  const { compactMode } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
-  const [mode, setMode] = useState("PIE"); // "PIE" | "ANALYTICS"
+  const styles = makeStyles(colors, compactMode);
+  const [mode, setMode] = useState("PIE");
 
   useEffect(() => {
     const budgetId = route?.params?.budgetId;
@@ -29,316 +29,197 @@ export default function BudgetOverviewScreen({ route, navigation }) {
     budgetCtx.selectBudget?.(budgetId).catch(() => {});
   }, [route?.params?.budgetId, budgetCtx]);
 
-  const currentBudgetTitle = useMemo(() => {
-    return String(
-      budgetCtx.activeBudgetMeta?.title ||
-        budgetCtx.activeBudgetMeta?.name ||
-        route?.params?.title ||
-        "Budget",
-    );
-  }, [
-    budgetCtx.activeBudgetMeta?.title,
-    budgetCtx.activeBudgetMeta?.name,
-    route?.params?.title,
-  ]);
+  const currentBudgetTitle = useMemo(
+    () =>
+      String(
+        budgetCtx.activeBudgetMeta?.title ||
+          budgetCtx.activeBudgetMeta?.name ||
+          route?.params?.title ||
+          "Budget",
+      ),
+    [
+      budgetCtx.activeBudgetMeta?.title,
+      budgetCtx.activeBudgetMeta?.name,
+      route?.params?.title,
+    ],
+  );
 
   useEffect(() => {
     if (route?.params?.title === currentBudgetTitle) return;
     navigation.setParams({ title: currentBudgetTitle });
   }, [navigation, route?.params?.title, currentBudgetTitle]);
 
-  const colorsPie = [
-    colors.accent500,
-    colors.primary500,
-    colors.primary700,
-    colors.gray500,
-  ];
+  const colorsPie = [colors.accent500, colors.primary500, colors.primary700, colors.gray500];
 
-  const { total, used, remaining, isOver, categories, categoryValues } =
-    useMemo(() => {
-      const t = Number(budgetCtx.total) || 0;
-      const cats = budgetCtx.categories || {};
-      const vals = Object.values(cats).map((v) => Number(v) || 0);
-      const u = vals.reduce((s, v) => s + v, 0);
-      const r = t - u;
+  const { total, used, remaining, isOver, categories, categoryValues } = useMemo(() => {
+    const t = Number(budgetCtx.total) || 0;
+    const cats = budgetCtx.categories || {};
+    const vals = Object.values(cats).map((v) => Number(v) || 0);
+    const u = vals.reduce((s, v) => s + v, 0);
+    const r = t - u;
+    return {
+      total: t,
+      used: u,
+      remaining: r,
+      isOver: r < 0,
+      categories: cats,
+      categoryValues: vals,
+    };
+  }, [budgetCtx.total, budgetCtx.categories]);
 
-      return {
-        total: t,
-        used: u,
-        remaining: r,
-        isOver: r < 0,
-        categories: cats,
-        categoryValues: vals,
-      };
-    }, [budgetCtx.total, budgetCtx.categories]);
   const usagePct = total > 0 ? Math.round((used / total) * 100) : 0;
   const usageRatio = total > 0 ? Math.min(1, Math.max(0, used / total)) : 0;
 
-  const border = highContrast ? colors.borderStrong : colors.border;
-  const pad = compactMode ? 12 : 16;
-
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{ padding: pad, paddingBottom: 24, gap: 12 }}
+      style={styles.screen}
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* HERO */}
-      <View
-        style={[
-          styles.heroCard,
-          {
-            backgroundColor: colors.surface2,
-            borderColor: border,
-            padding: pad,
-          },
-        ]}
-      >
+      <View style={styles.heroCard}>
+        <View style={[styles.heroBubble, styles.heroBubbleTop]} />
+        <View style={[styles.heroBubble, styles.heroBubbleBottom]} />
+
         <View style={styles.heroTop}>
-          <View
-            style={[
-              styles.heroIcon,
-              { backgroundColor: colors.surface, borderColor: border },
-            ]}
-          >
+          <View style={styles.heroIcon}>
             <Ionicons
               name={isOver ? "warning-outline" : "pie-chart-outline"}
-              size={18}
+              size={17}
               color={colors.textTitle}
             />
           </View>
-
           <View style={{ flex: 1 }}>
-            <Text style={[styles.heroTitle, { color: colors.textTitle }]}>
-              {currentBudgetTitle}
-            </Text>
-            <Text style={[styles.heroSub, { color: colors.textMuted }]}>
+            <Text style={styles.heroTitle}>{currentBudgetTitle}</Text>
+            <Text style={styles.heroSub}>
               {budgetCtx.formatEuro(used)} allocati su {budgetCtx.formatEuro(total)}
             </Text>
           </View>
-
           <View
             style={[
-              styles.pill,
+              styles.heroStatus,
               {
-                backgroundColor: isOver ? colors.danger20 : colors.accent16,
-                borderColor: isOver ? colors.danger30 : colors.accent28,
+                backgroundColor: isOver ? colors.danger20 : colors.accent18,
+                borderColor: isOver ? colors.danger30 : colors.accent35,
               },
             ]}
           >
-            <Text style={[styles.pillText, { color: colors.textTitle }]}>
-              {isOver ? "SFORATO" : "OK"}
-            </Text>
+            <Text style={styles.heroStatusText}>{isOver ? "SFORATO" : "OK"}</Text>
           </View>
         </View>
 
-        <Text
-          style={[
-            styles.remainingValue,
-            { color: isOver ? colors.textTitle : colors.textTitle },
-          ]}
-        >
-          {budgetCtx.formatEuro(remaining)}
-        </Text>
-        <Text style={[styles.remainingLabel, { color: colors.textMuted }]}>
-          Rimanenti
-        </Text>
+        <Text style={styles.heroRemaining}>{budgetCtx.formatEuro(remaining)}</Text>
+        <Text style={styles.heroRemainingLabel}>Residuo disponibile</Text>
 
-        <View style={[styles.meterTrack, { backgroundColor: colors.white10 }]}>
+        <View style={styles.heroProgressTrack}>
           <View
             style={[
-              styles.meterFill,
+              styles.heroProgressFill,
               {
-                width: `${Math.max(6, usageRatio * 100)}%`,
+                width: `${Math.max(4, usageRatio * 100)}%`,
                 backgroundColor: isOver ? colors.error500 : colors.accent500,
               },
             ]}
           />
         </View>
-        <Text style={[styles.meterText, { color: colors.textMuted }]}>
-          Utilizzato {usagePct}% del budget
-        </Text>
+        <Text style={styles.heroProgressText}>Utilizzato {usagePct}% del budget</Text>
       </View>
 
-      <View style={styles.statsRow}>
-        <View
-          style={[
-            styles.statCard,
-            { backgroundColor: colors.surface, borderColor: border },
-          ]}
-        >
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Allocati</Text>
-          <Text style={[styles.statValue, { color: colors.textTitle }]}>
-            {budgetCtx.formatEuro(used)}
-          </Text>
+      <View style={styles.kpiRow}>
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiLabel}>Allocati</Text>
+          <Text style={styles.kpiValue}>{budgetCtx.formatEuro(used)}</Text>
         </View>
-        <View
-          style={[
-            styles.statCard,
-            { backgroundColor: colors.surface, borderColor: border },
-          ]}
-        >
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Totale</Text>
-          <Text style={[styles.statValue, { color: colors.textTitle }]}>
-            {budgetCtx.formatEuro(total)}
-          </Text>
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiLabel}>Totale</Text>
+          <Text style={styles.kpiValue}>{budgetCtx.formatEuro(total)}</Text>
         </View>
-        <View
-          style={[
-            styles.statCard,
-            { backgroundColor: colors.surface, borderColor: border },
-          ]}
-        >
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Residuo</Text>
-          <Text
-            style={[
-              styles.statValue,
-              { color: isOver ? colors.error500 : colors.textTitle },
-            ]}
-          >
+        <View style={styles.kpiCard}>
+          <Text style={styles.kpiLabel}>Residuo</Text>
+          <Text style={[styles.kpiValue, isOver && { color: colors.error500 }]}>
             {budgetCtx.formatEuro(remaining)}
           </Text>
         </View>
       </View>
 
-      {/* Toggle */}
       <View style={styles.toggleRow}>
         <Pressable
           onPress={() => setMode("PIE")}
           style={({ pressed }) => [
             styles.toggleBtn,
-            {
-              backgroundColor: colors.surface,
-              borderColor: border,
-              paddingVertical: compactMode ? 10 : 12,
-            },
-            mode === "PIE" && {
-              backgroundColor: colors.accent18,
-              borderColor: colors.accent35,
-            },
-            pressed && styles.pressed,
+            mode === "PIE" && styles.toggleBtnActive,
+            pressed && { opacity: 0.88 },
           ]}
         >
           <Ionicons
             name="pie-chart-outline"
-            size={16}
-            color={mode === "PIE" ? colors.textOnAccent : colors.textMuted}
+            size={15}
+            color={mode === "PIE" ? colors.textTitle : colors.textMuted}
           />
-            <Text
-              style={[
-                styles.toggleText,
-                { color: mode === "PIE" ? colors.textOnAccent : colors.textBody },
-              ]}
-            >
-            Torta
-            </Text>
+          <Text
+            style={[
+              styles.toggleText,
+              { color: mode === "PIE" ? colors.textTitle : colors.textMuted },
+            ]}
+          >
+            Distribuzione
+          </Text>
         </Pressable>
 
         <Pressable
           onPress={() => setMode("ANALYTICS")}
           style={({ pressed }) => [
             styles.toggleBtn,
-            {
-              backgroundColor: colors.surface,
-              borderColor: border,
-              paddingVertical: compactMode ? 10 : 12,
-            },
-            mode === "ANALYTICS" && {
-              backgroundColor: colors.accent18,
-              borderColor: colors.accent35,
-            },
-            pressed && styles.pressed,
+            mode === "ANALYTICS" && styles.toggleBtnActive,
+            pressed && { opacity: 0.88 },
           ]}
         >
           <Ionicons
             name="analytics-outline"
-            size={16}
-            color={
-              mode === "ANALYTICS" ? colors.textOnAccent : colors.textMuted
-            }
+            size={15}
+            color={mode === "ANALYTICS" ? colors.textTitle : colors.textMuted}
           />
           <Text
             style={[
               styles.toggleText,
-              {
-                color:
-                  mode === "ANALYTICS" ? colors.textOnAccent : colors.textBody,
-              },
+              { color: mode === "ANALYTICS" ? colors.textTitle : colors.textMuted },
             ]}
           >
-            Analisi
+            Analytics
           </Text>
         </Pressable>
       </View>
 
-      {/* CONTENT */}
       {mode === "PIE" ? (
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: border,
-              padding: pad,
-            },
-          ]}
-        >
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-            Distribuzione
-          </Text>
-
-          <View style={styles.pieBox}>
-            <PieChart data={categoryValues} colorsPie={colorsPie} size={210} />
+        <View style={styles.chartCard}>
+          <Text style={styles.sectionLabel}>Composizione categorie</Text>
+          <View style={styles.chartWrap}>
+            <PieChart data={categoryValues} colorsPie={colorsPie} size={208} />
           </View>
 
-          <View style={{ marginTop: 8 }}>
-            {Object.entries(categories).map(([cat, val], idx) => {
-              const v = Number(val) || 0;
-              const pct = total > 0 ? (v / total) * 100 : 0;
-
+          <View style={styles.legendList}>
+            {Object.entries(categories).map(([cat, value], idx) => {
+              const amount = Number(value) || 0;
+              const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
               return (
-                <View
-                  key={cat}
-                  style={[styles.legendRow, { borderColor: border }]}
-                >
+                <View key={cat} style={styles.legendRow}>
                   <View
                     style={[
-                      styles.colorDot,
+                      styles.legendDot,
                       { backgroundColor: colorsPie[idx % colorsPie.length] },
                     ]}
                   />
-
-                  <View
-                    style={[
-                      styles.iconBadge,
-                      { backgroundColor: colors.surface2, borderColor: border },
-                    ]}
-                  >
+                  <View style={styles.legendIcon}>
                     <Ionicons
                       name={categoryIcons[cat] ?? "pricetag-outline"}
-                      size={18}
+                      size={15}
                       color={colors.textTitle}
                     />
                   </View>
-
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={[styles.legendTitle, { color: colors.textTitle }]}
-                    >
-                      {cat}
-                    </Text>
-                    <Text
-                      style={[styles.legendSub, { color: colors.textMuted }]}
-                    >
-                      {pct.toFixed(0)}% del totale
-                    </Text>
+                    <Text style={styles.legendTitle}>{cat}</Text>
+                    <Text style={styles.legendSub}>{pct}% del totale</Text>
                   </View>
-
-                  <Text
-                    style={[styles.legendValue, { color: colors.textBody }]}
-                  >
-                    {budgetCtx.formatEuro(v)}
-                  </Text>
+                  <Text style={styles.legendValue}>{budgetCtx.formatEuro(amount)}</Text>
                 </View>
               );
             })}
@@ -351,101 +232,162 @@ export default function BudgetOverviewScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  heroCard: { borderRadius: 18, borderWidth: 1 },
-  heroTop: { flexDirection: "row", alignItems: "center", gap: 12 },
-  heroIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroTitle: { fontWeight: "900", fontSize: 16 },
-  heroSub: { marginTop: 2, fontWeight: "800" },
-  pill: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  pillText: { fontWeight: "900", fontSize: 12, letterSpacing: 0.4 },
+function makeStyles(colors, compactMode) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: {
+      paddingHorizontal: compactMode ? 12 : 16,
+      paddingVertical: compactMode ? 10 : 14,
+      paddingBottom: 24,
+      gap: 12,
+    },
+    heroCard: {
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 12,
+      overflow: "hidden",
+      position: "relative",
+    },
+    heroBubble: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent18,
+      backgroundColor: colors.accent12,
+    },
+    heroBubbleTop: { width: 112, height: 112, right: -34, top: -34 },
+    heroBubbleBottom: { width: 62, height: 62, right: 42, bottom: -28 },
+    heroTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    heroIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    heroTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 16 },
+    heroSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 12 },
+    heroStatus: {
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingVertical: 5,
+      paddingHorizontal: 9,
+    },
+    heroStatusText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    heroRemaining: { marginTop: 11, color: colors.textTitle, fontWeight: "900", fontSize: 28 },
+    heroRemainingLabel: {
+      marginTop: 2,
+      color: colors.textMuted,
+      fontWeight: "800",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
+    },
+    heroProgressTrack: {
+      marginTop: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      height: 8,
+      overflow: "hidden",
+    },
+    heroProgressFill: { height: "100%", borderRadius: 999 },
+    heroProgressText: { marginTop: 6, color: colors.textMuted, fontWeight: "800", fontSize: 12 },
 
-  remainingValue: { marginTop: 12, fontWeight: "900", fontSize: 28 },
-  remainingLabel: {
-    marginTop: 4,
-    fontWeight: "900",
-    fontSize: 12,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  meterTrack: {
-    marginTop: 10,
-    height: 8,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  meterFill: { height: "100%", borderRadius: 999 },
-  meterText: { marginTop: 6, fontWeight: "800", fontSize: 12 },
+    kpiRow: { flexDirection: "row", gap: 8 },
+    kpiCard: {
+      flex: 1,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 10,
+      paddingHorizontal: 9,
+    },
+    kpiLabel: {
+      color: colors.textMuted,
+      fontWeight: "800",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.2,
+    },
+    kpiValue: { marginTop: 4, color: colors.textTitle, fontWeight: "900", fontSize: 12 },
 
-  statsRow: { flexDirection: "row", gap: 8 },
-  statCard: {
-    flex: 1,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-  statLabel: { fontWeight: "800", fontSize: 11 },
-  statValue: { marginTop: 4, fontWeight: "900", fontSize: 12 },
+    toggleRow: { flexDirection: "row", gap: 8 },
+    toggleBtn: {
+      flex: 1,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    toggleBtnActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    toggleText: { fontWeight: "900", fontSize: 12 },
 
-  toggleRow: { flexDirection: "row", gap: 10 },
-  toggleBtn: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  toggleText: { fontWeight: "900" },
-  pressed: { opacity: 0.88 },
-
-  card: { borderRadius: 18, borderWidth: 1 },
-  sectionTitle: {
-    fontWeight: "900",
-    fontSize: 12,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-
-  pieBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-  },
-
-  legendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-  },
-  colorDot: { width: 12, height: 12, borderRadius: 999 },
-  iconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  legendTitle: { fontWeight: "900" },
-  legendSub: { marginTop: 2, fontWeight: "800", fontSize: 12 },
-  legendValue: { fontWeight: "900" },
-});
+    chartCard: {
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+    },
+    sectionLabel: {
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
+    },
+    chartWrap: {
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 10,
+      marginBottom: 6,
+    },
+    legendList: { gap: 8 },
+    legendRow: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 9,
+      paddingHorizontal: 9,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    legendDot: { width: 10, height: 10, borderRadius: 999 },
+    legendIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white08,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    legendTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 12 },
+    legendSub: { marginTop: 1, color: colors.textMuted, fontWeight: "700", fontSize: 11 },
+    legendValue: { color: colors.textBody, fontWeight: "900", fontSize: 12 },
+  });
+}
