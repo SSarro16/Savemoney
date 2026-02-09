@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import React, { useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text } from "react-native";
 import { GlobalStyles } from "../../constants/styles";
 
 export default function CButton({
@@ -36,24 +36,44 @@ export default function CButton({
       : colors.white12;
 
   const textColor = isPrimary ? colors.textOnAccentStrong : colors.textTitle;
+  const pressAnim = useRef(new Animated.Value(0)).current;
+  const scale = pressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.975],
+  });
+
+  const animateTo = (value) => {
+    Animated.spring(pressAnim, {
+      toValue: value,
+      speed: 22,
+      bounciness: 0,
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.btn,
-        { backgroundColor: bg, borderColor: border },
-        pressed && !disabled && styles.pressed,
-        disabled && styles.disabled,
-      ]}
+      onPressIn={() => animateTo(1)}
+      onPressOut={() => animateTo(0)}
+      style={styles.outer}
     >
-      <Text style={[styles.text, { color: textColor }]}>{text}</Text>
+      <Animated.View
+        style={[
+          styles.btn,
+          { backgroundColor: bg, borderColor: border, transform: [{ scale }] },
+          disabled && styles.disabled,
+        ]}
+      >
+        <Text style={[styles.text, { color: textColor }]}>{text}</Text>
+      </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  outer: { borderRadius: 16 },
   btn: {
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -63,6 +83,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   text: { fontWeight: "900", fontSize: 13, letterSpacing: 0.2 },
-  pressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.55 },
 });
