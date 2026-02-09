@@ -1,12 +1,12 @@
 import axios from "axios";
+import { FIREBASE_WEB_API_KEY } from "./env";
 
-const API_KEY = "AIzaSyBFB8LBK_Nml38ZlhFpYWHAXU0Ag2yWKA4";
 const AUTH_TIMEOUT_MS = 15000;
 
-const SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`;
-const LOGIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`;
-const LEGACY_SIGNUP_URL = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=${API_KEY}`;
-const LEGACY_LOGIN_URL = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${API_KEY}`;
+const SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_WEB_API_KEY}`;
+const LOGIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_WEB_API_KEY}`;
+const LEGACY_SIGNUP_URL = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=${FIREBASE_WEB_API_KEY}`;
+const LEGACY_LOGIN_URL = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${FIREBASE_WEB_API_KEY}`;
 
 function mapFirebaseAuthError(code) {
   if (code === "EMAIL_NOT_FOUND") return "Email non trovata.";
@@ -60,7 +60,9 @@ function mapAuthResponse(data) {
 }
 
 async function authenticate(url, fallbackUrl, email, password) {
-  if (!API_KEY) throw new Error("API_KEY Firebase mancante.");
+  if (!FIREBASE_WEB_API_KEY) {
+    throw new Error("API key Firebase mancante. Imposta EXPO_PUBLIC_FIREBASE_WEB_API_KEY.");
+  }
 
   try {
     const payload = { email, password, returnSecureToken: true };
@@ -100,8 +102,12 @@ export function login(email, password) {
 }
 
 export async function refreshIdToken(refreshToken) {
+  if (!FIREBASE_WEB_API_KEY) {
+    throw new Error("API key Firebase mancante. Imposta EXPO_PUBLIC_FIREBASE_WEB_API_KEY.");
+  }
+
   const res = await axios.post(
-    `https://securetoken.googleapis.com/v1/token?key=${API_KEY}`,
+    `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_WEB_API_KEY}`,
     `grant_type=refresh_token&refresh_token=${refreshToken}`,
     {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },

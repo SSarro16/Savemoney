@@ -1,27 +1,16 @@
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { normalizeIcon } from "../expenses/expense-normalize";
-
-const BACKEND_URL =
-  "https://react-native-section10-d8ef4-default-rtdb.europe-west1.firebasedatabase.app";
+import {
+  dbUrl,
+  firebaseApi as api,
+  requestConfig,
+  safeId,
+  withLegacyFallback,
+} from "../firebase-rest";
 
 const LEGACY_KEY = "recurringItems_v1";
 const KEY_PREFIX = "recurringItems_v2_";
 const MIGRATION_DONE_KEY_PREFIX = "recurring_items_migrated_firebase_v1_";
-
-function safeId(value) {
-  return encodeURIComponent(String(value || "").trim());
-}
-
-function authQuery(token) {
-  return `auth=${encodeURIComponent(String(token || ""))}`;
-}
-
-function requestConfig(token) {
-  return {
-    timeout: 15000,
-  };
-}
 
 function keyForUser(userId) {
   const uid = userId ? String(userId) : "anon";
@@ -40,45 +29,16 @@ function ensureAuth(userId, token) {
 
 function recurringPath(userId, token, legacy = false) {
   if (legacy) {
-    return `${BACKEND_URL}/recurring/${safeId(userId)}.json?${authQuery(token)}`;
+    return dbUrl(`recurring/${safeId(userId)}`, token);
   }
-  return `${BACKEND_URL}/users/${safeId(userId)}/recurring.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/recurring`, token);
 }
 
 function recurringItemPath(userId, token, id, legacy = false) {
   if (legacy) {
-    return `${BACKEND_URL}/recurring/${safeId(userId)}/${safeId(id)}.json?${authQuery(token)}`;
+    return dbUrl(`recurring/${safeId(userId)}/${safeId(id)}`, token);
   }
-  return `${BACKEND_URL}/users/${safeId(userId)}/recurring/${safeId(id)}.json?${authQuery(token)}`;
-}
-
-function shouldTryLegacyPath(error) {
-  const status = Number(error?.response?.status || 0);
-  const rawError = error?.response?.data?.error;
-  const raw =
-    typeof rawError === "string"
-      ? rawError.toLowerCase()
-      : String(rawError?.message || "").toLowerCase();
-
-  if (status === 404 || status === 401 || status === 403) return true;
-  if (
-    raw.includes("permission_denied") ||
-    raw.includes("permission denied") ||
-    raw.includes("access denied") ||
-    raw.includes("unauthorized")
-  ) {
-    return true;
-  }
-  return false;
-}
-
-async function withLegacyFallback(runPrimary, runLegacy) {
-  try {
-    return await runPrimary();
-  } catch (error) {
-    if (!shouldTryLegacyPath(error)) throw error;
-    return await runLegacy();
-  }
+  return dbUrl(`users/${safeId(userId)}/recurring/${safeId(id)}`, token);
 }
 
 function normalizeRecurring(item, forcedId) {
@@ -128,8 +88,8 @@ function sortRecurring(list) {
 
 async function fetchRemoteRecurring(userId, token) {
   const response = await withLegacyFallback(
-    () => axios.get(recurringPath(userId, token), requestConfig(token)),
-    () => axios.get(recurringPath(userId, token, true), requestConfig(token)),
+    () => api.get(recurringPath(userId, token), requestConfig(token)),
+    () => api.get(recurringPath(userId, token, true), requestConfig(token)),
   );
   const data = response.data || {};
   const list = Object.keys(data).map((id) => normalizeRecurring(data[id], id));
@@ -164,11 +124,11 @@ async function migrateIfNeeded(userId, token) {
 
           return withLegacyFallback(
             () =>
-              axios.put(recurringItemPath(userId, token, clean.id), clean, {
+              api.put(recurringItemPath(userId, token, clean.id), clean, {
                 ...requestConfig(token),
               }),
             () =>
-              axios.put(recurringItemPath(userId, token, clean.id, true), clean, {
+              api.put(recurringItemPath(userId, token, clean.id, true), clean, {
                 ...requestConfig(token),
               }),
           );
@@ -198,8 +158,8 @@ export async function saveRecurringItems(userId, token, list) {
   }, {});
 
   await withLegacyFallback(
-    () => axios.put(recurringPath(userId, token), map, requestConfig(token)),
-    () => axios.put(recurringPath(userId, token, true), map, requestConfig(token)),
+    () => api.put(recurringPath(userId, token), map, requestConfig(token)),
+    () => api.put(recurringPath(userId, token, true), map, requestConfig(token)),
   );
   return safe;
 }
@@ -216,11 +176,11 @@ export async function upsertRecurringItem(userId, token, item) {
   if (existingId) {
     await withLegacyFallback(
       () =>
-        axios.put(recurringItemPath(userId, token, existingId), clean, {
+        api.put(recurringItemPath(userId, token, existingId), clean, {
           ...requestConfig(token),
         }),
       () =>
-        axios.put(recurringItemPath(userId, token, existingId, true), clean, {
+        api.put(recurringItemPath(userId, token, existingId, true), clean, {
           ...requestConfig(token),
         }),
     );
@@ -229,11 +189,11 @@ export async function upsertRecurringItem(userId, token, item) {
 
   const response = await withLegacyFallback(
     () =>
-      axios.post(recurringPath(userId, token), clean, {
+      api.post(recurringPath(userId, token), clean, {
         ...requestConfig(token),
       }),
     () =>
-      axios.post(recurringPath(userId, token, true), clean, {
+      api.post(recurringPath(userId, token, true), clean, {
         ...requestConfig(token),
       }),
   );
@@ -242,13 +202,13 @@ export async function upsertRecurringItem(userId, token, item) {
   if (newId) {
     await withLegacyFallback(
       () =>
-        axios.patch(
+        api.patch(
           recurringItemPath(userId, token, newId),
           { id: newId },
           requestConfig(token),
         ),
       () =>
-        axios.patch(
+        api.patch(
           recurringItemPath(userId, token, newId, true),
           { id: newId },
           requestConfig(token),
@@ -263,9 +223,9 @@ export async function removeRecurringItem(userId, token, id) {
   await migrateIfNeeded(userId, token);
 
   await withLegacyFallback(
-    () => axios.delete(recurringItemPath(userId, token, id), requestConfig(token)),
+    () => api.delete(recurringItemPath(userId, token, id), requestConfig(token)),
     () =>
-      axios.delete(recurringItemPath(userId, token, id, true), requestConfig(token)),
+      api.delete(recurringItemPath(userId, token, id, true), requestConfig(token)),
   );
   return await fetchRemoteRecurring(userId, token);
 }

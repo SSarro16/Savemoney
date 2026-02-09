@@ -1,24 +1,7 @@
-import axios from "axios";
-
-const BACKEND_URL =
-  "https://react-native-section10-d8ef4-default-rtdb.europe-west1.firebasedatabase.app";
-
-function safeId(value) {
-  return encodeURIComponent(String(value || "").trim());
-}
-
-function authQuery(token) {
-  return `auth=${encodeURIComponent(String(token || ""))}`;
-}
-
-function requestConfig(token) {
-  return {
-    timeout: 15000,
-  };
-}
+import { dbUrl, firebaseApi as api, safeId, requestConfig } from "./firebase-rest";
 
 function profileUrl(userId, token) {
-  return `${BACKEND_URL}/users/${safeId(userId)}/profile.json?${authQuery(token)}`;
+  return dbUrl(`users/${safeId(userId)}/profile`, token);
 }
 
 function normalizeProfile(raw) {
@@ -38,7 +21,7 @@ export async function fetchUserProfile(userId, token) {
   if (!userId || !token) return null;
 
   try {
-    const response = await axios.get(profileUrl(userId, token), requestConfig(token));
+    const response = await api.get(profileUrl(userId, token), requestConfig(token));
     if (!response?.data) return null;
     return normalizeProfile(response.data);
   } catch {
@@ -50,10 +33,14 @@ export async function saveUserProfile(userId, token, profile) {
   if (!userId || !token) return null;
 
   const payload = normalizeProfile(profile);
-  await axios.patch(profileUrl(userId, token), {
-    ...payload,
-    updatedAt: new Date().toISOString(),
-  }, requestConfig(token));
+  await api.patch(
+    profileUrl(userId, token),
+    {
+      ...payload,
+      updatedAt: new Date().toISOString(),
+    },
+    requestConfig(token),
+  );
 
   return payload;
 }
