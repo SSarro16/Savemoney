@@ -191,7 +191,13 @@ function BudgetContextProvider({ children }) {
   const saveBudget = useCallback(
     async (patch = null) => {
       ensureAuth();
-      if (!budgetId) throw new Error("Nessun budget selezionato.");
+      const patchTitle = String(patch?.title || "").trim();
+      let targetBudgetId = budgetId;
+      if (!targetBudgetId) {
+        const created = await createNewBudget(patchTitle || "Budget 1");
+        targetBudgetId = created?.id || null;
+      }
+      if (!targetBudgetId) throw new Error("Nessun budget selezionato.");
 
       const nextTotal =
         patch && Object.prototype.hasOwnProperty.call(patch, "total")
@@ -213,15 +219,14 @@ function BudgetContextProvider({ children }) {
           ? Number(patch.cashBalance) || 0
           : Number(cashBalance) || 0;
 
-      const patchTitle = String(patch?.title || "").trim();
-      let meta = budgets.find((b) => b.id === budgetId) || null;
+      let meta = budgets.find((b) => b.id === targetBudgetId) || null;
       if (!meta) {
-        meta = await withAuthRetry((t) => getBudgetById(userId, t, budgetId));
+        meta = await withAuthRetry((t) => getBudgetById(userId, t, targetBudgetId));
       }
 
       const next = await withAuthRetry((t) =>
         upsertBudget(userId, t, {
-          id: budgetId,
+          id: targetBudgetId,
           title: patchTitle || String(meta?.title || meta?.name || "Nuovo budget"),
           total: nextTotal,
           categories: nextCategories,
@@ -233,6 +238,7 @@ function BudgetContextProvider({ children }) {
       setCategories(nextCategories);
       setCashBalanceState(nextCashBalance);
       setBudgets(next);
+      setBudgetId(targetBudgetId);
     },
     [
       ensureAuth,
@@ -243,6 +249,7 @@ function BudgetContextProvider({ children }) {
       categoriesCtx?.categories,
       cashBalance,
       budgets,
+      createNewBudget,
       withAuthRetry,
     ],
   );
