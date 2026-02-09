@@ -654,6 +654,7 @@ function AuthStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
@@ -682,6 +683,8 @@ function ExpensesTabsClassic() {
 
   return (
     <BottomTabs.Navigator
+      lazy={false}
+      detachInactiveScreens={false}
       tabBar={(props) => (
         <FloatingGlassTabBar
           {...props}
@@ -692,6 +695,7 @@ function ExpensesTabsClassic() {
       )}
       screenOptions={{
         ...screenHeader(colors, textScale),
+        freezeOnBlur: false,
         animation: "shift",
         transitionSpec: TransitionSpecs.ShiftSpec,
         sceneStyleInterpolator: SceneStyleInterpolators.forShift,
@@ -770,6 +774,7 @@ function BudgetStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
@@ -829,6 +834,7 @@ function RecurringStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
@@ -860,6 +866,7 @@ function PaymentsStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
@@ -901,6 +908,7 @@ function SettingsStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
@@ -962,6 +970,7 @@ function GoalsStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
@@ -991,9 +1000,12 @@ function AppDrawer() {
 
   return (
     <Drawer.Navigator
+      lazy={false}
+      detachInactiveScreens={false}
       drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
         headerShown: false,
+        freezeOnBlur: false,
         drawerType: Platform.OS === "ios" ? "slide" : "front",
         overlayColor: "rgba(0,0,0,0.34)",
         drawerHideStatusBarOnOpen: Platform.OS === "ios",
@@ -1133,6 +1145,7 @@ function AuthenticatedStack() {
       screenOptions={{
         ...screenHeader(colors, textScale),
         ...screenContent(colors),
+        freezeOnBlur: false,
       }}
     >
       <Stack.Screen
