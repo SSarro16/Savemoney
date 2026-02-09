@@ -60,6 +60,7 @@ import ExpenseCategoriesContextProvider from "./store/expense-categories-context
 import GoalsContextProvider from "./store/goals-context";
 
 import IconButton from "./components/ui/IconButton";
+import AppLogo from "./components/ui/AppLogo";
 import AppErrorBoundary from "./components/ui/AppErrorBoundary";
 import { TAB_BAR_ICONS } from "./constants/navigation-icons";
 import { initMonitoring } from "./util/monitoring";
@@ -462,16 +463,6 @@ function makeDrawerStyles(colors, textScale) {
       right: 36,
       bottom: -26,
     },
-    brandIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 15,
-      borderWidth: 1,
-      borderColor: colors.white12,
-      backgroundColor: colors.surface2,
-      alignItems: "center",
-      justifyContent: "center",
-    },
     brandTitle: {
       color: colors.textTitle,
       fontWeight: "900",
@@ -620,9 +611,7 @@ function AppDrawerContent(props) {
       >
         <View style={[styles.brandOrb, styles.brandOrbTop]} />
         <View style={[styles.brandOrb, styles.brandOrbBottom]} />
-        <View style={styles.brandIcon}>
-          <Ionicons name="wallet-outline" size={20} color={colors.accent500} />
-        </View>
+        <AppLogo size={44} />
         <View style={{ flex: 1 }}>
           <Text style={styles.brandTitle}>Savemoney</Text>
           <Text style={styles.brandSub} numberOfLines={1}>
