@@ -1,5 +1,13 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
@@ -11,11 +19,32 @@ import { ExpenseCategoriesContext } from "../../store/expense-categories-context
 import { getRecurringItems } from "../../util/recurring/recurring-storage";
 import { isDueTodayOrPast } from "../../util/recurring/recurring-utils";
 import { exportCurrentMonthCsv } from "../../util/reports/monthly-csv-export";
+import { saveUserProfile } from "../../util/profile-http";
 import AppLogo from "../../components/ui/AppLogo";
+import Button from "../../components/ui/CButton";
+import CustomDatePicker from "../../components/ui/DatePicker";
 
 function isAuthHttpError(error) {
   const status = Number(error?.response?.status || 0);
   return status === 401 || status === 403;
+}
+
+function safeDate(value) {
+  const parsed = value ? new Date(value) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return new Date(2000, 0, 1);
+  return parsed;
+}
+
+function formatDate(value) {
+  const parsed = value ? new Date(value) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return "Non impostata";
+  return parsed.toLocaleDateString("it-IT");
+}
+
+function genderLabel(value) {
+  if (value === "MALE") return "Maschio";
+  if (value === "FEMALE") return "Femmina";
+  return "Non impostato";
 }
 
 function MetricCard({ icon, title, value, subtitle, colors, styles }) {
@@ -78,6 +107,34 @@ function InfoRow({ icon, label, value, styles, colors }) {
   );
 }
 
+function GenderSelector({ value, onChange, styles }) {
+  return (
+    <View style={styles.genderRow}>
+      {[
+        { key: "MALE", label: "Maschio" },
+        { key: "FEMALE", label: "Femmina" },
+      ].map((option) => {
+        const active = value === option.key;
+        return (
+          <Pressable
+            key={option.key}
+            onPress={() => onChange(active ? "" : option.key)}
+            style={({ pressed }) => [
+              styles.genderChip,
+              active && styles.genderChipActive,
+              pressed && { opacity: 0.88 },
+            ]}
+          >
+            <Text style={[styles.genderChipText, active && styles.genderChipTextActive]}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function UserProfileScreen({ navigation }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
@@ -91,11 +148,28 @@ export default function UserProfileScreen({ navigation }) {
   const [recurringCount, setRecurringCount] = useState(0);
   const [dueRecurringCount, setDueRecurringCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [draftFirstName, setDraftFirstName] = useState("");
+  const [draftLastName, setDraftLastName] = useState("");
+  const [draftGender, setDraftGender] = useState("");
+  const [draftDob, setDraftDob] = useState(new Date(2000, 0, 1));
   const refreshSessionRef = useRef(authCtx.refreshSession);
 
   useEffect(() => {
     refreshSessionRef.current = authCtx.refreshSession;
   }, [authCtx.refreshSession]);
+
+  useEffect(() => {
+    setDraftFirstName(String(authCtx.profile?.firstName || ""));
+    setDraftLastName(String(authCtx.profile?.lastName || ""));
+    setDraftGender(String(authCtx.profile?.gender || ""));
+    setDraftDob(safeDate(authCtx.profile?.dateOfBirth));
+  }, [
+    authCtx.profile?.firstName,
+    authCtx.profile?.lastName,
+    authCtx.profile?.gender,
+    authCtx.profile?.dateOfBirth,
+  ]);
 
   const loadRecurringSummary = useCallback(async () => {
     if (!authCtx.userId || !authCtx.token) return;
@@ -163,6 +237,30 @@ export default function UserProfileScreen({ navigation }) {
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, 10);
 
+  const profileDirty = useMemo(() => {
+    const currentFirst = String(authCtx.profile?.firstName || "").trim();
+    const currentLast = String(authCtx.profile?.lastName || "").trim();
+    const currentGender = String(authCtx.profile?.gender || "").trim().toUpperCase();
+    const currentDob = safeDate(authCtx.profile?.dateOfBirth).toISOString().slice(0, 10);
+    const draftDobKey = safeDate(draftDob).toISOString().slice(0, 10);
+
+    return (
+      currentFirst !== String(draftFirstName || "").trim() ||
+      currentLast !== String(draftLastName || "").trim() ||
+      currentGender !== String(draftGender || "").trim().toUpperCase() ||
+      currentDob !== draftDobKey
+    );
+  }, [
+    authCtx.profile?.firstName,
+    authCtx.profile?.lastName,
+    authCtx.profile?.gender,
+    authCtx.profile?.dateOfBirth,
+    draftFirstName,
+    draftLastName,
+    draftGender,
+    draftDob,
+  ]);
+
   const handleExport = async () => {
     if (isExporting) return;
     setIsExporting(true);
@@ -176,6 +274,42 @@ export default function UserProfileScreen({ navigation }) {
       Alert.alert("Export fallito", "Impossibile esportare il report CSV.");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (isSavingProfile || !authCtx.userId || !authCtx.token) return;
+    setIsSavingProfile(true);
+
+    const payload = {
+      firstName: String(draftFirstName || "").trim(),
+      lastName: String(draftLastName || "").trim(),
+      gender: String(draftGender || "").trim().toUpperCase(),
+      dateOfBirth: safeDate(draftDob).toISOString(),
+      email: authCtx.profile?.email || "",
+    };
+
+    try {
+      const saved = await saveUserProfile(authCtx.userId, authCtx.token, payload);
+      await authCtx.setProfile(saved || payload);
+      Alert.alert("Profilo aggiornato", "I dati account sono stati salvati.");
+    } catch (error) {
+      if (isAuthHttpError(error)) {
+        const refreshed = await refreshSessionRef.current?.(true).catch(() => null);
+        if (refreshed?.token) {
+          try {
+            const saved = await saveUserProfile(authCtx.userId, refreshed.token, payload);
+            await authCtx.setProfile(saved || payload);
+            Alert.alert("Profilo aggiornato", "I dati account sono stati salvati.");
+            return;
+          } catch {
+            // handled below
+          }
+        }
+      }
+      Alert.alert("Aggiornamento fallito", "Impossibile salvare il profilo.");
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -215,12 +349,69 @@ export default function UserProfileScreen({ navigation }) {
           colors={colors}
         />
         <InfoRow
+          icon="male-female-outline"
+          label="Genere"
+          value={genderLabel(authCtx.gender)}
+          styles={styles}
+          colors={colors}
+        />
+        <InfoRow
+          icon="calendar-outline"
+          label="Nascita"
+          value={formatDate(authCtx.dateOfBirth)}
+          styles={styles}
+          colors={colors}
+        />
+        <InfoRow
           icon="pricetags-outline"
           label="Categorie"
           value={String((categoriesCtx.categories || []).length)}
           styles={styles}
           colors={colors}
         />
+      </View>
+
+      <Text style={styles.sectionTitle}>Account settings</Text>
+      <View style={styles.editorCard}>
+        <View style={styles.editorRow}>
+          <View style={styles.editorField}>
+            <Text style={styles.editorLabel}>Nome</Text>
+            <TextInput
+              value={draftFirstName}
+              onChangeText={setDraftFirstName}
+              placeholder="Nome"
+              placeholderTextColor={colors.textFaint}
+              style={styles.editorInput}
+            />
+          </View>
+          <View style={styles.editorField}>
+            <Text style={styles.editorLabel}>Cognome</Text>
+            <TextInput
+              value={draftLastName}
+              onChangeText={setDraftLastName}
+              placeholder="Cognome"
+              placeholderTextColor={colors.textFaint}
+              style={styles.editorInput}
+            />
+          </View>
+        </View>
+
+        <Text style={styles.editorLabel}>Genere</Text>
+        <GenderSelector value={draftGender} onChange={setDraftGender} styles={styles} />
+
+        <View style={{ marginTop: 10 }}>
+          <CustomDatePicker
+            label="Data di nascita"
+            value={safeDate(draftDob)}
+            onChange={setDraftDob}
+          />
+        </View>
+
+        <View style={styles.editorSaveWrap}>
+          <Button onPress={handleSaveProfile} disabled={!profileDirty || isSavingProfile}>
+            {isSavingProfile ? "Salvataggio..." : "Salva dati account"}
+          </Button>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>Panoramica</Text>
@@ -341,7 +532,6 @@ function makeStyles(colors) {
     },
     heroTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 17 },
     heroSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 12 },
-
     infoCard: {
       borderRadius: 18,
       borderWidth: 1,
@@ -369,7 +559,6 @@ function makeStyles(colors) {
       fontWeight: "900",
       fontSize: 12,
     },
-
     sectionTitle: {
       color: colors.textMuted,
       fontWeight: "900",
@@ -378,6 +567,60 @@ function makeStyles(colors) {
       textTransform: "uppercase",
       marginBottom: 8,
       marginTop: 2,
+    },
+    editorCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 12,
+      marginBottom: 12,
+    },
+    editorRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    editorField: { flex: 1 },
+    editorLabel: {
+      color: colors.textMuted,
+      fontWeight: "800",
+      fontSize: 11,
+      marginBottom: 5,
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
+    },
+    editorInput: {
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.surface2,
+      color: colors.textTitle,
+      fontWeight: "800",
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      marginBottom: 10,
+    },
+    genderRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    genderChip: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.surface2,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    genderChipActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    genderChipText: { color: colors.textMuted, fontWeight: "900", fontSize: 12 },
+    genderChipTextActive: { color: colors.textTitle },
+    editorSaveWrap: {
+      marginTop: 12,
     },
     metricGrid: {
       flexDirection: "row",

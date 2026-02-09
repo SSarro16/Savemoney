@@ -34,6 +34,9 @@ function LoginScreen() {
           firstName: profile?.firstName || "",
           lastName: profile?.lastName || "",
           email: profile?.email || email,
+          gender: profile?.gender || "",
+          dateOfBirth: profile?.dateOfBirth || "",
+          updatedAt: profile?.updatedAt || new Date().toISOString(),
         },
       });
     } catch (error) {

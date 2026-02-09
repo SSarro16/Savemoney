@@ -534,6 +534,8 @@ function AppDrawerContent(props) {
     .map((item) => String(item || "").trim())
     .filter(Boolean)
     .join(" ");
+  const drawerDisplayName = fullName || "Utente Savemoney";
+  const drawerSubtitle = authCtx.profile?.email || "Controllo spese personale";
 
   function renderDrawerItem(routeName) {
     const route = state.routes.find((item) => item.name === routeName);
@@ -613,9 +615,11 @@ function AppDrawerContent(props) {
         <View style={[styles.brandOrb, styles.brandOrbBottom]} />
         <AppLogo size={44} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.brandTitle}>Savemoney</Text>
+          <Text style={styles.brandTitle} numberOfLines={1}>
+            {drawerDisplayName}
+          </Text>
           <Text style={styles.brandSub} numberOfLines={1}>
-            {fullName || "Controllo spese personale"}
+            {drawerSubtitle}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
