@@ -365,6 +365,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
   }, [recurring]);
 
   const noRecurring = (recurring || []).length === 0;
+  const hasRecurringBlocks = noRecurring || dueSubs.length > 0 || habits.length > 0;
 
   const goToRecurring = () => {
     close();
@@ -759,7 +760,9 @@ export default function QuickAddExpenseScreen({ navigation }) {
             </View>
           )}
 
-          <View style={[styles.section, styles.sectionCard]}>
+          {hasRecurringBlocks ? <View style={styles.sectionSpacer} /> : null}
+
+          <View style={[styles.section, styles.sectionCard, styles.modelsSection]}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
                 Modelli
               </Text>
@@ -850,6 +853,7 @@ function makeStyles(colors) {
     },
     pressed: { opacity: 0.85 },
     section: { marginBottom: 14 },
+    sectionSpacer: { height: 10 },
     sectionCard: {
       borderRadius: 16,
       borderWidth: 1,
@@ -857,6 +861,7 @@ function makeStyles(colors) {
       backgroundColor: colors.white06,
       padding: 10,
     },
+    modelsSection: { marginTop: 2 },
     statsRow: {
       flexDirection: "row",
       gap: 8,
