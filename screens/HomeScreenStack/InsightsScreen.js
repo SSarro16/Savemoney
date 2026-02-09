@@ -1,6 +1,7 @@
 import React, { useContext, useMemo, useState } from "react";
-import { Alert, View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { ExpensesContext } from "../../store/expenses-context";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
@@ -23,9 +24,9 @@ function endOfDay(date) {
   d.setHours(23, 59, 59, 999);
   return d;
 }
+
 function getPresetRange(preset) {
   const today = endOfDay(new Date());
-
   if (preset === PRESETS.DAYS_7) {
     const d = new Date(today);
     d.setDate(d.getDate() - 7);
@@ -46,32 +47,23 @@ function getPresetRange(preset) {
 
 function euro(n) {
   const v = Number(n || 0);
-  return `${v.toFixed(2)} €`;
+  return `${v.toFixed(2)} EUR`;
 }
 
-function Chip({ label, active, onPress }) {
-  const colors = GlobalStyles.colors;
-
+function PresetPill({ label, active, onPress, styles, colors }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.chip,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-        },
-        active && {
-          backgroundColor: colors.accent18,
-          borderColor: colors.accent35,
-        },
-        pressed && { opacity: 0.9 },
+        styles.presetPill,
+        active && styles.presetPillActive,
+        pressed && { opacity: 0.88 },
       ]}
     >
       <Text
         style={[
-          styles.chipText,
-          { color: active ? colors.textTitle : colors.textBody },
+          styles.presetPillText,
+          { color: active ? colors.textTitle : colors.textMuted },
         ]}
       >
         {label}
@@ -80,35 +72,33 @@ function Chip({ label, active, onPress }) {
   );
 }
 
-function Card({ title, icon, children, compactMode, highContrast }) {
-  const colors = GlobalStyles.colors;
-
+function MetricTile({ icon, label, value, sub, styles, colors }) {
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: highContrast ? colors.borderStrong : colors.border,
-          padding: compactMode ? 12 : 14,
-        },
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <View
-          style={[
-            styles.cardIcon,
-            {
-              backgroundColor: colors.surface2,
-              borderColor: highContrast ? colors.borderStrong : colors.border,
-            },
-          ]}
-        >
-          <Ionicons name={icon} size={16} color={colors.textTitle} />
-        </View>
-        <Text style={[styles.cardTitle, { color: colors.textTitle }]}>
-          {title}
+    <View style={styles.metricTile}>
+      <View style={styles.metricIcon}>
+        <Ionicons name={icon} size={14} color={colors.textTitle} />
+      </View>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue} numberOfLines={1}>
+        {value}
+      </Text>
+      {!!sub ? (
+        <Text style={styles.metricSub} numberOfLines={1}>
+          {sub}
         </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function SectionCard({ title, icon, children, styles, colors }) {
+  return (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={14} color={colors.textTitle} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       {children}
     </View>
@@ -117,8 +107,9 @@ function Card({ title, icon, children, compactMode, highContrast }) {
 
 export default function InsightsScreen() {
   const expensesCtx = useContext(ExpensesContext);
-  const { compactMode, highContrast } = useContext(CustomizationContext);
+  const { compactMode } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
+  const styles = makeStyles(colors, compactMode);
 
   const [preset, setPreset] = useState(PRESETS.DAYS_7);
   const [exporting, setExporting] = useState(false);
@@ -128,6 +119,7 @@ export default function InsightsScreen() {
     const { from, to } = range;
     return (expensesCtx.expenses || []).filter((e) => {
       const d = e.date instanceof Date ? e.date : new Date(e.date);
+      if (!d || Number.isNaN(d.getTime())) return false;
       if (from && d < from) return false;
       if (to && d > to) return false;
       return true;
@@ -142,7 +134,7 @@ export default function InsightsScreen() {
   const byCategory = useMemo(() => {
     const map = new Map();
     for (const e of filtered) {
-      const c = String(e.category || "Senza categoria");
+      const c = String(e.category || "Senza categoria").trim() || "Senza categoria";
       map.set(c, (map.get(c) || 0) + Number(e.amount || 0));
     }
     return Array.from(map.entries())
@@ -157,7 +149,6 @@ export default function InsightsScreen() {
         e?.methodType === "CARD" || e?.payMethod === "CARD" ? "CARD" : "CASH";
       map.set(type, (map.get(type) || 0) + Number(e.amount || 0));
     }
-
     return [
       { key: "CARD", label: "Carta", amount: map.get("CARD") || 0 },
       { key: "CASH", label: "Contanti", amount: map.get("CASH") || 0 },
@@ -178,7 +169,13 @@ export default function InsightsScreen() {
       .slice(0, 5);
   }, [filtered]);
 
-  const maxCat = byCategory[0]?.amount || 0;
+  const topCategory = byCategory[0] || null;
+  const averageSpend = filtered.length ? total / filtered.length : 0;
+  const maxCategory = topCategory?.amount || 0;
+  const cardAmount = byMethod.find((x) => x.key === "CARD")?.amount || 0;
+  const cashAmount = byMethod.find((x) => x.key === "CASH")?.amount || 0;
+  const cardPct = total > 0 ? Math.round((cardAmount / total) * 100) : 0;
+  const cashPct = total > 0 ? Math.round((cashAmount / total) * 100) : 0;
 
   const handleExportMonthlyCsv = async () => {
     if (exporting) return;
@@ -199,318 +196,358 @@ export default function InsightsScreen() {
 
   return (
     <ScrollView
-      style={[styles.root, { backgroundColor: colors.bg }]}
-      contentContainerStyle={[
-        styles.content,
-        { padding: compactMode ? 12 : 16 },
-      ]}
+      style={styles.root}
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View
-        style={[
-          styles.hero,
-          {
-            backgroundColor: colors.surface,
-            borderColor: highContrast ? colors.borderStrong : colors.border,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.heroBlob,
-            styles.heroBlobTop,
-            { backgroundColor: colors.accent12, borderColor: colors.accent18 },
-          ]}
-        />
-        <View
-          style={[
-            styles.heroBlob,
-            styles.heroBlobBottom,
-            { backgroundColor: colors.accent12, borderColor: colors.accent18 },
-          ]}
-        />
-
-        <View style={styles.heroTop}>
-          <View
-            style={[
-              styles.heroIcon,
-              {
-                backgroundColor: colors.accent18,
-                borderColor: colors.accent35,
-              },
-            ]}
-          >
-            <Ionicons name="analytics-outline" size={16} color={colors.textTitle} />
+      <View style={styles.heroCard}>
+        <View style={[styles.heroBubble, styles.heroBubbleA]} />
+        <View style={[styles.heroBubble, styles.heroBubbleB]} />
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="trending-up-outline" size={17} color={colors.textTitle} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.heroTitle, { color: colors.textTitle }]}>
-              Analisi
-            </Text>
-            <Text style={[styles.heroSub, { color: colors.textMuted }]}>
-              Capisci dove stai spendendo davvero.
-            </Text>
+            <Text style={styles.heroTitle}>Insights</Text>
+            <Text style={styles.heroSub}>Pattern reali, non solo numeri.</Text>
           </View>
           <Pressable
             onPress={handleExportMonthlyCsv}
-            style={({ pressed }) => [
-              styles.exportBtn,
-              {
-                backgroundColor: colors.surface2,
-                borderColor: highContrast ? colors.borderStrong : colors.border,
-              },
-              pressed && { opacity: 0.88 },
-            ]}
+            style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.88 }]}
           >
             <Ionicons name="download-outline" size={14} color={colors.textTitle} />
-            <Text style={[styles.exportBtnText, { color: colors.textTitle }]}>
+            <Text style={styles.exportBtnText}>
               {exporting ? "Export..." : "CSV mese"}
             </Text>
           </Pressable>
         </View>
 
-        <View style={styles.chipsRow}>
-          <Chip
+        <View style={styles.presetRow}>
+          <PresetPill
             label="7 giorni"
             active={preset === PRESETS.DAYS_7}
             onPress={() => setPreset(PRESETS.DAYS_7)}
+            styles={styles}
+            colors={colors}
           />
-          <Chip
+          <PresetPill
             label="1 mese"
             active={preset === PRESETS.MONTH_1}
             onPress={() => setPreset(PRESETS.MONTH_1)}
+            styles={styles}
+            colors={colors}
           />
-          <Chip
+          <PresetPill
             label="1 anno"
             active={preset === PRESETS.YEAR_1}
             onPress={() => setPreset(PRESETS.YEAR_1)}
+            styles={styles}
+            colors={colors}
           />
         </View>
       </View>
 
-      <View
-        style={[
-          styles.totalCard,
-          {
-            backgroundColor: colors.surface2,
-            borderColor: highContrast ? colors.borderStrong : colors.border,
-            padding: compactMode ? 12 : 16,
-          },
-        ]}
-      >
-        <Text style={[styles.totalLabel, { color: colors.textMuted }]}>
-          Totale periodo
-        </Text>
-        <Text style={[styles.totalValue, { color: colors.textTitle }]}>
-          {euro(total)}
-        </Text>
-        <Text style={[styles.totalHint, { color: colors.textFaint }]}>
-          {filtered.length} spese nel periodo selezionato
-        </Text>
+      <View style={styles.metricsGrid}>
+        <MetricTile
+          icon="wallet-outline"
+          label="Totale periodo"
+          value={euro(total)}
+          sub={`${filtered.length} movimenti`}
+          styles={styles}
+          colors={colors}
+        />
+        <MetricTile
+          icon="stats-chart-outline"
+          label="Scontrino medio"
+          value={euro(averageSpend)}
+          sub={filtered.length ? "Per movimento" : "Nessun dato"}
+          styles={styles}
+          colors={colors}
+        />
+        <MetricTile
+          icon="ribbon-outline"
+          label="Top categoria"
+          value={topCategory?.category || "Nessuna"}
+          sub={topCategory ? euro(topCategory.amount) : ""}
+          styles={styles}
+          colors={colors}
+        />
       </View>
 
-      <Card
-        title="Per categoria"
-        icon="pricetags-outline"
-        compactMode={compactMode}
-        highContrast={highContrast}
-      >
+      <SectionCard title="Distribuzione categorie" icon="pricetags-outline" styles={styles} colors={colors}>
         {!byCategory.length ? (
-          <Text style={[styles.emptyText, { color: colors.textFaint }]}>
-            Nessun dato in questo periodo.
-          </Text>
+          <Text style={styles.emptyText}>Nessuna categoria nel periodo selezionato.</Text>
         ) : (
-          <View style={{ gap: 10, marginTop: 10 }}>
-            {byCategory.map((x) => {
-              const pct =
-                maxCat > 0 ? Math.round((x.amount / maxCat) * 100) : 0;
+          <View style={styles.rankWrap}>
+            {byCategory.slice(0, 6).map((item, index) => {
+              const relative = maxCategory > 0 ? Math.max(6, Math.round((item.amount / maxCategory) * 100)) : 0;
+              const share = total > 0 ? Math.round((item.amount / total) * 100) : 0;
               return (
-                <View key={x.category} style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.rowTop}>
-                      <Text
-                        style={[styles.rowTitle, { color: colors.textTitle }]}
-                        numberOfLines={1}
-                      >
-                        {x.category}
-                      </Text>
-                      <Text
-                        style={[styles.rowValue, { color: colors.accent500 }]}
-                      >
-                        {euro(x.amount)}
-                      </Text>
+                <View key={item.category} style={styles.rankRow}>
+                  <View style={styles.rankHead}>
+                    <View style={styles.rankBadge}>
+                      <Text style={styles.rankBadgeText}>{index + 1}</Text>
                     </View>
-
-                    <View
-                      style={[
-                        styles.barTrack,
-                        {
-                          backgroundColor: colors.surface2,
-                          borderColor: highContrast
-                            ? colors.borderStrong
-                            : colors.border,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.barFill,
-                          {
-                            width: `${pct}%`,
-                            backgroundColor: colors.accent500,
-                          },
-                        ]}
-                      />
-                    </View>
+                    <Text style={styles.rankLabel} numberOfLines={1}>
+                      {item.category}
+                    </Text>
+                    <Text style={styles.rankValue}>{euro(item.amount)}</Text>
                   </View>
+                  <View style={styles.rankTrack}>
+                    <View style={[styles.rankFill, { width: `${relative}%` }]} />
+                  </View>
+                  <Text style={styles.rankShare}>{share}% del totale</Text>
                 </View>
               );
             })}
           </View>
         )}
-      </Card>
+      </SectionCard>
 
-      <Card
-        title="Top spese"
-        icon="trophy-outline"
-        compactMode={compactMode}
-        highContrast={highContrast}
-      >
+      <SectionCard title="Metodi di pagamento" icon="card-outline" styles={styles} colors={colors}>
+        <View style={styles.methodGrid}>
+          <View style={styles.methodCard}>
+            <Text style={styles.methodLabel}>Carta</Text>
+            <Text style={styles.methodValue}>{euro(cardAmount)}</Text>
+            <Text style={styles.methodSub}>{cardPct}% del totale</Text>
+          </View>
+          <View style={styles.methodCard}>
+            <Text style={styles.methodLabel}>Contanti</Text>
+            <Text style={styles.methodValue}>{euro(cashAmount)}</Text>
+            <Text style={styles.methodSub}>{cashPct}% del totale</Text>
+          </View>
+        </View>
+      </SectionCard>
+
+      <SectionCard title="Voci piu impattanti" icon="trophy-outline" styles={styles} colors={colors}>
         {!topDescriptions.length ? (
-          <Text style={[styles.emptyText, { color: colors.textFaint }]}>
-            Nessun dato in questo periodo.
-          </Text>
+          <Text style={styles.emptyText}>Nessuna descrizione disponibile in questo range.</Text>
         ) : (
-          <View style={{ gap: 10, marginTop: 10 }}>
-            {topDescriptions.map((x) => (
-              <View key={x.desc} style={styles.topRow}>
-                <Text
-                  style={[styles.topText, { color: colors.textTitle }]}
-                  numberOfLines={1}
-                >
-                  {x.desc}
+          <View style={styles.topList}>
+            {topDescriptions.map((item, index) => (
+              <View key={item.desc} style={styles.topRow}>
+                <View style={styles.topRank}>
+                  <Text style={styles.topRankText}>{index + 1}</Text>
+                </View>
+                <Text style={styles.topDesc} numberOfLines={1}>
+                  {item.desc}
                 </Text>
-                <Text style={[styles.topValue, { color: colors.textBody }]}>
-                  {euro(x.amount)}
-                </Text>
+                <Text style={styles.topAmount}>{euro(item.amount)}</Text>
               </View>
             ))}
           </View>
         )}
-      </Card>
-
-      <Card
-        title="Per metodo"
-        icon="card-outline"
-        compactMode={compactMode}
-        highContrast={highContrast}
-      >
-        <View style={{ gap: 10, marginTop: 10 }}>
-          {byMethod.map((x) => (
-            <View key={x.key} style={styles.topRow}>
-              <Text style={[styles.topText, { color: colors.textTitle }]}>
-                {x.label}
-              </Text>
-              <Text style={[styles.topValue, { color: colors.textBody }]}>
-                {euro(x.amount)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-
-      <View style={{ height: 24 }} />
+      </SectionCard>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { paddingBottom: 28 },
+function makeStyles(colors, compactMode) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    content: {
+      padding: compactMode ? 12 : 16,
+      paddingBottom: 28,
+      gap: 12,
+    },
 
-  hero: {
-    marginBottom: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 12,
-    overflow: "hidden",
-  },
-  heroBlob: {
-    position: "absolute",
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  heroBlobTop: { width: 100, height: 100, right: -24, top: -26 },
-  heroBlobBottom: { width: 62, height: 62, right: 34, bottom: -24 },
-  heroTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-  heroIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroTitle: { fontWeight: "900", fontSize: 22 },
-  heroSub: { marginTop: 4, fontWeight: "700" },
-  exportBtn: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  exportBtnText: { fontWeight: "900", fontSize: 11 },
+    heroCard: {
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 12,
+      overflow: "hidden",
+      position: "relative",
+    },
+    heroBubble: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent18,
+      backgroundColor: colors.accent12,
+    },
+    heroBubbleA: { width: 126, height: 126, right: -32, top: -34 },
+    heroBubbleB: { width: 66, height: 66, right: 42, bottom: -28 },
+    heroTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    heroIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    heroTitle: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 19,
+    },
+    heroSub: {
+      marginTop: 2,
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 12,
+    },
+    exportBtn: {
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.surface2,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    exportBtnText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    presetRow: {
+      marginTop: 12,
+      flexDirection: "row",
+      gap: 8,
+    },
+    presetPill: {
+      flex: 1,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      paddingVertical: 9,
+      alignItems: "center",
+    },
+    presetPillActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    presetPillText: { fontWeight: "900", fontSize: 12 },
 
-  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
-  chip: {
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  chipText: { fontWeight: "900", fontSize: 12 },
+    metricsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+    },
+    metricTile: {
+      width: "48%",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+    },
+    metricIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 7,
+    },
+    metricLabel: { color: colors.textMuted, fontWeight: "900", fontSize: 11 },
+    metricValue: { marginTop: 2, color: colors.textTitle, fontWeight: "900", fontSize: 14 },
+    metricSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 11 },
 
-  totalCard: { borderRadius: 18, borderWidth: 1, marginBottom: 12 },
-  totalLabel: { fontWeight: "900", fontSize: 12 },
-  totalValue: { marginTop: 6, fontWeight: "900", fontSize: 26 },
-  totalHint: { marginTop: 6, fontWeight: "700" },
+    sectionCard: {
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 10,
+    },
+    sectionIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    sectionTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 14 },
+    emptyText: { color: colors.textFaint, fontWeight: "700", fontSize: 12 },
 
-  card: { borderRadius: 18, borderWidth: 1, marginTop: 12 },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  cardIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardTitle: { fontWeight: "900", fontSize: 14 },
+    rankWrap: { gap: 10 },
+    rankRow: { gap: 5 },
+    rankHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+    rankBadge: {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    rankBadgeText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    rankLabel: { flex: 1, color: colors.textTitle, fontWeight: "800", fontSize: 12 },
+    rankValue: { color: colors.accent500, fontWeight: "900", fontSize: 12 },
+    rankTrack: {
+      height: 9,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      overflow: "hidden",
+    },
+    rankFill: { height: "100%", borderRadius: 999, backgroundColor: colors.accent500 },
+    rankShare: { color: colors.textMuted, fontWeight: "700", fontSize: 11 },
 
-  emptyText: { marginTop: 10, fontWeight: "700" },
+    methodGrid: { flexDirection: "row", gap: 10 },
+    methodCard: {
+      flex: 1,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+    },
+    methodLabel: { color: colors.textMuted, fontWeight: "800", fontSize: 12 },
+    methodValue: { marginTop: 3, color: colors.textTitle, fontWeight: "900", fontSize: 14 },
+    methodSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 11 },
 
-  row: { flexDirection: "row", alignItems: "center" },
-  rowTop: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
-  rowTitle: { fontWeight: "900", flex: 1 },
-  rowValue: { fontWeight: "900" },
-
-  barTrack: {
-    marginTop: 8,
-    height: 10,
-    borderRadius: 999,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  barFill: { height: "100%", borderRadius: 999 },
-
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  topText: { fontWeight: "800", flex: 1 },
-  topValue: { fontWeight: "900" },
-});
+    topList: { gap: 8 },
+    topRow: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 9,
+      paddingHorizontal: 9,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    topRank: {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.white08,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    topRankText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    topDesc: { flex: 1, color: colors.textTitle, fontWeight: "800", fontSize: 12 },
+    topAmount: { color: colors.textBody, fontWeight: "900", fontSize: 12 },
+  });
+}
