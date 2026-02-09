@@ -111,6 +111,7 @@ function makeStyles(colors) {
       flexGrow: 1,
       justifyContent: "center",
       padding: 16,
+      paddingVertical: 20,
     },
   });
 }
