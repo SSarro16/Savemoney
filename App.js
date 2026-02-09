@@ -15,7 +15,7 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { useContext, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Animated,
@@ -60,6 +60,7 @@ import IconButton from "./components/ui/IconButton";
 import AppErrorBoundary from "./components/ui/AppErrorBoundary";
 import { TAB_BAR_ICONS } from "./constants/navigation-icons";
 import { initMonitoring } from "./util/monitoring";
+import { configureNotifications } from "./util/notifications/setup";
 
 const Stack = createStackNavigator();
 const BottomTabs = createBottomTabNavigator();
@@ -986,6 +987,10 @@ function Navigation() {
 }
 
 export default function App() {
+  useEffect(() => {
+    configureNotifications().catch(() => {});
+  }, []);
+
   return (
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>

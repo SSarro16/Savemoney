@@ -55,11 +55,15 @@ export default function SettingsScreen({ navigation }) {
     reduceMotion,
     showCategoryTag,
     showPaymentTag,
+    recurringRemindersEnabled,
+    recurringReminderHour,
     setCompactMode,
     setLargeText,
     setReduceMotion,
     setShowCategoryTag,
     setShowPaymentTag,
+    setRecurringRemindersEnabled,
+    setRecurringReminderHour,
   } = useContext(CustomizationContext);
 
   const goDrawerScreen = (screenName) => {
@@ -72,6 +76,8 @@ export default function SettingsScreen({ navigation }) {
     setReduceMotion(false);
     setShowCategoryTag(true);
     setShowPaymentTag(true);
+    setRecurringRemindersEnabled(false);
+    setRecurringReminderHour(9);
   };
 
   return (
@@ -182,6 +188,55 @@ export default function SettingsScreen({ navigation }) {
         colors={colors}
         styles={styles}
       />
+      <ToggleRow
+        title="Promemoria ricorrenze"
+        subtitle="Notifiche locali per abbonamenti e abitudini"
+        value={recurringRemindersEnabled}
+        onChange={setRecurringRemindersEnabled}
+        colors={colors}
+        styles={styles}
+      />
+
+      {recurringRemindersEnabled ? (
+        <View
+          style={[
+            styles.toggleRow,
+            { backgroundColor: colors.surface, borderColor: colors.white10 },
+          ]}
+        >
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={styles.toggleTitle}>Ora promemoria</Text>
+            <Text style={styles.toggleSub}>
+              Le notifiche vengono inviate alle {String(recurringReminderHour).padStart(2, "0")}:00
+            </Text>
+          </View>
+          <View style={styles.hourControls}>
+            <Pressable
+              onPress={() => setRecurringReminderHour(Math.max(0, recurringReminderHour - 1))}
+              style={({ pressed }) => [
+                styles.hourBtn,
+                { borderColor: colors.white10, backgroundColor: colors.surface2 },
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <Ionicons name="remove" size={16} color={colors.textTitle} />
+            </Pressable>
+            <Text style={styles.hourText}>
+              {String(recurringReminderHour).padStart(2, "0")}
+            </Text>
+            <Pressable
+              onPress={() => setRecurringReminderHour(Math.min(23, recurringReminderHour + 1))}
+              style={({ pressed }) => [
+                styles.hourBtn,
+                { borderColor: colors.white10, backgroundColor: colors.surface2 },
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <Ionicons name="add" size={16} color={colors.textTitle} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       <Pressable
         onPress={resetQuickPrefs}
@@ -288,6 +343,25 @@ function makeStyles(colors) {
       fontWeight: "700",
       marginTop: 2,
       fontSize: 12,
+    },
+    hourControls: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    hourBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    hourText: {
+      minWidth: 32,
+      color: colors.textTitle,
+      fontWeight: "900",
+      textAlign: "center",
     },
     resetBtn: {
       marginTop: 6,
