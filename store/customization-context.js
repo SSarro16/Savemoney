@@ -18,6 +18,9 @@ const DEFAULT_PREFS = {
   showPaymentTag: true,
   recurringRemindersEnabled: false,
   recurringReminderHour: 9,
+  budgetAlertsEnabled: false,
+  budgetAlertAt80: true,
+  budgetAlertAt100: true,
 };
 
 export const CustomizationContext = createContext({
@@ -31,6 +34,9 @@ export const CustomizationContext = createContext({
   setShowPaymentTag: async (_v) => {},
   setRecurringRemindersEnabled: async (_v) => {},
   setRecurringReminderHour: async (_v) => {},
+  setBudgetAlertsEnabled: async (_v) => {},
+  setBudgetAlertAt80: async (_v) => {},
+  setBudgetAlertAt100: async (_v) => {},
   ready: false,
   version: 0,
 });
@@ -63,6 +69,11 @@ export default function CustomizationContextProvider({ children }) {
             recurringReminderHour: Number.isFinite(Number(parsed.recurringReminderHour))
               ? Math.min(23, Math.max(0, Number(parsed.recurringReminderHour)))
               : 9,
+            budgetAlertsEnabled: !!parsed.budgetAlertsEnabled,
+            budgetAlertAt80:
+              parsed.budgetAlertAt80 !== undefined ? !!parsed.budgetAlertAt80 : true,
+            budgetAlertAt100:
+              parsed.budgetAlertAt100 !== undefined ? !!parsed.budgetAlertAt100 : true,
           });
         }
       } catch {
@@ -148,6 +159,30 @@ export default function CustomizationContextProvider({ children }) {
     [prefs, persist],
   );
 
+  const setBudgetAlertsEnabled = useCallback(
+    async (v) => {
+      const next = { ...prefs, budgetAlertsEnabled: !!v };
+      await persist(next);
+    },
+    [prefs, persist],
+  );
+
+  const setBudgetAlertAt80 = useCallback(
+    async (v) => {
+      const next = { ...prefs, budgetAlertAt80: !!v };
+      await persist(next);
+    },
+    [prefs, persist],
+  );
+
+  const setBudgetAlertAt100 = useCallback(
+    async (v) => {
+      const next = { ...prefs, budgetAlertAt100: !!v };
+      await persist(next);
+    },
+    [prefs, persist],
+  );
+
   const value = useMemo(
     () => ({
       ...prefs,
@@ -160,6 +195,9 @@ export default function CustomizationContextProvider({ children }) {
       setShowPaymentTag,
       setRecurringRemindersEnabled,
       setRecurringReminderHour,
+      setBudgetAlertsEnabled,
+      setBudgetAlertAt80,
+      setBudgetAlertAt100,
       ready,
       version,
     }),
@@ -173,6 +211,9 @@ export default function CustomizationContextProvider({ children }) {
       setShowPaymentTag,
       setRecurringRemindersEnabled,
       setRecurringReminderHour,
+      setBudgetAlertsEnabled,
+      setBudgetAlertAt80,
+      setBudgetAlertAt100,
       ready,
       version,
     ],
