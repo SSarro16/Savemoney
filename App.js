@@ -57,11 +57,15 @@ import PaymentContextProvider from "./store/payment-context";
 import ExpenseCategoriesContextProvider from "./store/expense-categories-context";
 
 import IconButton from "./components/ui/IconButton";
+import AppErrorBoundary from "./components/ui/AppErrorBoundary";
 import { TAB_BAR_ICONS } from "./constants/navigation-icons";
+import { initMonitoring } from "./util/monitoring";
 
 const Stack = createStackNavigator();
 const BottomTabs = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
+
+initMonitoring();
 
 function useNavTheme(colors, themeVersion) {
   return useMemo(() => {
@@ -983,22 +987,24 @@ function Navigation() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthContextProvider>
-        <ThemeContextProvider>
-          <CustomizationContextProvider>
-            <ExpenseCategoriesContextProvider>
-              <BudgetContextProvider>
-                <PaymentContextProvider>
-                  <ExpensesContextProvider>
-                    <Navigation />
-                  </ExpensesContextProvider>
-                </PaymentContextProvider>
-              </BudgetContextProvider>
-            </ExpenseCategoriesContextProvider>
-          </CustomizationContextProvider>
-        </ThemeContextProvider>
-      </AuthContextProvider>
-    </GestureHandlerRootView>
+    <AppErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AuthContextProvider>
+          <ThemeContextProvider>
+            <CustomizationContextProvider>
+              <ExpenseCategoriesContextProvider>
+                <BudgetContextProvider>
+                  <PaymentContextProvider>
+                    <ExpensesContextProvider>
+                      <Navigation />
+                    </ExpensesContextProvider>
+                  </PaymentContextProvider>
+                </BudgetContextProvider>
+              </ExpenseCategoriesContextProvider>
+            </CustomizationContextProvider>
+          </ThemeContextProvider>
+        </AuthContextProvider>
+      </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }

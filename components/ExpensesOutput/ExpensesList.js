@@ -9,6 +9,7 @@ import ExpenseItem from "./ExpenseItem";
 import { GlobalStyles } from "../../constants/styles";
 import { ExpensesContext } from "../../store/expenses-context";
 import { CustomizationContext } from "../../store/customization-context";
+import { logger } from "../../util/logger";
 
 function ExpensesList({ expenses }) {
   const expensesCtx = useContext(ExpensesContext);
@@ -76,7 +77,7 @@ function ExpensesList({ expenses }) {
           duration: 160,
           useNativeDriver: true,
         }).start();
-        console.log("Swipe delete error:", e?.message || e);
+        logger.warn("Swipe delete error", e);
       }
     },
     [expensesCtx, closeOpenSwipe],

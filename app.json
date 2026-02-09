@@ -31,7 +31,8 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

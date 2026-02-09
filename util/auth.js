@@ -1,5 +1,6 @@
 import axios from "axios";
 import { FIREBASE_WEB_API_KEY } from "./env";
+import { logger } from "./logger";
 
 const AUTH_TIMEOUT_MS = 15000;
 
@@ -88,7 +89,7 @@ async function authenticate(url, fallbackUrl, email, password) {
         "Richiesta Auth non autorizzata. Controlla configurazione Firebase.",
       );
     }
-    console.log("AUTH ERROR:", code || err.message);
+    logger.warn("AUTH ERROR", code || err.message);
     throw new Error(mapFirebaseAuthError(code));
   }
 }
