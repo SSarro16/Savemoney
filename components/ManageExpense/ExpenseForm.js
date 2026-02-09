@@ -104,12 +104,30 @@ const ExpenseForm = forwardRef(function ExpenseForm(
   const amountNumber = useMemo(() => parseAmount(inputs.amount), [inputs.amount]);
   const amountOk = !inputs.amount || (!Number.isNaN(amountNumber) && amountNumber > 0);
   const descOk = inputs.description.trim().length > 0;
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState({
+    amount: false,
+    description: false,
+  });
+  const showAmountError = (submitted || touched.amount) && !amountOk;
+  const showDescriptionError = (submitted || touched.description) && !descOk;
 
   function inputChangedHandler(key, value) {
     setInputs((cur) => ({ ...cur, [key]: value }));
   }
 
+  function markTouched(key) {
+    setTouched((cur) => ({ ...cur, [key]: true }));
+  }
+
   function submitHandler() {
+    setSubmitted(true);
+    setTouched((cur) => ({
+      ...cur,
+      amount: true,
+      description: true,
+    }));
+
     const payMethod = safePayMethod(inputs.payMethod);
     const methodId =
       payMethod === PAYMENT_METHOD.CARD
@@ -358,7 +376,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
               style={[
                 styles.field,
                 { borderColor: amountBorderColor },
-                !amountOk && styles.fieldError,
+                showAmountError && styles.fieldError,
               ]}
             >
               <Ionicons name="cash-outline" size={18} color={iconColor} />
@@ -384,13 +402,14 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                     duration: 160,
                     useNativeDriver: false,
                   }).start();
+                  markTouched("amount");
                 }}
                 returnKeyType="done"
               />
               <Text style={styles.suffix}>EUR</Text>
             </Animated.View>
 
-            {!amountOk && <Text style={styles.errorText}>Inserisci un importo valido.</Text>}
+            {showAmountError && <Text style={styles.errorText}>Inserisci un importo valido.</Text>}
           </View>
 
           <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
@@ -404,8 +423,8 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         </View>
 
         <View style={styles.sectionLast}>
-          <Text style={styles.label}>Descrizione</Text>
-          <View style={[styles.fieldTextArea, !descOk && styles.fieldError]}>
+          <Text style={styles.label}>Titolo della spesa</Text>
+          <View style={[styles.fieldTextArea, showDescriptionError && styles.fieldError]}>
             <Ionicons
               name="chatbubble-ellipses-outline"
               size={18}
@@ -420,9 +439,12 @@ const ExpenseForm = forwardRef(function ExpenseForm(
               editable={!disabled}
               placeholder="Es. spesa supermercato"
               placeholderTextColor={placeholder}
+              onBlur={() => markTouched("description")}
             />
           </View>
-          {!descOk && <Text style={styles.hintText}>Aggiungi una descrizione breve.</Text>}
+          {showDescriptionError ? (
+            <Text style={styles.hintText}>Inserisci cosa hai comprato.</Text>
+          ) : null}
         </View>
 
         <View style={styles.buttons}>
