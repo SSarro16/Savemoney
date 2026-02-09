@@ -22,7 +22,14 @@ function SignupScreen() {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 
-  async function signupHandler({ email, password, firstName, lastName }) {
+  async function signupHandler({
+    email,
+    password,
+    firstName,
+    lastName,
+    gender,
+    dateOfBirth,
+  }) {
     setIsAuthenticating(true);
 
     try {
@@ -30,7 +37,7 @@ function SignupScreen() {
 
       await authCtx.authenticate({
         ...response,
-        profile: { firstName, lastName, email },
+        profile: { firstName, lastName, email, gender, dateOfBirth },
       });
 
       try {
@@ -38,6 +45,8 @@ function SignupScreen() {
           firstName,
           lastName,
           email,
+          gender,
+          dateOfBirth,
         });
       } catch (profileError) {
         logger.warn("saveUserProfile signup warning", profileError);
