@@ -5,15 +5,12 @@ import Button from "../ui/CButton";
 import Input from "./Input";
 import CustomDatePicker from "../ui/DatePicker";
 import { GlobalStyles } from "../../constants/styles";
-
-const GENDER_OPTIONS = [
-  { key: "MALE", label: "Maschio" },
-  { key: "FEMALE", label: "Femmina" },
-];
+import { useTranslation } from "../../store/language-context";
 
 function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
 
   const [enteredFirstName, setEnteredFirstName] = useState("");
   const [enteredLastName, setEnteredLastName] = useState("");
@@ -85,11 +82,13 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
 
   return (
     <View>
-      <Text style={styles.title}>{isLogin ? "Credenziali" : "Crea le credenziali"}</Text>
+      <Text style={styles.title}>
+        {isLogin ? t("auth.credentials") : t("auth.createCredentials")}
+      </Text>
       <Text style={styles.subtitle}>
         {isLogin
-          ? "Inserisci email e password per continuare."
-          : "Form minimale: anagrafica opzionale + password e data di nascita."}
+          ? t("auth.credentialsHint")
+          : t("auth.createCredentialsHint")}
       </Text>
 
       {!isLogin && (
@@ -98,14 +97,14 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
             <View style={styles.rowItem}>
               <Input
                 ref={firstNameRef}
-                label="Nome (opzionale)"
+                label={t("auth.firstNameOptional")}
                 icon="person-outline"
                 onUpdateValue={(t) => {
                   setEnteredFirstName(t);
                   onFieldChange?.("firstName");
                 }}
                 value={enteredFirstName}
-                placeholder="Mario"
+                placeholder={t("auth.firstNamePlaceholder")}
                 returnKeyType="next"
                 autoFocus
                 blurOnSubmit={false}
@@ -115,14 +114,14 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
             <View style={styles.rowItem}>
               <Input
                 ref={lastNameRef}
-                label="Cognome (opzionale)"
+                label={t("auth.lastNameOptional")}
                 icon="person-circle-outline"
                 onUpdateValue={(t) => {
                   setEnteredLastName(t);
                   onFieldChange?.("lastName");
                 }}
                 value={enteredLastName}
-                placeholder="Rossi"
+                placeholder={t("auth.lastNamePlaceholder")}
                 returnKeyType="next"
                 blurOnSubmit={false}
                 onSubmitEditing={() => emailRef.current?.focus()}
@@ -131,9 +130,12 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
           </View>
 
           <View style={styles.genderWrap}>
-            <Text style={styles.genderLabel}>Genere (opzionale)</Text>
+            <Text style={styles.genderLabel}>{t("auth.genderOptional")}</Text>
             <View style={styles.genderRow}>
-              {GENDER_OPTIONS.map((option) => {
+              {[
+                { key: "MALE", label: t("auth.male") },
+                { key: "FEMALE", label: t("auth.female") },
+              ].map((option) => {
                 const active = enteredGender === option.key;
                 return (
                   <Pressable
@@ -158,7 +160,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
 
       <Input
         ref={emailRef}
-        label="Email"
+        label={t("auth.email")}
         icon="mail-outline"
         onUpdateValue={(t) => {
           setEnteredEmail(t);
@@ -167,7 +169,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
         value={enteredEmail}
         keyboardType="email-address"
         isInvalid={emailIsInvalid}
-        placeholder="nome@email.com"
+        placeholder={t("auth.emailPlaceholder")}
         returnKeyType="next"
         autoFocus={isLogin}
         blurOnSubmit={false}
@@ -176,7 +178,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
 
       <Input
         ref={passwordRef}
-        label="Password"
+        label={t("auth.password")}
         icon="lock-closed-outline"
         onUpdateValue={(t) => {
           setEnteredPassword(t);
@@ -185,7 +187,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
         secure
         value={enteredPassword}
         isInvalid={passwordIsInvalid}
-        placeholder="Minimo 6 caratteri"
+        placeholder={t("auth.passwordMinLength")}
         returnKeyType={isLogin ? "done" : "next"}
         blurOnSubmit={isLogin}
         showToggleSecure
@@ -198,7 +200,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
       {!isLogin && (
         <Input
           ref={confirmPasswordRef}
-          label="Conferma Password"
+          label={t("auth.confirmPassword")}
           icon="lock-open-outline"
           onUpdateValue={(t) => {
             setEnteredConfirmPassword(t);
@@ -207,7 +209,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
           secure
           value={enteredConfirmPassword}
           isInvalid={confirmPasswordIsInvalid}
-          placeholder="Ripeti password"
+          placeholder={t("auth.repeatPassword")}
           returnKeyType="done"
           blurOnSubmit
           showToggleSecure
@@ -218,7 +220,7 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
       {!isLogin && (
         <View style={styles.dateWrap}>
           <CustomDatePicker
-            label="Data di nascita"
+            label={t("auth.birthDate")}
             value={enteredDateOfBirth}
             onChange={(date) => {
               setEnteredDateOfBirth(date);
@@ -226,14 +228,14 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
             }}
           />
           {dateOfBirthIsInvalid ? (
-            <Text style={styles.errorText}>Seleziona una data di nascita valida.</Text>
+            <Text style={styles.errorText}>{t("auth.invalidBirthDate")}</Text>
           ) : null}
         </View>
       )}
 
       <View style={styles.buttons}>
         <Button onPress={submitHandler}>
-          {isLogin ? "Accedi" : "Crea account"}
+          {isLogin ? t("auth.loginAction") : t("auth.signupAction")}
         </Button>
       </View>
     </View>

@@ -15,9 +15,10 @@ import { GlobalStyles } from "../../constants/styles";
 import { GoalsContext } from "../../store/goals-context";
 import { CustomizationContext } from "../../store/customization-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
+import { useTranslation } from "../../store/language-context";
 
-function euro(value) {
-  return `${Number(value || 0).toFixed(2)} EUR`;
+function formatMoney(value, currencyCode) {
+  return `${Number(value || 0).toFixed(2)} ${currencyCode}`;
 }
 
 function toPercent(goal) {
@@ -44,6 +45,8 @@ export default function GoalsScreen() {
   const { compactMode } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors, compactMode);
+  const { t } = useTranslation();
+  const currencyCode = t("common.currencyCode");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,11 +100,11 @@ export default function GoalsScreen() {
     const notes = String(draft.notes || "").trim();
 
     if (!title) {
-      Alert.alert("Titolo mancante", "Inserisci un nome obiettivo.");
+      Alert.alert(t("goals.missingTitle"), t("goals.missingTitleMessage"));
       return;
     }
     if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
-      Alert.alert("Target non valido", "Inserisci un importo target maggiore di zero.");
+      Alert.alert(t("goals.invalidTarget"), t("goals.invalidTargetMessage"));
       return;
     }
 
@@ -116,23 +119,23 @@ export default function GoalsScreen() {
       });
       setModalOpen(false);
     } catch {
-      Alert.alert("Errore", "Impossibile salvare l'obiettivo.");
+      Alert.alert(t("common.error"), t("goals.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const deleteGoal = (goal) => {
-    Alert.alert("Eliminare obiettivo?", goal?.title || "Obiettivo", [
-      { text: "Annulla", style: "cancel" },
+    Alert.alert(t("goals.deleteTitle"), goal?.title || t("goals.goalFallback"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Elimina",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           try {
             await goalsCtx.deleteGoal(goal?.id);
           } catch {
-            Alert.alert("Errore", "Impossibile eliminare l'obiettivo.");
+            Alert.alert(t("common.error"), t("goals.deleteFailed"));
           }
         },
       },
@@ -140,7 +143,7 @@ export default function GoalsScreen() {
   };
 
   if (!goalsCtx.initialized && goalsCtx.loading) {
-    return <LoadingOverlay message="Caricamento obiettivi..." />;
+    return <LoadingOverlay message={t("goals.loading")} />;
   }
 
   return (
@@ -158,9 +161,12 @@ export default function GoalsScreen() {
               <Ionicons name="rocket-outline" size={17} color={colors.textTitle} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroTitle}>Savings Missions</Text>
+              <Text style={styles.heroTitle}>{t("goals.heroTitle")}</Text>
               <Text style={styles.heroSub}>
-                {euro(goalsCtx.totalSaved)} su {euro(goalsCtx.totalTarget)}
+                {t("goals.savedOnTarget", {
+                  saved: formatMoney(goalsCtx.totalSaved, currencyCode),
+                  target: formatMoney(goalsCtx.totalTarget, currencyCode),
+                })}
               </Text>
             </View>
             <Pressable
@@ -168,7 +174,7 @@ export default function GoalsScreen() {
               style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.88 }]}
             >
               <Ionicons name="add" size={16} color={colors.textOnAccentStrong} />
-              <Text style={styles.addBtnText}>Nuovo</Text>
+              <Text style={styles.addBtnText}>{t("goals.newAction")}</Text>
             </Pressable>
           </View>
 
@@ -182,28 +188,30 @@ export default function GoalsScreen() {
               ]}
             />
           </View>
-          <Text style={styles.mainProgressText}>{completion}% completamento totale</Text>
+          <Text style={styles.mainProgressText}>
+            {t("goals.totalCompletion", { percent: completion })}
+          </Text>
         </View>
 
         <View style={styles.statsRow}>
           <StatTile
             icon="albums-outline"
-            label="Obiettivi"
+            label={t("goals.goalsCount")}
             value={String((goalsCtx.goals || []).length)}
             styles={styles}
             colors={colors}
           />
           <StatTile
             icon="pulse-outline"
-            label="Media progressi"
+            label={t("goals.averageProgress")}
             value={`${averageProgress}%`}
             styles={styles}
             colors={colors}
           />
           <StatTile
             icon="hourglass-outline"
-            label="Da risparmiare"
-            value={euro(remaining)}
+            label={t("goals.remainingToSave")}
+            value={formatMoney(remaining, currencyCode)}
             styles={styles}
             colors={colors}
           />
@@ -214,15 +222,15 @@ export default function GoalsScreen() {
             <View style={styles.emptyStateIcon}>
               <Ionicons name="flag-outline" size={20} color={colors.textTitle} />
             </View>
-            <Text style={styles.emptyStateTitle}>Nessun obiettivo attivo</Text>
+            <Text style={styles.emptyStateTitle}>{t("goals.noGoalsTitle")}</Text>
             <Text style={styles.emptyStateSub}>
-              Imposta un target concreto e monitora il progresso in tempo reale.
+              {t("goals.noGoalsSub")}
             </Text>
             <Pressable
               onPress={openCreate}
               style={({ pressed }) => [styles.emptyStateCta, pressed && { opacity: 0.88 }]}
             >
-              <Text style={styles.emptyStateCtaText}>Crea il primo obiettivo</Text>
+              <Text style={styles.emptyStateCtaText}>{t("goals.createFirstGoal")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -240,7 +248,7 @@ export default function GoalsScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.goalTitle}>{goal.title}</Text>
                       <Text style={styles.goalAmounts}>
-                        {euro(goal.currentAmount)} / {euro(goal.targetAmount)}
+                        {formatMoney(goal.currentAmount, currencyCode)} / {formatMoney(goal.targetAmount, currencyCode)}
                       </Text>
                     </View>
                     <View style={styles.goalBadge}>
@@ -258,7 +266,9 @@ export default function GoalsScreen() {
                   </View>
 
                   <View style={styles.goalMetaRow}>
-                    <Text style={styles.goalMetaText}>Mancano {euro(remainingGoal)}</Text>
+                    <Text style={styles.goalMetaText}>
+                      {t("goals.remainingAmount", { amount: formatMoney(remainingGoal, currencyCode) })}
+                    </Text>
                     {!!goal.notes ? (
                       <Text style={styles.goalMetaText} numberOfLines={1}>
                         {goal.notes}
@@ -277,7 +287,7 @@ export default function GoalsScreen() {
                         ]}
                       >
                         <Text style={styles.quickBtnText}>
-                          {value > 0 ? `+${value}` : value} EUR
+                          {value > 0 ? `+${value}` : value} {t("common.currencyCode")}
                         </Text>
                       </Pressable>
                     ))}
@@ -289,7 +299,7 @@ export default function GoalsScreen() {
                       style={({ pressed }) => [styles.goalActionBtn, pressed && { opacity: 0.9 }]}
                     >
                       <Ionicons name="create-outline" size={14} color={colors.textTitle} />
-                      <Text style={styles.goalActionText}>Modifica</Text>
+                      <Text style={styles.goalActionText}>{t("common.edit")}</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => deleteGoal(goal)}
@@ -297,7 +307,7 @@ export default function GoalsScreen() {
                     >
                       <Ionicons name="trash-outline" size={14} color={colors.error500} />
                       <Text style={[styles.goalActionText, { color: colors.error500 }]}>
-                        Elimina
+                        {t("common.delete")}
                       </Text>
                     </Pressable>
                   </View>
@@ -311,13 +321,15 @@ export default function GoalsScreen() {
       <Modal transparent visible={modalOpen} animationType="fade" onRequestClose={() => setModalOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{draft.id ? "Modifica obiettivo" : "Nuovo obiettivo"}</Text>
+            <Text style={styles.modalTitle}>
+              {draft.id ? t("goals.editGoalTitle") : t("goals.newGoalTitle")}
+            </Text>
 
             <TextInput
               value={draft.title}
               onChangeText={(value) => setDraft((prev) => ({ ...prev, title: value }))}
               style={styles.input}
-              placeholder="Titolo (es. Fondo vacanze)"
+              placeholder={t("goals.titlePlaceholder")}
               placeholderTextColor={colors.textFaint}
             />
             <TextInput
@@ -325,7 +337,7 @@ export default function GoalsScreen() {
               onChangeText={(value) => setDraft((prev) => ({ ...prev, targetAmount: value }))}
               keyboardType="decimal-pad"
               style={styles.input}
-              placeholder="Target EUR"
+              placeholder={t("goals.targetPlaceholder")}
               placeholderTextColor={colors.textFaint}
             />
             <TextInput
@@ -333,25 +345,25 @@ export default function GoalsScreen() {
               onChangeText={(value) => setDraft((prev) => ({ ...prev, currentAmount: value }))}
               keyboardType="decimal-pad"
               style={styles.input}
-              placeholder="Importo gia risparmiato"
+              placeholder={t("goals.savedAmountPlaceholder")}
               placeholderTextColor={colors.textFaint}
             />
             <TextInput
               value={draft.notes}
               onChangeText={(value) => setDraft((prev) => ({ ...prev, notes: value }))}
               style={[styles.input, { minHeight: 64 }]}
-              placeholder="Note (opzionale)"
+              placeholder={t("goals.notesPlaceholder")}
               placeholderTextColor={colors.textFaint}
               multiline
             />
 
             <View style={styles.modalActions}>
               <Pressable onPress={() => setModalOpen(false)} style={styles.modalSecondaryBtn}>
-                <Text style={styles.modalSecondaryText}>Annulla</Text>
+                <Text style={styles.modalSecondaryText}>{t("common.cancel")}</Text>
               </Pressable>
               <Pressable onPress={submitGoal} style={styles.modalPrimaryBtn} disabled={saving}>
                 <Text style={styles.modalPrimaryText}>
-                  {saving ? "Salvataggio..." : "Salva obiettivo"}
+                  {saving ? t("profile.saving") : t("goals.saveGoal")}
                 </Text>
               </Pressable>
             </View>

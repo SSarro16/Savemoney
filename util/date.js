@@ -1,20 +1,22 @@
+﻿import { getCurrentLocaleTag } from "../store/language-context";
+
 function safeDate(dateLike) {
   const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
-  if (!d || isNaN(d.getTime())) return null;
+  if (!d || Number.isNaN(d.getTime())) return null;
   return d;
 }
 
-// ✅ per UI: 05/02/2026
+// Keep function name for backward compatibility, but output follows current app locale.
 export function formatDateIT(dateLike) {
   const d = safeDate(dateLike);
   if (!d) return "";
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return d.toLocaleDateString(getCurrentLocaleTag(), {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
-// ✅ per UI (se vuoi stile "2026-02-05")
 export function formatDateYMD(dateLike) {
   const d = safeDate(dateLike);
   if (!d) return "";
@@ -24,7 +26,6 @@ export function formatDateYMD(dateLike) {
   return `${year}-${month}-${day}`;
 }
 
-// ✅ per salvataggio: ISO sempre safe (non crasha mai)
 export function toISODateSafe(dateLike) {
   const d = safeDate(dateLike);
   if (!d) return new Date().toISOString();
@@ -35,7 +36,6 @@ export function toISODateSafe(dateLike) {
   }
 }
 
-// ✅ per filtri: sottrai giorni
 export function getDateMinusDays(dateLike, days) {
   const d = safeDate(dateLike) || new Date();
   const out = new Date(d);
@@ -43,7 +43,6 @@ export function getDateMinusDays(dateLike, days) {
   return out;
 }
 
-// ✅ util per filtri (opzionale)
 export function startOfDay(dateLike) {
   const d = safeDate(dateLike) || new Date();
   const out = new Date(d);

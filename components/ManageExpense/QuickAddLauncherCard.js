@@ -3,11 +3,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
 function QuickAddLauncherCard() {
   const navigation = useNavigation();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
 
   return (
     <Pressable
@@ -20,9 +22,9 @@ function QuickAddLauncherCard() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Aggiunta Rapida</Text>
+          <Text style={styles.title}>{t("quickAdd.title")}</Text>
           <Text style={styles.sub} numberOfLines={1}>
-            Aggiungi da preferiti e ricorrenze in un solo tap
+            {t("quickAdd.subtitle")}
           </Text>
         </View>
       </View>

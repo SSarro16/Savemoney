@@ -1,4 +1,3 @@
-// components/ManageRecurring/RecurringForm.js
 import React, { useContext, useMemo, useState } from "react";
 import {
   View,
@@ -14,6 +13,7 @@ import { GlobalStyles } from "../../constants/styles";
 import CustomDatePicker from "../ui/DatePicker";
 import IconPicker from "../ManageExpense/IconPicker";
 import { ExpenseCategoriesContext } from "../../store/expense-categories-context";
+import { useTranslation } from "../../store/language-context";
 
 import {
   Cadence as CadenceImport,
@@ -27,13 +27,6 @@ const CadenceSafe = CadenceImport || {
   YEARLY: "YEARLY",
 };
 
-const CADENCE_OPTIONS = [
-  { key: CadenceSafe.DAILY, label: "Giornaliera" },
-  { key: CadenceSafe.WEEKLY, label: "Settimanale" },
-  { key: CadenceSafe.MONTHLY, label: "Mensile" },
-  { key: CadenceSafe.YEARLY, label: "Annuale" },
-];
-
 function toNumber(text) {
   const cleaned = String(text ?? "")
     .replace(",", ".")
@@ -46,6 +39,7 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const categoriesCtx = useContext(ExpenseCategoriesContext);
+  const { t } = useTranslation();
 
   const isEditing = !!defaultValues?.id;
 
@@ -73,6 +67,16 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
 
   const amount = useMemo(() => toNumber(amountText), [amountText]);
 
+  const cadenceOptions = useMemo(
+    () => [
+      { key: CadenceSafe.DAILY, label: t("recurringForm.cadenceDaily") },
+      { key: CadenceSafe.WEEKLY, label: t("recurringForm.cadenceWeekly") },
+      { key: CadenceSafe.MONTHLY, label: t("recurringForm.cadenceMonthly") },
+      { key: CadenceSafe.YEARLY, label: t("recurringForm.cadenceYearly") },
+    ],
+    [t],
+  );
+
   const categoryItems = useMemo(() => {
     const base = Array.isArray(categoriesCtx?.categories)
       ? categoriesCtx.categories
@@ -80,7 +84,7 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
     const selected = String(category || "").trim();
     if (!selected) return base;
     const exists = base.some(
-      (x) => String(x).toLowerCase() === selected.toLowerCase(),
+      (item) => String(item).toLowerCase() === selected.toLowerCase(),
     );
     return exists ? base : [...base, selected];
   }, [categoriesCtx?.categories, category]);
@@ -88,12 +92,12 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
   const addCustomCategory = async () => {
     const clean = String(newCategory || "").trim();
     if (!clean) {
-      Alert.alert("Categoria mancante", "Inserisci un nome categoria.");
+      Alert.alert(t("recurringForm.categoryMissingTitle"), t("recurringForm.categoryMissingMessage"));
       return;
     }
     const added = await categoriesCtx?.addCategory?.(clean);
     if (!added) {
-      Alert.alert("Categoria non valida", "Usa almeno 1 carattere valido.");
+      Alert.alert(t("recurringForm.categoryInvalidTitle"), t("recurringForm.categoryInvalidMessage"));
       return;
     }
     setCategory(added);
@@ -103,15 +107,15 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
   const submit = () => {
     const cleanTitle = title.trim();
     if (!cleanTitle) {
-      Alert.alert("Titolo mancante", "Inserisci un titolo.");
+      Alert.alert(t("recurringForm.titleMissingTitle"), t("recurringForm.titleMissingMessage"));
       return;
     }
     if (amount <= 0) {
-      Alert.alert("Importo non valido", "Inserisci un importo > 0.");
+      Alert.alert(t("recurringForm.invalidAmountTitle"), t("recurringForm.invalidAmountMessage"));
       return;
     }
     if (!(nextDue instanceof Date) || Number.isNaN(nextDue.getTime())) {
-      Alert.alert("Data non valida", "Seleziona una data valida.");
+      Alert.alert(t("recurringForm.invalidDateTitle"), t("recurringForm.invalidDateMessage"));
       return;
     }
 
@@ -130,13 +134,13 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{isEditing ? "Modifica" : "Nuova ricorrenza"}</Text>
+      <Text style={styles.title}>{isEditing ? t("recurringForm.editTitle") : t("recurringForm.newTitle")}</Text>
 
       <View style={[styles.row, styles.typeRow]}>
         <Pressable
           onPress={() => {
             setType(RecurringType.HABIT);
-            setCadence((cur) => cur || CadenceSafe.DAILY);
+            setCadence((current) => current || CadenceSafe.DAILY);
             if (!icon || icon === "repeat-outline") setIcon("flash-outline");
           }}
           style={({ pressed }) => [
@@ -146,13 +150,13 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
           ]}
         >
           <Ionicons name="flash-outline" size={16} color={colors.textTitle} />
-          <Text style={styles.pillText}>Abitudine</Text>
+          <Text style={styles.pillText}>{t("recurring.typeHabit")}</Text>
         </Pressable>
 
         <Pressable
           onPress={() => {
             setType(RecurringType.SUBSCRIPTION);
-            setCadence((cur) => cur || CadenceSafe.MONTHLY);
+            setCadence((current) => current || CadenceSafe.MONTHLY);
             if (!icon || icon === "flash-outline") setIcon("repeat-outline");
           }}
           style={({ pressed }) => [
@@ -162,23 +166,23 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
           ]}
         >
           <Ionicons name="repeat-outline" size={16} color={colors.textTitle} />
-          <Text style={styles.pillText}>Abbonamento</Text>
+          <Text style={styles.pillText}>{t("recurring.typeSubscription")}</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.label}>Titolo</Text>
+      <Text style={styles.label}>{t("recurringForm.titleLabel")}</Text>
       <View style={styles.field}>
         <Ionicons name="text-outline" size={18} color={colors.white75} />
         <TextInput
           style={styles.input}
           value={title}
           onChangeText={setTitle}
-          placeholder="Es. Netflix, Palestra"
+          placeholder={t("recurringForm.titlePlaceholder")}
           placeholderTextColor={colors.white40}
         />
       </View>
 
-      <Text style={[styles.label, { marginTop: 12 }]}>Importo</Text>
+      <Text style={[styles.label, { marginTop: 12 }]}>{t("recurringForm.amountLabel")}</Text>
       <View style={styles.field}>
         <Ionicons name="cash-outline" size={18} color={colors.white75} />
         <TextInput
@@ -189,16 +193,16 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
           placeholder="0"
           placeholderTextColor={colors.white40}
         />
-        <Text style={styles.suffix}>EUR</Text>
+        <Text style={styles.suffix}>{t("common.currencyCode")}</Text>
       </View>
 
-      <Text style={[styles.label, { marginTop: 12 }]}>Categoria</Text>
+      <Text style={[styles.label, { marginTop: 12 }]}>{t("recurringForm.categoryLabel")}</Text>
       <View style={styles.addCategoryRow}>
         <TextInput
           style={styles.addCategoryInput}
           value={newCategory}
           onChangeText={setNewCategory}
-          placeholder="Nuova categoria (es. Casa)"
+          placeholder={t("recurringForm.newCategoryPlaceholder")}
           placeholderTextColor={colors.white40}
           maxLength={24}
           returnKeyType="done"
@@ -215,42 +219,42 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
         </Pressable>
       </View>
       <View style={styles.rowWrap}>
-        {categoryItems.map((c) => {
-          const active = c === category;
+        {categoryItems.map((item) => {
+          const active = item === category;
           return (
             <Pressable
-              key={c}
-              onPress={() => setCategory(c)}
+              key={item}
+              onPress={() => setCategory(item)}
               style={({ pressed }) => [
                 styles.chip,
                 active && styles.chipActive,
                 pressed && { opacity: 0.9 },
               ]}
             >
-              <Text style={styles.chipText}>{c}</Text>
+              <Text style={styles.chipText}>{item}</Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={[styles.label, { marginTop: 12 }]}>Icona</Text>
-      <IconPicker value={icon} onChange={setIcon} title="Scegli icona ricorrenza" />
+      <Text style={[styles.label, { marginTop: 12 }]}>{t("expenseForm.icon")}</Text>
+      <IconPicker value={icon} onChange={setIcon} title={t("recurringForm.selectIconTitle")} />
 
-      <Text style={[styles.label, { marginTop: 12 }]}>Frequenza</Text>
+      <Text style={[styles.label, { marginTop: 12 }]}>{t("recurringForm.frequencyLabel")}</Text>
       <View style={styles.rowWrap}>
-        {CADENCE_OPTIONS.map((opt) => {
-          const active = opt.key === cadence;
+        {cadenceOptions.map((option) => {
+          const active = option.key === cadence;
           return (
             <Pressable
-              key={opt.key}
-              onPress={() => setCadence(opt.key)}
+              key={option.key}
+              onPress={() => setCadence(option.key)}
               style={({ pressed }) => [
                 styles.chip,
                 active && styles.chipActive,
                 pressed && { opacity: 0.9 },
               ]}
             >
-              <Text style={styles.chipText}>{opt.label}</Text>
+              <Text style={styles.chipText}>{option.label}</Text>
             </Pressable>
           );
         })}
@@ -258,13 +262,13 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
 
       <View style={{ marginTop: 10 }}>
         <CustomDatePicker
-          label="Prossima scadenza"
+          label={t("recurringForm.nextDueLabel")}
           value={nextDue}
           onChange={setNextDue}
         />
       </View>
 
-      <Text style={[styles.label, { marginTop: 12 }]}>Note (opzionale)</Text>
+      <Text style={[styles.label, { marginTop: 12 }]}>{t("recurringForm.notesLabel")}</Text>
       <View style={[styles.field, { alignItems: "flex-start" }]}>
         <Ionicons
           name="chatbubble-ellipses-outline"
@@ -277,17 +281,17 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
           multiline
           value={description}
           onChangeText={setDescription}
-          placeholder="Es. ogni 1 del mese"
+          placeholder={t("recurringForm.notesPlaceholder")}
           placeholderTextColor={colors.white40}
         />
       </View>
 
-      <View style={[styles.row, { marginTop: 18 }]}> 
+      <View style={[styles.row, { marginTop: 18 }]}>
         <Pressable
           onPress={onCancel}
           style={({ pressed }) => [styles.btnGhost, pressed && styles.pressed]}
         >
-          <Text style={styles.btnGhostText}>Annulla</Text>
+          <Text style={styles.btnGhostText}>{t("common.cancel")}</Text>
         </Pressable>
 
         <Pressable
@@ -295,7 +299,7 @@ export default function RecurringForm({ defaultValues, onSubmit, onCancel }) {
           style={({ pressed }) => [styles.btnPrimary, pressed && styles.pressed]}
         >
           <Ionicons name="save-outline" size={18} color={colors.textOnAccentStrong} />
-          <Text style={styles.btnPrimaryText}>Salva</Text>
+          <Text style={styles.btnPrimaryText}>{t("common.save")}</Text>
         </Pressable>
       </View>
     </View>

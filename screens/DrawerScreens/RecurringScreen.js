@@ -17,6 +17,7 @@ import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { ExpensesContext } from "../../store/expenses-context";
 import { AuthContext } from "../../store/auth-context";
 import { CustomizationContext } from "../../store/customization-context";
+import { useTranslation } from "../../store/language-context";
 
 import RecurringOutput from "../../components/RecurringOutput/RecurringOutput";
 import RecurringList from "../../components/RecurringOutput/RecurringList";
@@ -56,7 +57,7 @@ function isAuthHttpError(error) {
   return status === 401 || status === 403;
 }
 
-function toRecurringErrorMessage(error) {
+function toRecurringErrorMessage(error, t) {
   const rawError = error?.response?.data?.error;
   const raw =
     typeof rawError === "string"
@@ -64,7 +65,7 @@ function toRecurringErrorMessage(error) {
       : String(rawError?.message || "").toLowerCase();
 
   if (raw.includes("permission_denied") || raw.includes("permission denied")) {
-    return "Accesso negato dal database. Verifica le regole Firebase.";
+    return t("payments.permissionDenied");
   }
 
   if (
@@ -73,10 +74,10 @@ function toRecurringErrorMessage(error) {
     raw.includes("invalid id token") ||
     raw.includes("invalid token")
   ) {
-    return "Sessione scaduta. Effettua di nuovo l'accesso.";
+    return t("payments.sessionExpired");
   }
 
-  return error?.message || "Impossibile caricare abitudini/abbonamenti.";
+  return error?.message || t("recurring.loadFailed");
 }
 
 function makeRecurringPatch(item, type) {
@@ -105,6 +106,7 @@ export default function RecurringScreen() {
   const { recurringRemindersEnabled, recurringReminderHour } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
 
   const userId = authCtx.userId;
   const token = authCtx.token;
@@ -129,12 +131,12 @@ export default function RecurringScreen() {
     async (request) => {
       try {
         return await request(token);
-      } catch (error) {
-        if (!isAuthHttpError(error)) throw error;
+      } catch (requestError) {
+        if (!isAuthHttpError(requestError)) throw requestError;
 
         const refreshed = await refreshSessionRef.current?.(true).catch(() => null);
         const nextToken = refreshed?.token;
-        if (!nextToken) throw error;
+        if (!nextToken) throw requestError;
 
         return await request(nextToken);
       }
@@ -146,12 +148,12 @@ export default function RecurringScreen() {
     if (!userId || !token) return;
     setError(null);
     const list = await withTimeout(
-      withAuthRetry((t) => getRecurringItems(userId, t)),
+      withAuthRetry((nextToken) => getRecurringItems(userId, nextToken)),
       LOAD_TIMEOUT_MS,
-      "Timeout caricamento ricorrenze.",
+      t("recurring.loadTimeout"),
     );
     setItems(Array.isArray(list) ? list : []);
-  }, [userId, token, withAuthRetry]);
+  }, [userId, token, withAuthRetry, t]);
 
   useEffect(() => {
     let mounted = true;
@@ -166,8 +168,8 @@ export default function RecurringScreen() {
       setError(null);
       try {
         await load();
-      } catch (e) {
-        if (mounted) setError(toRecurringErrorMessage(e));
+      } catch (loadError) {
+        if (mounted) setError(toRecurringErrorMessage(loadError, t));
       } finally {
         if (mounted && !hasLoadedRef.current) setIsFetching(false);
         hasLoadedRef.current = true;
@@ -177,7 +179,7 @@ export default function RecurringScreen() {
     return () => {
       mounted = false;
     };
-  }, [userId, token, load]);
+  }, [userId, token, load, t]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -189,9 +191,9 @@ export default function RecurringScreen() {
   };
 
   const normalized = useMemo(() => {
-    const list = (items || []).map((x) => ({
-      ...x,
-      amount: Number(x.amount || 0),
+    const list = (items || []).map((entry) => ({
+      ...entry,
+      amount: Number(entry.amount || 0),
     }));
 
     return list.sort((a, b) => {
@@ -219,16 +221,16 @@ export default function RecurringScreen() {
 
   const dueSubscriptions = useMemo(() => {
     return normalized.filter(
-      (x) =>
-        x.type === RecurringType.SUBSCRIPTION && isDueTodayOrPast(x.nextDue),
+      (entry) =>
+        entry.type === RecurringType.SUBSCRIPTION && isDueTodayOrPast(entry.nextDue),
     );
   }, [normalized]);
 
   const visibleItems = useMemo(() => {
     if (showPaidSubscriptions) return normalized;
-    return normalized.filter((x) => {
-      if (x.type !== RecurringType.SUBSCRIPTION) return true;
-      return isDueTodayOrPast(x.nextDue);
+    return normalized.filter((entry) => {
+      if (entry.type !== RecurringType.SUBSCRIPTION) return true;
+      return isDueTodayOrPast(entry.nextDue);
     });
   }, [normalized, showPaidSubscriptions]);
 
@@ -238,8 +240,8 @@ export default function RecurringScreen() {
     syncRecurringReminderNotifications(items, {
       enabled: recurringRemindersEnabled,
       hour: recurringReminderHour,
-    }).catch((error) => {
-      logger.warn("Recurring reminders sync failed", error);
+    }).catch((syncError) => {
+      logger.warn("Recurring reminders sync failed", syncError);
     });
   }, [
     items,
@@ -293,24 +295,24 @@ export default function RecurringScreen() {
       for (const wait of RETRY_DELAYS_MS) {
         try {
           if (wait > 0) await delay(wait);
-          const next = await withAuthRetry((t) => upsertRecurringItem(userId, t, patch));
+          const next = await withAuthRetry((nextToken) => upsertRecurringItem(userId, nextToken, patch));
           setItems(Array.isArray(next) ? next : []);
           return true;
-        } catch (e) {
-          lastError = e;
+        } catch (updateError) {
+          lastError = updateError;
         }
       }
-      throw lastError || new Error("Aggiornamento ricorrenza non riuscito.");
+      throw lastError || new Error(t("recurring.updateRecurringFailed"));
     },
-    [userId, withAuthRetry],
+    [userId, withAuthRetry, t],
   );
 
   const handleSubmitRecurring = async (data) => {
     if (!userId || !token) return;
 
     try {
-      const next = await withAuthRetry((t) =>
-        upsertRecurringItem(userId, t, {
+      const next = await withAuthRetry((nextToken) =>
+        upsertRecurringItem(userId, nextToken, {
           ...data,
           amount: Number(data?.amount || 0),
         }),
@@ -322,7 +324,7 @@ export default function RecurringScreen() {
       );
       closeModal();
     } catch {
-      Alert.alert("Errore", "Impossibile salvare la ricorrenza.");
+      Alert.alert(t("common.error"), t("recurring.saveFailed"));
     }
   };
 
@@ -330,14 +332,14 @@ export default function RecurringScreen() {
     if (!userId || !token) return;
 
     try {
-      const next = await withAuthRetry((t) => removeRecurringItem(userId, t, item.id));
+      const next = await withAuthRetry((nextToken) => removeRecurringItem(userId, nextToken, item.id));
       setItems(next);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
         () => {},
       );
     } catch {
-      Alert.alert("Errore", "Impossibile eliminare.");
+      Alert.alert(t("common.error"), t("recurring.deleteFailed"));
     }
   };
 
@@ -357,52 +359,60 @@ export default function RecurringScreen() {
       cashId: item?.cashId || "",
     };
 
-    Alert.alert("Aggiungere?", `${item.title}\n${payload.amount.toFixed(2)} EUR`, [
-      { text: "Annulla", style: "cancel" },
-      {
-        text: "Aggiungi",
-        onPress: async () => {
-          let expenseAdded = false;
-          const patch = makeRecurringPatch(item, "habit");
-          try {
-            await expensesCtx.addExpense(payload);
-            expenseAdded = true;
-            await updateRecurringWithRetry(patch);
+    Alert.alert(
+      t("recurring.confirmAddHabitTitle"),
+      t("recurring.confirmSingleMessage", {
+        title: item.title,
+        amount: payload.amount.toFixed(2),
+        currency: t("common.currencyCode"),
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("recurring.quickAdd"),
+          onPress: async () => {
+            let expenseAdded = false;
+            const patch = makeRecurringPatch(item, "habit");
+            try {
+              await expensesCtx.addExpense(payload);
+              expenseAdded = true;
+              await updateRecurringWithRetry(patch);
 
-            Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success,
-            ).catch(() => {});
-          } catch {
-            if (expenseAdded) {
-              setItems((prev) => prev);
-              Alert.alert(
-                "Completato parzialmente",
-                "Spesa aggiunta, ma non e stato possibile aggiornare la ricorrenza.",
-                [
-                  { text: "Chiudi", style: "cancel" },
-                  {
-                    text: "Riprova aggiornamento",
-                    onPress: async () => {
-                      try {
-                        await updateRecurringWithRetry(patch);
-                        Alert.alert("Operazione completata", "Ricorrenza aggiornata.");
-                      } catch {
-                        Alert.alert(
-                          "Errore",
-                          "Aggiornamento ricorrenza ancora non riuscito. Riprova da Abbonamenti/Abitudinali.",
-                        );
-                      }
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              ).catch(() => {});
+            } catch {
+              if (expenseAdded) {
+                setItems((prev) => prev);
+                Alert.alert(
+                  t("recurring.partialCompletedTitle"),
+                  t("recurring.expenseAddedRecurringNotUpdated"),
+                  [
+                    { text: t("common.close"), style: "cancel" },
+                    {
+                      text: t("recurring.retryUpdate"),
+                      onPress: async () => {
+                        try {
+                          await updateRecurringWithRetry(patch);
+                          Alert.alert(t("recurring.operationCompletedTitle"), t("recurring.recurringUpdated"));
+                        } catch {
+                          Alert.alert(
+                            t("common.error"),
+                            t("recurring.updateRecurringStillFailed"),
+                          );
+                        }
+                      },
                     },
-                  },
-                ],
-              );
-              return;
+                  ],
+                );
+                return;
+              }
+              Alert.alert(t("common.error"), t("recurring.addExpenseFailed"));
             }
-            Alert.alert("Errore", "Impossibile aggiungere la spesa.");
-          }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const paySubscription = async (item) => {
@@ -422,12 +432,16 @@ export default function RecurringScreen() {
     };
 
     Alert.alert(
-      "Registrare pagamento?",
-      `${item.title}\n${payload.amount.toFixed(2)} EUR`,
+      t("recurring.confirmPaySubscriptionTitle"),
+      t("recurring.confirmSingleMessage", {
+        title: item.title,
+        amount: payload.amount.toFixed(2),
+        currency: t("common.currencyCode"),
+      }),
       [
-        { text: "Annulla", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Registra",
+          text: t("recurring.registerAction"),
           onPress: async () => {
             let expenseAdded = false;
             const patch = makeRecurringPatch(item, "subscription");
@@ -442,20 +456,20 @@ export default function RecurringScreen() {
             } catch {
               if (expenseAdded) {
                 Alert.alert(
-                  "Completato parzialmente",
-                  "Pagamento registrato, ma non e stato possibile aggiornare la ricorrenza.",
+                  t("recurring.partialCompletedTitle"),
+                  t("recurring.paymentAddedRecurringNotUpdated"),
                   [
-                    { text: "Chiudi", style: "cancel" },
+                    { text: t("common.close"), style: "cancel" },
                     {
-                      text: "Riprova aggiornamento",
+                      text: t("recurring.retryUpdate"),
                       onPress: async () => {
                         try {
                           await updateRecurringWithRetry(patch);
-                          Alert.alert("Operazione completata", "Ricorrenza aggiornata.");
+                          Alert.alert(t("recurring.operationCompletedTitle"), t("recurring.recurringUpdated"));
                         } catch {
                           Alert.alert(
-                            "Errore",
-                            "Aggiornamento ricorrenza ancora non riuscito. Riprova da Abbonamenti/Abitudinali.",
+                            t("common.error"),
+                            t("recurring.updateRecurringStillFailed"),
                           );
                         }
                       },
@@ -464,7 +478,7 @@ export default function RecurringScreen() {
                 );
                 return;
               }
-              Alert.alert("Errore", "Impossibile registrare il pagamento.");
+              Alert.alert(t("common.error"), t("recurring.payFailed"));
             }
           },
         },
@@ -477,12 +491,12 @@ export default function RecurringScreen() {
     if (!dueSubscriptions.length) return;
 
     Alert.alert(
-      "Aggiungere tutto?",
-      `Vuoi registrare ${dueSubscriptions.length} pagamento/i in scadenza?`,
+      t("recurring.confirmAddAllTitle"),
+      t("recurring.confirmAddAllMessage", { count: dueSubscriptions.length }),
       [
-        { text: "Annulla", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Aggiungi tutto",
+          text: t("recurring.addAllAction"),
           onPress: async () => {
             const failedUpdates = [];
             try {
@@ -510,22 +524,22 @@ export default function RecurringScreen() {
 
               if (failedUpdates.length) {
                 Alert.alert(
-                  "Completato parzialmente",
-                  `${failedUpdates.length} ricorrenza/e non aggiornate.`,
+                  t("recurring.partialCompletedTitle"),
+                  t("recurring.someRecurringNotUpdated", { count: failedUpdates.length }),
                   [
-                    { text: "Chiudi", style: "cancel" },
+                    { text: t("common.close"), style: "cancel" },
                     {
-                      text: "Riprova aggiornamento",
+                      text: t("recurring.retryUpdate"),
                       onPress: async () => {
                         try {
                           for (const patch of failedUpdates) {
                             await updateRecurringWithRetry(patch);
                           }
-                          Alert.alert("Operazione completata", "Ricorrenze aggiornate.");
+                          Alert.alert(t("recurring.operationCompletedTitle"), t("recurring.recurringsUpdated"));
                         } catch {
                           Alert.alert(
-                            "Errore",
-                            "Alcune ricorrenze non sono state aggiornate.",
+                            t("common.error"),
+                            t("recurring.someRecurringStillNotUpdated"),
                           );
                         }
                       },
@@ -538,7 +552,7 @@ export default function RecurringScreen() {
                 ).catch(() => {});
               }
             } catch {
-              Alert.alert("Errore", "Impossibile aggiungere tutto.");
+              Alert.alert(t("common.error"), t("recurring.addAllFailed"));
             }
           },
         },
@@ -551,16 +565,16 @@ export default function RecurringScreen() {
     setError(null);
     try {
       await load();
-    } catch (e) {
-      setError(toRecurringErrorMessage(e));
+    } catch (loadError) {
+      setError(toRecurringErrorMessage(loadError, t));
     } finally {
       setIsFetching(false);
     }
   };
 
-  if (isFetching) return <LoadingOverlay message="Caricamento..." />;
+  if (isFetching) return <LoadingOverlay message={t("recurring.loading")} />;
   if (error) {
-    return <ErrorOverlay message={error} onRetry={retry} retryLabel="Riprova" />;
+    return <ErrorOverlay message={error} onRetry={retry} retryLabel={t("common.retry")} />;
   }
 
   return (

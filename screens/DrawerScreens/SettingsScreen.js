@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
 function NavCard({ icon, title, subtitle, onPress, accent, styles, colors }) {
   return (
@@ -36,12 +37,92 @@ function SectionGroup({ title, children, styles, colors }) {
   );
 }
 
+function LanguageToggleCard({ language, onChange, t, styles, colors }) {
+  const options = [
+    {
+      key: "it",
+      label: t("common.italian"),
+      shortLabel: "IT",
+      icon: "flag-outline",
+    },
+    {
+      key: "en",
+      label: t("common.english"),
+      shortLabel: "EN",
+      icon: "language-outline",
+    },
+  ];
+
+  return (
+    <View style={styles.languageCard}>
+      <View style={styles.languageHeader}>
+        <View style={styles.languageIconWrap}>
+          <Ionicons name="globe-outline" size={17} color={colors.textTitle} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.navTitle}>{t("settings.languageTitle")}</Text>
+          <Text style={styles.navSub}>{t("settings.languageSubtitle")}</Text>
+        </View>
+      </View>
+
+      <View style={styles.languageSwitchRow}>
+        {options.map((option) => {
+          const active = language === option.key;
+          return (
+            <Pressable
+              key={option.key}
+              onPress={() => onChange(option.key)}
+              style={({ pressed }) => [
+                styles.languageOption,
+                active && styles.languageOptionActive,
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <Ionicons
+                name={option.icon}
+                size={15}
+                color={active ? colors.textTitle : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.languageShortLabel,
+                  { color: active ? colors.textTitle : colors.textMuted },
+                ]}
+              >
+                {option.shortLabel}
+              </Text>
+              <Text
+                style={[
+                  styles.languageLabel,
+                  { color: active ? colors.textTitle : colors.textMuted },
+                ]}
+                numberOfLines={1}
+              >
+                {option.label}
+              </Text>
+              {active ? (
+                <Ionicons name="checkmark-circle" size={15} color={colors.textTitle} />
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export default function SettingsScreen({ navigation }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t, language, setLanguage } = useTranslation();
 
   const goDrawerScreen = (screenName) => {
     navigation.getParent()?.navigate(screenName);
+  };
+
+  const handleLanguageChange = (nextLanguage) => {
+    if (nextLanguage === language) return;
+    void setLanguage(nextLanguage);
   };
 
   return (
@@ -57,18 +138,25 @@ export default function SettingsScreen({ navigation }) {
           <Ionicons name="settings-outline" size={18} color={colors.textTitle} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroTitle}>Control Center</Text>
+          <Text style={styles.heroTitle}>{t("settings.heroTitle")}</Text>
           <Text style={styles.heroSub}>
-            Hub unico per personalizzazione, operativita e gestione moduli.
+            {t("settings.heroSubtitle")}
           </Text>
         </View>
       </View>
 
-      <SectionGroup title="Aspetto e UX" styles={styles} colors={colors}>
+      <SectionGroup title={t("settings.appearanceSection")} styles={styles} colors={colors}>
+        <LanguageToggleCard
+          language={language}
+          onChange={handleLanguageChange}
+          t={t}
+          styles={styles}
+          colors={colors}
+        />
         <NavCard
           icon="flash-outline"
-          title="Impostazioni rapide"
-          subtitle="Accessibilita, notifiche e preferenze operative"
+          title={t("settings.quickSettingsTitle")}
+          subtitle={t("settings.quickSettingsSubtitle")}
           onPress={() => navigation.navigate("QuickSettings")}
           accent={colors.accent500}
           styles={styles}
@@ -76,8 +164,8 @@ export default function SettingsScreen({ navigation }) {
         />
         <NavCard
           icon="color-palette-outline"
-          title="Personalizzazione"
-          subtitle="Temi e identita visiva dell'app"
+          title={t("settings.customizationTitle")}
+          subtitle={t("settings.customizationSubtitle")}
           onPress={() => navigation.navigate("CustomizeHome")}
           accent={colors.primary500}
           styles={styles}
@@ -85,11 +173,11 @@ export default function SettingsScreen({ navigation }) {
         />
       </SectionGroup>
 
-      <SectionGroup title="Dati e cataloghi" styles={styles} colors={colors}>
+      <SectionGroup title={t("settings.dataSection")} styles={styles} colors={colors}>
         <NavCard
           icon="pricetags-outline"
-          title="Categorie Spese"
-          subtitle="Aggiungi, rinomina e rimuovi categorie"
+          title={t("settings.categoriesTitle")}
+          subtitle={t("settings.categoriesSubtitle")}
           onPress={() => navigation.navigate("CategoriesManager")}
           accent={colors.accent500}
           styles={styles}
@@ -97,8 +185,8 @@ export default function SettingsScreen({ navigation }) {
         />
         <NavCard
           icon="card-outline"
-          title="Carte e Contanti"
-          subtitle="Gestione wallet e metodi di pagamento"
+          title={t("settings.paymentsTitle")}
+          subtitle={t("settings.paymentsSubtitle")}
           onPress={() => goDrawerScreen("Payments")}
           accent={colors.primary500}
           styles={styles}
@@ -106,11 +194,11 @@ export default function SettingsScreen({ navigation }) {
         />
       </SectionGroup>
 
-      <SectionGroup title="Pianificazione" styles={styles} colors={colors}>
+      <SectionGroup title={t("settings.planningSection")} styles={styles} colors={colors}>
         <NavCard
           icon="repeat-outline"
-          title="Abbonamenti e Abitudini"
-          subtitle="Scadenze ricorrenti e azioni rapide"
+          title={t("settings.recurringTitle")}
+          subtitle={t("settings.recurringSubtitle")}
           onPress={() => goDrawerScreen("Recurring")}
           accent={colors.accent500}
           styles={styles}
@@ -118,8 +206,8 @@ export default function SettingsScreen({ navigation }) {
         />
         <NavCard
           icon="cash-outline"
-          title="Budget"
-          subtitle="Limiti, allocazioni e overview"
+          title={t("settings.budgetTitle")}
+          subtitle={t("settings.budgetSubtitle")}
           onPress={() => goDrawerScreen("Budget")}
           accent={colors.primary500}
           styles={styles}
@@ -127,8 +215,8 @@ export default function SettingsScreen({ navigation }) {
         />
         <NavCard
           icon="flag-outline"
-          title="Obiettivi"
-          subtitle="Target di risparmio e avanzamento"
+          title={t("settings.goalsTitle")}
+          subtitle={t("settings.goalsSubtitle")}
           onPress={() => goDrawerScreen("Goals")}
           accent={colors.accent500}
           styles={styles}
@@ -238,6 +326,60 @@ function makeStyles(colors) {
       fontWeight: "700",
       fontSize: 11,
       lineHeight: 16,
+    },
+    languageCard: {
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 10,
+      marginBottom: 8,
+      gap: 10,
+    },
+    languageHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 9,
+    },
+    languageIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+    },
+    languageSwitchRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    languageOption: {
+      flex: 1,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 9,
+      paddingHorizontal: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    languageOptionActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    languageShortLabel: {
+      fontWeight: "900",
+      fontSize: 11,
+    },
+    languageLabel: {
+      fontWeight: "900",
+      fontSize: 11,
+      maxWidth: 70,
     },
   });
 }

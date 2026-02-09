@@ -20,24 +20,17 @@ import { ExpensesContext } from "../../store/expenses-context";
 import { CustomizationContext } from "../../store/customization-context";
 import UndoSnackbar from "../ui/UndoSnackbar";
 import QuickAddLauncherCard from "../ManageExpense/QuickAddLauncherCard";
+import { useTranslation } from "../../store/language-context";
 
-function formatDate(d) {
+function formatDate(d, localeTag) {
   if (!d) return "";
-  const months = [
-    "Gen",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mag",
-    "Giu",
-    "Lug",
-    "Ago",
-    "Set",
-    "Ott",
-    "Nov",
-    "Dic",
-  ];
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return d
+    .toLocaleDateString(localeTag || "it-IT", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+    .replace(/,/g, "");
 }
 
 function Chip({ active, label, onPress }) {
@@ -93,6 +86,7 @@ function ExpensesOutput({
   const { compactMode, highContrast } = useContext(CustomizationContext);
   const expensesCtx = useContext(ExpensesContext);
   const tabBarHeight = useBottomTabBarHeight();
+  const { t, localeTag } = useTranslation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [filtersModalOpen, setFiltersModalOpen] = useState(false);
@@ -120,11 +114,15 @@ function ExpensesOutput({
 
   const rangeLabel = useMemo(() => {
     if (rangeFrom && rangeTo)
-      return `${formatDate(rangeFrom)} - ${formatDate(rangeTo)}`;
-    if (rangeFrom && !rangeTo) return `Da ${formatDate(rangeFrom)}`;
-    if (!rangeFrom && rangeTo) return `Fino a ${formatDate(rangeTo)}`;
-    return "Oggi";
-  }, [rangeFrom, rangeTo]);
+      return `${formatDate(rangeFrom, localeTag)} - ${formatDate(rangeTo, localeTag)}`;
+    if (rangeFrom && !rangeTo) {
+      return t("expenses.fromDate", { date: formatDate(rangeFrom, localeTag) });
+    }
+    if (!rangeFrom && rangeTo) {
+      return t("expenses.toDate", { date: formatDate(rangeTo, localeTag) });
+    }
+    return t("common.today");
+  }, [rangeFrom, rangeTo, localeTag, t]);
 
   const content =
     expenses.length > 0 ? (
@@ -200,7 +198,7 @@ function ExpensesOutput({
               </Text>
             )}
             <Text style={[styles.toolbarHint, { color: colors.textMuted }]}>
-              Filtra e analizza rapidamente il periodo.
+              {t("expensesOutput.filterAnalyzeHint")}
             </Text>
           </View>
         </View>
@@ -224,7 +222,7 @@ function ExpensesOutput({
               color={colors.textTitle}
             />
             <Text style={[styles.toolbarBtnText, { color: colors.textTitle }]}>
-              Periodo
+              {t("expensesOutput.period")}
             </Text>
           </Pressable>
 
@@ -248,7 +246,7 @@ function ExpensesOutput({
           >
             <Ionicons name="options-outline" size={18} color={colors.textTitle} />
             <Text style={[styles.toolbarBtnText, { color: colors.textTitle }]}>
-              Filtri
+              {t("expensesOutput.filters")}
             </Text>
             {isAdvancedFilterActive ? (
               <View style={[styles.filterDot, { backgroundColor: colors.accent500 }]} />
@@ -286,7 +284,7 @@ function ExpensesOutput({
 
       <UndoSnackbar
         visible={expensesCtx.canUndo}
-        message="Spesa eliminata"
+        message={t("expenses.expenseDeleted")}
         onUndo={expensesCtx.undoDelete}
         bottomOffset={tabBarHeight + 6}
       />
@@ -306,7 +304,7 @@ function ExpensesOutput({
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textTitle }]}>
-                Seleziona periodo
+                {t("expensesOutput.selectPeriod")}
               </Text>
               <Pressable
                 style={({ pressed }) => [
@@ -324,12 +322,12 @@ function ExpensesOutput({
             </View>
 
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              Preset rapidi
+              {t("expensesOutput.quickPresets")}
             </Text>
             <View style={styles.chipsGrid}>
               <View style={styles.chipGridItem}>
                 <Chip
-                  label="Oggi"
+                  label={t("common.today")}
                   active={activePreset === presets?.TODAY}
                   onPress={() => {
                     onSelectPreset?.(presets?.TODAY);
@@ -339,7 +337,7 @@ function ExpensesOutput({
               </View>
               <View style={styles.chipGridItem}>
                 <Chip
-                  label="Ieri"
+                  label={t("common.yesterday")}
                   active={activePreset === presets?.YESTERDAY}
                   onPress={() => {
                     onSelectPreset?.(presets?.YESTERDAY);
@@ -349,7 +347,7 @@ function ExpensesOutput({
               </View>
               <View style={styles.chipGridItem}>
                 <Chip
-                  label="7 Giorni"
+                  label={t("expensesOutput.days7")}
                   active={activePreset === presets?.DAYS_7}
                   onPress={() => {
                     onSelectPreset?.(presets?.DAYS_7);
@@ -359,7 +357,7 @@ function ExpensesOutput({
               </View>
               <View style={styles.chipGridItem}>
                 <Chip
-                  label="1 Mese"
+                  label={t("expensesOutput.month1")}
                   active={activePreset === presets?.MONTH_1}
                   onPress={() => {
                     onSelectPreset?.(presets?.MONTH_1);
@@ -369,7 +367,7 @@ function ExpensesOutput({
               </View>
               <View style={styles.chipGridItem}>
                 <Chip
-                  label="1 Anno"
+                  label={t("expensesOutput.year1")}
                   active={activePreset === presets?.YEAR_1}
                   onPress={() => {
                     onSelectPreset?.(presets?.YEAR_1);
@@ -379,7 +377,7 @@ function ExpensesOutput({
               </View>
               <View style={styles.chipGridItem}>
                 <Chip
-                  label="Totale"
+                  label={t("expensesOutput.total")}
                   active={activePreset === presets?.TOTAL}
                   onPress={() => {
                     onSelectPreset?.(presets?.TOTAL);
@@ -401,7 +399,7 @@ function ExpensesOutput({
             />
 
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              Intervallo personalizzato
+              {t("expensesOutput.customRange")}
             </Text>
 
             <View
@@ -417,7 +415,7 @@ function ExpensesOutput({
             >
               <View style={styles.pickerRow}>
                 <Text style={[styles.modalLabel, { color: colors.textBody }]}>
-                  Da
+                  {t("expensesOutput.from")}
                 </Text>
                 <DateTimePicker
                   value={draftFrom ?? new Date()}
@@ -432,7 +430,7 @@ function ExpensesOutput({
 
               <View style={styles.pickerRow}>
                 <Text style={[styles.modalLabel, { color: colors.textBody }]}>
-                  A
+                  {t("expensesOutput.to")}
                 </Text>
                 <DateTimePicker
                   value={draftTo ?? new Date()}
@@ -461,7 +459,7 @@ function ExpensesOutput({
                 onPress={() => setModalOpen(false)}
               >
                 <Text style={[styles.actionText, { color: colors.textTitle }]}>
-                  Annulla
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
 
@@ -479,7 +477,7 @@ function ExpensesOutput({
                 <Text
                   style={[styles.actionText, { color: colors.textOnAccent }]}
                 >
-                  Applica
+                  {t("expensesOutput.apply")}
                 </Text>
               </Pressable>
             </View>
@@ -507,7 +505,7 @@ function ExpensesOutput({
           >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textTitle }]}>
-                Ricerca e filtri
+                {t("expensesOutput.searchFiltersTitle")}
               </Text>
               <Pressable
                 style={({ pressed }) => [
@@ -526,7 +524,7 @@ function ExpensesOutput({
 
             <View style={styles.filtersTopRow}>
               <Text style={[styles.filtersTitle, { color: colors.textMuted }]}>
-                Personalizza i risultati
+                {t("expensesOutput.customizeResults")}
               </Text>
               {isAdvancedFilterActive ? (
                 <Pressable
@@ -538,7 +536,7 @@ function ExpensesOutput({
                   ]}
                 >
                   <Text style={[styles.clearFiltersText, { color: colors.textBody }]}>
-                    Reset
+                    {t("expensesOutput.reset")}
                   </Text>
                 </Pressable>
               ) : null}
@@ -547,7 +545,7 @@ function ExpensesOutput({
             <TextInput
               value={searchQuery}
               onChangeText={onChangeSearchQuery}
-              placeholder="Cerca descrizione o categoria"
+              placeholder={t("expensesOutput.searchPlaceholder")}
               placeholderTextColor={colors.textFaint}
               style={[
                 styles.searchInput,
@@ -560,28 +558,28 @@ function ExpensesOutput({
             />
 
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              Metodo di pagamento
+              {t("expensesOutput.paymentMethod")}
             </Text>
             <View style={styles.methodRow}>
               <Chip
-                label="Tutti"
+                label={t("expensesOutput.allMethods")}
                 active={selectedMethod === "ALL"}
                 onPress={() => onSelectMethod?.("ALL")}
               />
               <Chip
-                label="Contanti"
+                label={t("expensesOutput.cash")}
                 active={selectedMethod === "CASH"}
                 onPress={() => onSelectMethod?.("CASH")}
               />
               <Chip
-                label="Carta"
+                label={t("expensesOutput.card")}
                 active={selectedMethod === "CARD"}
                 onPress={() => onSelectMethod?.("CARD")}
               />
             </View>
 
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              Categoria
+              {t("expensesOutput.category")}
             </Text>
             <ScrollView
               horizontal
@@ -589,7 +587,7 @@ function ExpensesOutput({
               contentContainerStyle={styles.categoriesRow}
             >
               <Chip
-                label="Tutte le categorie"
+                label={t("expensesOutput.allCategories")}
                 active={selectedCategory === "ALL"}
                 onPress={() => onSelectCategory?.("ALL")}
               />
@@ -615,7 +613,7 @@ function ExpensesOutput({
               onPress={() => setFiltersModalOpen(false)}
             >
               <Text style={[styles.actionText, { color: colors.textOnAccent }]}>
-                Chiudi filtri
+                {t("expensesOutput.closeFilters")}
               </Text>
             </Pressable>
           </View>

@@ -17,6 +17,10 @@ import {
   upsertCard,
   upsertCashWallet,
 } from "../util/payment-http";
+import {
+  getCurrentLanguage,
+  translateWithLanguage,
+} from "./language-context";
 
 export const PaymentContext = createContext({
   cards: [],
@@ -53,6 +57,10 @@ function isAuthHttpError(error) {
   return status === 401 || status === 403;
 }
 
+function tt(key, params) {
+  return translateWithLanguage(getCurrentLanguage(), key, params);
+}
+
 export default function PaymentContextProvider({ children }) {
   const authCtx = useContext(AuthContext);
   const userId = authCtx.userId;
@@ -71,7 +79,7 @@ export default function PaymentContextProvider({ children }) {
 
   const ensureAuth = useCallback(() => {
     if (!userId || !token) {
-      throw new Error("Auth non disponibile (token/userId mancanti).");
+      throw new Error(tt("quickAdd.authUnavailable"));
     }
   }, [userId, token]);
 
@@ -110,7 +118,7 @@ export default function PaymentContextProvider({ children }) {
       }
 
       if (cardsResult.status === "rejected" && cashResult.status === "rejected") {
-        throw cardsResult.reason || cashResult.reason || new Error("Errore caricamento pagamenti.");
+        throw cardsResult.reason || cashResult.reason || new Error(tt("payments.loadFailed"));
       }
     } finally {
       setInitialized(true);
@@ -277,6 +285,8 @@ export default function PaymentContextProvider({ children }) {
 
   const resolveMethodLabel = useCallback(
     (expenseLike) => {
+      const cardLabel = tt("expensesOutput.card");
+      const cashLabel = tt("expensesOutput.cash");
       const type =
         expenseLike?.methodType === "CARD" || expenseLike?.payMethod === "CARD"
           ? "CARD"
@@ -290,27 +300,27 @@ export default function PaymentContextProvider({ children }) {
 
       if (type === "CARD") {
         const card = methodId ? cardsMap.get(methodId) : null;
-        if (card?.name) return `Carta - ${card.name}`;
+        if (card?.name) return `${cardLabel} - ${card.name}`;
 
         if (!methodId && (cards || []).length === 1) {
           const singleCardName = String(cards?.[0]?.name || "").trim();
-          if (singleCardName) return `Carta - ${singleCardName}`;
+          if (singleCardName) return `${cardLabel} - ${singleCardName}`;
         }
 
-        return "Carta";
+        return cardLabel;
       }
 
       if (methodId) {
         const wallet = cashMap.get(methodId);
-        if (wallet?.name) return `Contanti - ${wallet.name}`;
+        if (wallet?.name) return `${cashLabel} - ${wallet.name}`;
       }
 
       const fallbackWallet =
         (cashWallets || []).find((w) => w?.isDefault) || cashWallets?.[0];
       const fallbackWalletName = String(fallbackWallet?.name || "").trim();
-      if (fallbackWalletName) return `Contanti - ${fallbackWalletName}`;
+      if (fallbackWalletName) return `${cashLabel} - ${fallbackWalletName}`;
 
-      return "Contanti";
+      return cashLabel;
     },
     [cardsMap, cashMap, cards, cashWallets],
   );

@@ -11,14 +11,17 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import { EXPENSE_ICONS } from "../../constants/expense-icons";
+import { useTranslation } from "../../store/language-context";
 
 export default function IconPicker({
   value,
   onChange,
-  title = "Scegli un'icona",
+  title,
 }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
+  const safeTitle = title || t("expenseForm.selectIcon");
 
   const [open, setOpen] = useState(false);
 
@@ -32,7 +35,7 @@ export default function IconPicker({
           <View style={styles.preview}>
             <Ionicons name={selected} size={18} color={colors.textTitle} />
           </View>
-          <Text style={styles.triggerText}>Icona</Text>
+          <Text style={styles.triggerText}>{t("expenseForm.icon")}</Text>
         </View>
 
         <Ionicons name="chevron-forward" size={18} color={colors.white55} />
@@ -41,7 +44,7 @@ export default function IconPicker({
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={styles.backdrop}>
           <View style={styles.card}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.title}>{safeTitle}</Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.grid}>
@@ -65,7 +68,7 @@ export default function IconPicker({
             </ScrollView>
 
             <Pressable style={styles.closeBtn} onPress={() => setOpen(false)}>
-              <Text style={styles.closeText}>Chiudi</Text>
+              <Text style={styles.closeText}>{t("common.close")}</Text>
             </Pressable>
           </View>
         </View>

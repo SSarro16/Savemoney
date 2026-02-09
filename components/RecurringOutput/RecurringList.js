@@ -1,10 +1,11 @@
 import React, { useCallback, useRef } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 import RecurringItem from "./RecurringItem";
 import {
   RecurringType,
@@ -26,6 +27,7 @@ export default function RecurringList({
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const openSwipeRef = useRef(null);
+  const { t } = useTranslation();
 
   const closeOpenSwipe = useCallback(() => {
     if (openSwipeRef.current) {
@@ -52,10 +54,10 @@ export default function RecurringList({
         ]}
       >
         <Ionicons name="create-outline" size={18} color={colors.textTitle} />
-        <Text style={styles.actionText}>Modifica</Text>
+        <Text style={styles.actionText}>{t("recurring.editAction")}</Text>
       </Pressable>
     ),
-    [closeOpenSwipe, onEdit],
+    [closeOpenSwipe, onEdit, styles.action, styles.actionText, colors, t],
   );
 
   const renderRightActions = useCallback(
@@ -75,10 +77,10 @@ export default function RecurringList({
         ]}
       >
         <Ionicons name="trash-outline" size={18} color={colors.textTitle} />
-        <Text style={styles.actionText}>Elimina</Text>
+        <Text style={styles.actionText}>{t("recurring.deleteAction")}</Text>
       </Pressable>
     ),
-    [closeOpenSwipe, onDelete],
+    [closeOpenSwipe, onDelete, styles.action, styles.actionText, colors, t],
   );
 
   const renderItem = ({ item }) => {
@@ -144,16 +146,16 @@ export default function RecurringList({
 
 function makeStyles(colors) {
   return StyleSheet.create({
-  action: {
-    width: 120,
-    marginVertical: 8,
-    marginHorizontal: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
-  actionText: { color: colors.textTitle, fontWeight: "900", fontSize: 12 },
+    action: {
+      width: 120,
+      marginVertical: 8,
+      marginHorizontal: 10,
+      borderRadius: 16,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+    },
+    actionText: { color: colors.textTitle, fontWeight: "900", fontSize: 12 },
   });
 }

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { BudgetContext } from "../../store/budget-context";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
+import { useTranslation } from "../../store/language-context";
 
 import PieChart from "../../components/ManageBudget/PieChart";
 import BudgetAnalytics from "../../components/ManageBudget/BudgetAnalytics";
@@ -21,6 +22,7 @@ export default function BudgetOverviewScreen({ route, navigation }) {
   const { compactMode } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors, compactMode);
+  const { t } = useTranslation();
   const [mode, setMode] = useState("PIE");
 
   useEffect(() => {
@@ -32,15 +34,16 @@ export default function BudgetOverviewScreen({ route, navigation }) {
   const currentBudgetTitle = useMemo(
     () =>
       String(
-        budgetCtx.activeBudgetMeta?.title ||
+          budgetCtx.activeBudgetMeta?.title ||
           budgetCtx.activeBudgetMeta?.name ||
           route?.params?.title ||
-          "Budget",
+          t("drawer.budget"),
       ),
     [
       budgetCtx.activeBudgetMeta?.title,
       budgetCtx.activeBudgetMeta?.name,
       route?.params?.title,
+      t,
     ],
   );
 
@@ -91,7 +94,10 @@ export default function BudgetOverviewScreen({ route, navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.heroTitle}>{currentBudgetTitle}</Text>
             <Text style={styles.heroSub}>
-              {budgetCtx.formatEuro(used)} allocati su {budgetCtx.formatEuro(total)}
+              {t("budgetOverview.allocatedOfTotal", {
+                allocated: budgetCtx.formatEuro(used),
+                total: budgetCtx.formatEuro(total),
+              })}
             </Text>
           </View>
           <View
@@ -103,12 +109,14 @@ export default function BudgetOverviewScreen({ route, navigation }) {
               },
             ]}
           >
-            <Text style={styles.heroStatusText}>{isOver ? "SFORATO" : "OK"}</Text>
+            <Text style={styles.heroStatusText}>
+              {isOver ? t("budgetOverview.overBudget") : t("budgetOverview.ok")}
+            </Text>
           </View>
         </View>
 
         <Text style={styles.heroRemaining}>{budgetCtx.formatEuro(remaining)}</Text>
-        <Text style={styles.heroRemainingLabel}>Residuo disponibile</Text>
+        <Text style={styles.heroRemainingLabel}>{t("budgetOverview.availableRemaining")}</Text>
 
         <View style={styles.heroProgressTrack}>
           <View
@@ -121,20 +129,22 @@ export default function BudgetOverviewScreen({ route, navigation }) {
             ]}
           />
         </View>
-        <Text style={styles.heroProgressText}>Utilizzato {usagePct}% del budget</Text>
+        <Text style={styles.heroProgressText}>
+          {t("budgetOverview.usedPercentOfBudget", { percent: usagePct })}
+        </Text>
       </View>
 
       <View style={styles.kpiRow}>
         <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Allocati</Text>
+          <Text style={styles.kpiLabel}>{t("budgetOverview.allocated")}</Text>
           <Text style={styles.kpiValue}>{budgetCtx.formatEuro(used)}</Text>
         </View>
         <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Totale</Text>
+          <Text style={styles.kpiLabel}>{t("budgetOverview.total")}</Text>
           <Text style={styles.kpiValue}>{budgetCtx.formatEuro(total)}</Text>
         </View>
         <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Residuo</Text>
+          <Text style={styles.kpiLabel}>{t("budgetOverview.remaining")}</Text>
           <Text style={[styles.kpiValue, isOver && { color: colors.error500 }]}>
             {budgetCtx.formatEuro(remaining)}
           </Text>
@@ -161,7 +171,7 @@ export default function BudgetOverviewScreen({ route, navigation }) {
               { color: mode === "PIE" ? colors.textTitle : colors.textMuted },
             ]}
           >
-            Distribuzione
+            {t("budgetOverview.distribution")}
           </Text>
         </Pressable>
 
@@ -184,14 +194,14 @@ export default function BudgetOverviewScreen({ route, navigation }) {
               { color: mode === "ANALYTICS" ? colors.textTitle : colors.textMuted },
             ]}
           >
-            Analytics
+            {t("budgetOverview.analytics")}
           </Text>
         </Pressable>
       </View>
 
       {mode === "PIE" ? (
         <View style={styles.chartCard}>
-          <Text style={styles.sectionLabel}>Composizione categorie</Text>
+          <Text style={styles.sectionLabel}>{t("budgetOverview.categoryComposition")}</Text>
           <View style={styles.chartWrap}>
             <PieChart data={categoryValues} colorsPie={colorsPie} size={208} />
           </View>
@@ -217,7 +227,9 @@ export default function BudgetOverviewScreen({ route, navigation }) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.legendTitle}>{cat}</Text>
-                    <Text style={styles.legendSub}>{pct}% del totale</Text>
+                    <Text style={styles.legendSub}>
+                      {t("insights.percentOfTotal", { percent: pct })}
+                    </Text>
                   </View>
                   <Text style={styles.legendValue}>{budgetCtx.formatEuro(amount)}</Text>
                 </View>

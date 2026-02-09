@@ -1,9 +1,12 @@
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
-export default function LoadingOverlay({ message = "Caricamento..." }) {
+export default function LoadingOverlay({ message }) {
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
+  const resolvedMessage = message || t("common.loading");
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -12,9 +15,9 @@ export default function LoadingOverlay({ message = "Caricamento..." }) {
           styles.card,
           { backgroundColor: colors.surface2, borderColor: colors.border },
         ]}
-      >
+        >
         <ActivityIndicator size="large" color={colors.accent500} />
-        <Text style={[styles.text, { color: colors.textBody }]}>{message}</Text>
+        <Text style={[styles.text, { color: colors.textBody }]}>{resolvedMessage}</Text>
       </View>
     </View>
   );

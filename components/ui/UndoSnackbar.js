@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
 export default function UndoSnackbar({
   visible,
@@ -19,6 +20,7 @@ export default function UndoSnackbar({
   bottomOffset = 0,
 }) {
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function UndoSnackbar({
                 style={[styles.text, { color: colors.textBody }]}
                 numberOfLines={2}
               >
-                {message || "Elemento eliminato."}
+                {message || t("expenses.expenseDeleted")}
               </Text>
             </View>
 
@@ -87,7 +89,7 @@ export default function UndoSnackbar({
               ]}
             >
               <Text style={[styles.btnText, { color: colors.textTitle }]}>
-                ANNULLA
+                {t("common.undo").toUpperCase()}
               </Text>
             </Pressable>
           </View>

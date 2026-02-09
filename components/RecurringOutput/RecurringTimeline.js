@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 import {
   RecurringType,
   isDueTodayOrPast,
@@ -12,6 +13,7 @@ import {
 export default function RecurringTimeline({ items }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
 
   const nextEvents = useMemo(() => {
     return (items || [])
@@ -19,8 +21,8 @@ export default function RecurringTimeline({ items }) {
       .map((x) => {
         const due = isDueTodayOrPast(x.nextDue);
         const next = x.nextDue ? new Date(x.nextDue) : null;
-        const t = next ? next.getTime() : Number.MAX_SAFE_INTEGER;
-        return { ...x, _due: due, _t: t };
+        const timestamp = next ? next.getTime() : Number.MAX_SAFE_INTEGER;
+        return { ...x, _due: due, _t: timestamp };
       })
       .sort((a, b) => {
         if (a._due !== b._due) return a._due ? -1 : 1;
@@ -38,34 +40,34 @@ export default function RecurringTimeline({ items }) {
           <Ionicons name="time-outline" size={16} color={colors.textTitle} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Prossime scadenze</Text>
-          <Text style={styles.sub}>Solo abbonamenti</Text>
+          <Text style={styles.title}>{t("recurring.timelineTitle")}</Text>
+          <Text style={styles.sub}>{t("recurring.timelineSub")}</Text>
         </View>
       </View>
 
       <View style={{ marginTop: 10 }}>
-        {nextEvents.map((x) => (
-          <View key={String(x.id)} style={styles.row}>
-            <View style={[styles.dotWrap, x._due ? styles.dotDueWrap : styles.dotPaidWrap]}>
+        {nextEvents.map((item) => (
+          <View key={String(item.id)} style={styles.row}>
+            <View style={[styles.dotWrap, item._due ? styles.dotDueWrap : styles.dotPaidWrap]}>
               <Ionicons
-                name={x._due ? "alert-circle-outline" : "checkmark-outline"}
+                name={item._due ? "alert-circle-outline" : "checkmark-outline"}
                 size={12}
-                color={x._due ? colors.textOnAccentStrong : colors.textTitle}
+                color={item._due ? colors.textOnAccentStrong : colors.textTitle}
               />
             </View>
 
             <Text style={styles.rowTitle} numberOfLines={1}>
-              {x.title}
+              {item.title}
             </Text>
 
             <View style={styles.rowRight}>
-              <Text style={[styles.rowDate, x._due && styles.rowDue]}>
-                {x._due ? "Oggi" : formatDateShortIT(x.nextDue)}
+              <Text style={[styles.rowDate, item._due && styles.rowDue]}>
+                {item._due ? t("common.today") : formatDateShortIT(item.nextDue)}
               </Text>
-              {!x._due ? (
+              {!item._due ? (
                 <View style={styles.paidPill}>
                   <Ionicons name="checkmark" size={11} color={colors.textTitle} />
-                  <Text style={styles.paidPillText}>Pagato</Text>
+                  <Text style={styles.paidPillText}>{t("recurring.quickPaid")}</Text>
                 </View>
               ) : null}
             </View>

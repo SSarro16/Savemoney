@@ -1,7 +1,9 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 import { RecurringType } from "../../util/recurring/recurring-utils";
 
 function isEmoji(value) {
@@ -11,13 +13,18 @@ function isEmoji(value) {
 export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
 
   const icon = item?.icon || "repeat-outline";
   const title = String(item?.title || "");
   const amount = Number(item?.amount || 0);
   const isSub = item?.type === RecurringType.SUBSCRIPTION;
   const isPaidSubscription = isSub && !isDue;
-  const quickLabel = isSub ? (isPaidSubscription ? "Pagato" : "Paga") : "Aggiungi";
+  const quickLabel = isSub
+    ? isPaidSubscription
+      ? t("recurring.quickPaid")
+      : t("recurring.quickPay")
+    : t("recurring.quickAdd");
   const quickIcon =
     isSub && isPaidSubscription ? "checkmark-circle" : "add-circle-outline";
 
@@ -44,7 +51,7 @@ export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
             {title}
           </Text>
           <Text style={styles.sub} numberOfLines={1}>
-            {isSub ? "Abbonamento" : "Abitudine"} - {amount.toFixed(2)} EUR
+            {isSub ? t("recurring.typeSubscription") : t("recurring.typeHabit")} - {amount.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
       </View>

@@ -1,15 +1,19 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
 export default function ErrorOverlay({
   message,
   onRetry,
-  retryLabel = "Riprova",
+  retryLabel,
   retryDelayMs = 2000,
 }) {
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
+  const resolvedRetryLabel = retryLabel || t("common.retry");
 
   const [isRetrying, setIsRetrying] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -21,7 +25,7 @@ export default function ErrorOverlay({
     setSecondsLeft(totalSeconds);
 
     const tick = setInterval(() => {
-      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+      setSecondsLeft((current) => (current > 0 ? current - 1 : 0));
     }, 1000);
 
     const run = setTimeout(async () => {
@@ -45,12 +49,12 @@ export default function ErrorOverlay({
 
   const btnText = isRetrying
     ? secondsLeft > 0
-      ? `Riprovo tra ${secondsLeft}s...`
-      : "Riprovo..."
-    : retryLabel;
+      ? t("errors.retryIn", { seconds: secondsLeft })
+      : t("errors.retrying")
+    : resolvedRetryLabel;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}> 
       <View
         style={[
           styles.card,
@@ -63,19 +67,13 @@ export default function ErrorOverlay({
             { backgroundColor: colors.danger20, borderColor: colors.danger30 },
           ]}
         >
-          <Ionicons
-            name="alert-circle-outline"
-            size={26}
-            color={colors.textTitle}
-          />
+          <Ionicons name="alert-circle-outline" size={26} color={colors.textTitle} />
         </View>
 
         <Text style={[styles.title, { color: colors.textTitle }]}>
-          Ops! Qualcosa è andato storto
+          {t("errors.somethingWentWrong")}
         </Text>
-        <Text style={[styles.message, { color: colors.textBody }]}>
-          {message}
-        </Text>
+        <Text style={[styles.message, { color: colors.textBody }]}>{message}</Text>
 
         {!!onRetry && (
           <Pressable
@@ -96,14 +94,12 @@ export default function ErrorOverlay({
               size={18}
               color={colors.textOnAccent}
             />
-            <Text style={[styles.retryText, { color: colors.textOnAccent }]}>
-              {btnText}
-            </Text>
+            <Text style={[styles.retryText, { color: colors.textOnAccent }]}>{btnText}</Text>
           </Pressable>
         )}
 
-        <Text style={[styles.hint, { color: colors.textMuted }]}>
-          Se il problema persiste, controlla la connessione o riprova più tardi.
+        <Text style={[styles.hint, { color: colors.textMuted }]}> 
+          {t("errors.tryAgainLaterHint")}
         </Text>
       </View>
     </View>

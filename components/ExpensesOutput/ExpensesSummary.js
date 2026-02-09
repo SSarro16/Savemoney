@@ -3,15 +3,14 @@ import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
+import { useTranslation } from "../../store/language-context";
 
 function ExpensesSummary({ expenses, periodName }) {
   const { compactMode, highContrast } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
 
-  const expensesSum = expenses.reduce(
-    (sum, expense) => sum + expense.amount,
-    0,
-  );
+  const expensesSum = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
   return (
     <View
@@ -35,20 +34,17 @@ function ExpensesSummary({ expenses, periodName }) {
           ]}
         >
           <Ionicons name="time-outline" size={14} color={colors.textTitle} />
-          <Text
-            style={[styles.pillText, { color: colors.textBody }]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.pillText, { color: colors.textBody }]} numberOfLines={1}>
             {periodName}
           </Text>
         </View>
 
         <Text style={[styles.label, { color: colors.textMuted }]}>
-          Totale spese
+          {t("expensesOutput.totalExpenses")}
         </Text>
         <Text style={[styles.sum, { color: colors.textTitle }]}>
           {expensesSum.toFixed(2)}
-          <Text style={[styles.currency, { color: colors.textBody }]}> €</Text>
+          <Text style={[styles.currency, { color: colors.textBody }]}> {t("common.currencyCode")}</Text>
         </Text>
       </View>
 
@@ -78,7 +74,7 @@ function ExpensesSummary({ expenses, periodName }) {
           </Text>
         </View>
         <Text style={[styles.badgeHint, { color: colors.textMuted }]}>
-          voci
+          {t("expensesOutput.entries")}
         </Text>
       </View>
     </View>

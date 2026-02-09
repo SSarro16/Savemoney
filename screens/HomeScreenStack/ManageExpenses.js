@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlobalStyles } from "../../constants/styles";
 import { ExpensesContext } from "../../store/expenses-context";
 import { PaymentContext } from "../../store/payment-context";
+import { useTranslation } from "../../store/language-context";
 import ExpenseForm from "../../components/ManageExpense/ExpenseForm";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
@@ -36,7 +37,6 @@ import {
   removeExpenseTemplate,
 } from "../../util/expenses/expense-template";
 
-// ✅ per normalizzare il metodo pagamento
 import { PAYMENT_METHOD } from "../../util/expenses/expense-presets";
 
 function safePayMethod(v) {
@@ -72,6 +72,7 @@ function ManageExpenses({ route, navigation }) {
 
   const expensesCtx = useContext(ExpensesContext);
   const paymentCtx = useContext(PaymentContext);
+  const { t } = useTranslation();
 
   const editedExpenseId = route.params?.expenseId;
   const isEditing = !!editedExpenseId;
@@ -100,13 +101,12 @@ function ManageExpenses({ route, navigation }) {
 
       if (!draft.description?.trim()) {
         Alert.alert(
-          "Manca la descrizione",
-          "Scrivi una descrizione per salvare nei preferiti.",
+          t("manageExpense.missingDescriptionTitle"),
+          t("manageExpense.missingDescriptionMessage"),
         );
         return;
       }
 
-      // ✅ aggiungo anche metodo pagamento/cardId nel template
       const pm = safePayMethod(draft.payMethod);
       const cid =
         pm === PAYMENT_METHOD.CARD ? String(draft.cardId || "").trim() : "";
@@ -130,7 +130,10 @@ function ManageExpenses({ route, navigation }) {
         setFavoriteSaved(false);
         setFavoriteTemplateId("");
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        Alert.alert("Rimosso", "Preferito rimosso.");
+        Alert.alert(
+          t("manageExpense.favoriteRemovedTitle"),
+          t("manageExpense.favoriteRemovedMessage"),
+        );
         return;
       }
 
@@ -138,8 +141,8 @@ function ManageExpenses({ route, navigation }) {
         setFavoriteSaved(true);
         setFavoriteTemplateId(String(matching.id));
         Alert.alert(
-          "Già salvato",
-          "Questo preferito esiste già. Premi ancora la stella per rimuoverlo.",
+          t("manageExpense.favoriteAlreadySavedTitle"),
+          t("manageExpense.favoriteAlreadySavedMessage"),
         );
         return;
       }
@@ -156,13 +159,16 @@ function ManageExpenses({ route, navigation }) {
         () => {},
       );
       Alert.alert(
-        "Salvato",
-        "Aggiunto ai preferiti (lo trovi in Aggiunta Rapida)",
+        t("manageExpense.favoriteSavedTitle"),
+        t("manageExpense.favoriteSavedMessage"),
       );
-    } catch {
-      Alert.alert("Errore", "Impossibile salvare nei preferiti.");
+    } catch (saveError) {
+      Alert.alert(
+        t("common.error"),
+        saveError?.message || t("manageExpense.favoriteSaveFailed"),
+      );
     }
-  }, [favoriteSaved, favoriteTemplateId]);
+  }, [favoriteSaved, favoriteTemplateId, t]);
 
   useEffect(() => {
     setFavoriteSaved(false);
@@ -171,15 +177,17 @@ function ManageExpenses({ route, navigation }) {
   }, [editedExpenseId]);
 
   function confirmDelete() {
-    Alert.alert("Eliminare la spesa?", "Puoi annullare per alcuni secondi.", [
-      { text: "Annulla", style: "cancel" },
-      { text: "Elimina", style: "destructive", onPress: deleteExpenseHandler },
+    Alert.alert(t("manageExpense.confirmDeleteTitle"), t("manageExpense.confirmDeleteMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: deleteExpenseHandler },
     ]);
   }
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isEditing ? "Modifica Spesa" : "Aggiungi Spesa",
+      title: isEditing
+        ? t("manageExpense.editExpenseTitle")
+        : t("manageExpense.addExpenseTitle"),
       headerRight: () => (
         <View style={styles.headerRight}>
           <Pressable
@@ -223,6 +231,7 @@ function ManageExpenses({ route, navigation }) {
     colors.error500,
     colors.textOnAccentStrong,
     colors.textTitle,
+    t,
   ]);
 
   async function deleteExpenseHandler() {
@@ -239,7 +248,7 @@ function ManageExpenses({ route, navigation }) {
       );
       navigation.goBack();
     } catch {
-      setError("Impossibile eliminare la spesa! Riprova più tardi.");
+      setError(t("manageExpense.deleteFailed"));
       setIsSubmitting(false);
       submitLockRef.current = false;
     }
@@ -268,7 +277,7 @@ function ManageExpenses({ route, navigation }) {
       }
       navigation.goBack();
     } catch {
-      setError("Impossibile salvare la spesa! Riprova più tardi.");
+      setError(t("manageExpense.saveFailed"));
       setIsSubmitting(false);
       submitLockRef.current = false;
     }
@@ -301,7 +310,7 @@ function ManageExpenses({ route, navigation }) {
       setIsSubmitting(false);
       submitLockRef.current = false;
     } catch {
-      setError("Operazione non riuscita. Riprova più tardi.");
+      setError(t("manageExpense.operationFailed"));
       setIsSubmitting(false);
       submitLockRef.current = false;
     }
@@ -312,14 +321,14 @@ function ManageExpenses({ route, navigation }) {
       <ErrorOverlay
         message={error}
         onRetry={retryLastAction}
-        retryLabel="Riprova"
+        retryLabel={t("common.retry")}
         retryDelayMs={2000}
       />
     );
   }
 
   if (isSubmitting) {
-    return <LoadingOverlay message="Salvataggio in corso..." />;
+    return <LoadingOverlay message={t("manageExpense.saving")} />;
   }
 
   const Wrapper = Platform.OS === "ios" ? KeyboardAvoidingView : View;
@@ -364,18 +373,18 @@ function ManageExpenses({ route, navigation }) {
                 color={colors.textTitle}
               />
               <Text style={styles.heroBadgeText}>
-                {isEditing ? "Edit Mode" : "Nuova Spesa"}
+                {isEditing ? t("manageExpense.editModeBadge") : t("manageExpense.newExpenseBadge")}
               </Text>
             </View>
           </View>
 
           <Text style={styles.heroTitle}>
-            {isEditing ? "Aggiorna la tua spesa" : "Aggiungi una nuova spesa"}
+            {isEditing ? t("manageExpense.editHeroTitle") : t("manageExpense.newHeroTitle")}
           </Text>
           <Text style={styles.heroSub}>
             {isEditing
-              ? "Rivedi i campi e salva una sola volta. Cestino = elimina con undo."
-              : "Compila il form e registra in modo rapido. Stella = preferito."}
+              ? t("manageExpense.editHeroSubtitle")
+              : t("manageExpense.newHeroSubtitle")}
           </Text>
 
           <View style={styles.heroMetaRow}>
@@ -385,7 +394,7 @@ function ManageExpenses({ route, navigation }) {
             </View>
             <View style={styles.heroMetaPill}>
               <Ionicons name="checkmark-done-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.heroMetaText}>Salvataggio protetto</Text>
+              <Text style={styles.heroMetaText}>{t("manageExpense.secureSaving")}</Text>
             </View>
           </View>
         </View>
@@ -393,7 +402,7 @@ function ManageExpenses({ route, navigation }) {
         <View style={styles.formWrap}>
           <ExpenseForm
             ref={formRef}
-            submitButtonLabel={isEditing ? "Aggiorna" : "Aggiungi"}
+            submitButtonLabel={isEditing ? t("manageExpense.updateAction") : t("manageExpense.addAction")}
             onCancel={cancelHandler}
             onSubmit={confirmHandler}
             defaultValues={selectedExpense ?? preset}
@@ -546,6 +555,3 @@ function makeStyles(colors) {
     },
   });
 }
-
-
-

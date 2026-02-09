@@ -1,13 +1,16 @@
 import React, { useContext, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
+import { useTranslation } from "../../store/language-context";
 import ProgressBar from "./ProgressBar";
 
 export default function BudgetAnalytics({ total, categories }) {
   const { compactMode, highContrast } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
 
   const border = highContrast ? colors.borderStrong : colors.border;
   const pad = compactMode ? 12 : 16;
@@ -19,7 +22,7 @@ export default function BudgetAnalytics({ total, categories }) {
       .sort((a, b) => b.value - a.value);
   }, [categories]);
 
-  const used = rows.reduce((s, r) => s + r.value, 0);
+  const used = rows.reduce((sum, row) => sum + row.value, 0);
   const remaining = Number(total || 0) - used;
 
   return (
@@ -43,17 +46,17 @@ export default function BudgetAnalytics({ total, categories }) {
           />
         </View>
         <Text style={[styles.title, { color: colors.textTitle }]}>
-          Analisi
+          {t("budgetOverview.analytics")}
         </Text>
       </View>
 
       <View style={[styles.kpis, { borderColor: border }]}>
         <View style={styles.kpi}>
           <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
-            Usato
+            {t("budgetOverview.allocated")}
           </Text>
           <Text style={[styles.kpiValue, { color: colors.accent500 }]}>
-            {used.toFixed(2)} €
+            {used.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
 
@@ -61,34 +64,34 @@ export default function BudgetAnalytics({ total, categories }) {
 
         <View style={styles.kpi}>
           <Text style={[styles.kpiLabel, { color: colors.textMuted }]}>
-            Rimanente
+            {t("budgetOverview.remaining")}
           </Text>
           <Text style={[styles.kpiValue, { color: colors.textTitle }]}>
-            {remaining.toFixed(2)} €
+            {remaining.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
       </View>
 
       <Text style={[styles.section, { color: colors.textMuted }]}>
-        Per categoria
+        {t("budgetOverview.categoryComposition")}
       </Text>
 
       <View style={{ gap: 10 }}>
-        {rows.map((r, idx) => {
-          const pct = total > 0 ? Math.min(1, r.value / total) : 0;
-          const barColor = idx === 0 ? colors.accent500 : colors.primary500;
+        {rows.map((row, index) => {
+          const pct = total > 0 ? Math.min(1, row.value / total) : 0;
+          const barColor = index === 0 ? colors.accent500 : colors.primary500;
 
           return (
-            <View key={r.name} style={styles.row}>
+            <View key={row.name} style={styles.row}>
               <View style={styles.rowTop}>
                 <Text
                   style={[styles.rowName, { color: colors.textTitle }]}
                   numberOfLines={1}
                 >
-                  {r.name}
+                  {row.name}
                 </Text>
-                <Text style={[styles.rowValue, { color: colors.textBody }]}>
-                  {r.value.toFixed(2)} €
+                <Text style={[styles.rowValue, { color: colors.textBody }]}> 
+                  {row.value.toFixed(2)} {t("common.currencyCode")}
                 </Text>
               </View>
 

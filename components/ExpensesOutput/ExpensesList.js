@@ -10,12 +10,14 @@ import { GlobalStyles } from "../../constants/styles";
 import { ExpensesContext } from "../../store/expenses-context";
 import { CustomizationContext } from "../../store/customization-context";
 import { logger } from "../../util/logger";
+import { useTranslation } from "../../store/language-context";
 
 function ExpensesList({ expenses }) {
   const expensesCtx = useContext(ExpensesContext);
   const navigation = useNavigation();
   const { compactMode, highContrast } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
 
   const openSwipeRef = useRef(null);
   const animMapRef = useRef({});
@@ -98,7 +100,7 @@ function ExpensesList({ expenses }) {
     >
       <Ionicons name="create-outline" size={18} color={colors.textOnAccent} />
       <Text style={[styles.actionText, { color: colors.textOnAccent }]}>
-        Modifica
+        {t("common.edit")}
       </Text>
     </Pressable>
   );
@@ -118,7 +120,7 @@ function ExpensesList({ expenses }) {
     >
       <Ionicons name="trash-outline" size={18} color={colors.textOnAccent} />
       <Text style={[styles.actionText, { color: colors.textOnAccent }]}>
-        Elimina
+        {t("common.delete")}
       </Text>
     </Pressable>
   );

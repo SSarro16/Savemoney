@@ -19,6 +19,7 @@ import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { GlobalStyles } from "../../constants/styles";
 import { saveUserProfile } from "../../util/profile-http";
 import CustomDatePicker from "../../components/ui/DatePicker";
+import { useTranslation } from "../../store/language-context";
 
 export const PRESETS = {
   TODAY: "TODAY",
@@ -76,42 +77,25 @@ function getPresetRange(preset) {
   return { from: null, to: null };
 }
 
-function formatDate(d) {
+function formatDate(d, localeTag) {
   if (!d) return "";
-  const months = [
-    "Gen",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mag",
-    "Giu",
-    "Lug",
-    "Ago",
-    "Set",
-    "Ott",
-    "Nov",
-    "Dic",
-  ];
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return d
+    .toLocaleDateString(localeTag, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+    .replace(/,/g, "");
 }
 
-function formatDateShort(d) {
+function formatDateShort(d, localeTag) {
   if (!d) return "";
-  const months = [
-    "Gen",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mag",
-    "Giu",
-    "Lug",
-    "Ago",
-    "Set",
-    "Ott",
-    "Nov",
-    "Dic",
-  ];
-  return `${d.getDate()} ${months[d.getMonth()]}`;
+  return d
+    .toLocaleDateString(localeTag, {
+      day: "numeric",
+      month: "short",
+    })
+    .replace(/,/g, "");
 }
 
 function safeDate(dateLike) {
@@ -189,13 +173,14 @@ const LIKELY_FEMALE_NON_A = new Set([
   "sarah",
 ]);
 
-function getWelcomePrefix(firstName) {
+function getWelcomePrefix(firstName, language, t) {
+  if (language !== "it") return t("expenses.welcomeDefault");
   const base = stripAccents(firstName).toLowerCase().trim();
-  if (!base) return "Bentornato";
-  if (LIKELY_FEMALE_NON_A.has(base)) return "Bentornata";
-  if (LIKELY_MALE_ENDING_A.has(base)) return "Bentornato";
-  if (base.endsWith("a")) return "Bentornata";
-  return "Bentornato";
+  if (!base) return t("expenses.welcomeDefault");
+  if (LIKELY_FEMALE_NON_A.has(base)) return t("expenses.welcomeFemale");
+  if (LIKELY_MALE_ENDING_A.has(base)) return t("expenses.welcomeMale");
+  if (base.endsWith("a")) return t("expenses.welcomeFemale");
+  return t("expenses.welcomeMale");
 }
 
 function ExpensesScreen() {
@@ -203,6 +188,7 @@ function ExpensesScreen() {
   const authCtx = useContext(AuthContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t, language, localeTag } = useTranslation();
 
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(null);
@@ -230,12 +216,12 @@ function ExpensesScreen() {
     try {
       await expensesCtx.fetchAndSetExpenses();
     } catch {
-      setError("Impossibile recuperare le spese!");
+      setError(t("expenses.loadExpensesFailed"));
     } finally {
       if (!hasLoadedRef.current) setIsFetching(false);
       hasLoadedRef.current = true;
     }
-  }, [expensesCtx.fetchAndSetExpenses]);
+  }, [expensesCtx.fetchAndSetExpenses, t]);
 
   // ✅ una sola fetch all’avvio (no loop)
   useEffect(() => {
@@ -287,7 +273,8 @@ function ExpensesScreen() {
 
     return byRange.filter((expense) => {
       if (selectedCategory !== "ALL") {
-        const category = String(expense?.category || "").trim() || "Senza categoria";
+        const category =
+          String(expense?.category || "").trim() || t("expenses.uncategorized");
         if (category !== selectedCategory) return false;
       }
 
@@ -297,11 +284,13 @@ function ExpensesScreen() {
 
       if (normalizedQuery) {
         const description = normalizeForSearch(expense?.description);
-        const category = normalizeForSearch(expense?.category || "Senza categoria");
+        const category = normalizeForSearch(
+          expense?.category || t("expenses.uncategorized"),
+        );
         const method =
           paymentTypeLabel(expense) === "CARD"
-            ? "carta card"
-            : "contanti cash";
+            ? t("expenses.cardSearchTerms")
+            : t("expenses.cashSearchTerms");
 
         if (
           !description.includes(normalizedQuery) &&
@@ -321,52 +310,61 @@ function ExpensesScreen() {
     selectedCategory,
     selectedMethod,
     searchQuery,
+    t,
   ]);
 
   const periodLabel = useMemo(() => {
-    if (preset === PRESETS.TODAY) return "Oggi";
-    if (preset === PRESETS.YESTERDAY) return "Ieri";
-    if (preset === PRESETS.DAYS_7) return "Ultimi 7 giorni";
-    if (preset === PRESETS.MONTH_1) return "Ultimo mese";
-    if (preset === PRESETS.YEAR_1) return "Ultimo anno";
-    if (preset === PRESETS.TOTAL) return "Totale";
-
-    const { from, to } = effectiveRange;
-    if (from && to) return `${formatDate(from)} - ${formatDate(to)}`;
-    if (from && !to) return `Da ${formatDate(from)}`;
-    if (!from && to) return `Fino a ${formatDate(to)}`;
-    return "Periodo personalizzato";
-  }, [preset, effectiveRange]);
-
-  const emptyStateText = useMemo(() => {
-    if (isAdvancedFilterActive) {
-      return "Nessun risultato con i filtri selezionati.";
-    }
-    if (preset === PRESETS.TODAY) return "Nessuna spesa oggi";
-    if (preset === PRESETS.YESTERDAY) return "Nessuna spesa ieri";
-    if (preset === PRESETS.DAYS_7) {
-      return "Nessuna spesa effettuata in sette giorni";
-    }
-    if (preset === PRESETS.MONTH_1) {
-      return "Nessuna spesa effettuata in un mese";
-    }
-    if (preset === PRESETS.YEAR_1) {
-      return "Nessuna spesa effettuata in un anno";
-    }
-    if (preset === PRESETS.TOTAL) return "Nessuna spesa registrata";
+    if (preset === PRESETS.TODAY) return t("common.today");
+    if (preset === PRESETS.YESTERDAY) return t("common.yesterday");
+    if (preset === PRESETS.DAYS_7) return t("expenses.last7Days");
+    if (preset === PRESETS.MONTH_1) return t("expenses.lastMonth");
+    if (preset === PRESETS.YEAR_1) return t("expenses.lastYear");
+    if (preset === PRESETS.TOTAL) return t("expenses.totalPeriod");
 
     const { from, to } = effectiveRange;
     if (from && to) {
-      return `Nessuna spesa effettuata dal ${formatDateShort(from)} al ${formatDateShort(to)}`;
+      return t("expenses.fromToDate", {
+        from: formatDate(from, localeTag),
+        to: formatDate(to, localeTag),
+      });
+    }
+    if (from && !to) return t("expenses.fromDate", { date: formatDate(from, localeTag) });
+    if (!from && to) return t("expenses.toDate", { date: formatDate(to, localeTag) });
+    return t("expenses.periodCustom");
+  }, [preset, effectiveRange, localeTag, t]);
+
+  const emptyStateText = useMemo(() => {
+    if (isAdvancedFilterActive) {
+      return t("expenses.noResultsWithFilters");
+    }
+    if (preset === PRESETS.TODAY) return t("expenses.noExpensesToday");
+    if (preset === PRESETS.YESTERDAY) return t("expenses.noExpensesYesterday");
+    if (preset === PRESETS.DAYS_7) {
+      return t("expenses.noExpenses7Days");
+    }
+    if (preset === PRESETS.MONTH_1) {
+      return t("expenses.noExpensesMonth");
+    }
+    if (preset === PRESETS.YEAR_1) {
+      return t("expenses.noExpensesYear");
+    }
+    if (preset === PRESETS.TOTAL) return t("expenses.noExpensesTotal");
+
+    const { from, to } = effectiveRange;
+    if (from && to) {
+      return t("expenses.noExpensesBetween", {
+        from: formatDateShort(from, localeTag),
+        to: formatDateShort(to, localeTag),
+      });
     }
     if (from && !to) {
-      return `Nessuna spesa effettuata dal ${formatDateShort(from)}`;
+      return t("expenses.noExpensesFrom", { from: formatDateShort(from, localeTag) });
     }
     if (!from && to) {
-      return `Nessuna spesa effettuata fino al ${formatDateShort(to)}`;
+      return t("expenses.noExpensesTo", { to: formatDateShort(to, localeTag) });
     }
-    return "Nessuna spesa nel periodo selezionato.";
-  }, [preset, effectiveRange, isAdvancedFilterActive]);
+    return t("expenses.noExpensesInSelectedPeriod");
+  }, [preset, effectiveRange, isAdvancedFilterActive, localeTag, t]);
 
   const handleSelectPreset = (p) => {
     setPreset(p);
@@ -394,7 +392,7 @@ function ExpensesScreen() {
     .join(" ");
 
   const firstName = normalizeNameInput(authCtx.firstName).split(" ")[0];
-  const welcomePrefix = getWelcomePrefix(firstName);
+  const welcomePrefix = getWelcomePrefix(firstName, language, t);
   const welcomeText = welcomeName ? `${welcomePrefix}, ${welcomeName}` : "";
   const missingProfile = useMemo(
     () => ({
@@ -454,38 +452,38 @@ function ExpensesScreen() {
     const hasValidDob = isValidBirthDate(dateOfBirthDate);
 
     if (missingProfile.firstName && !firstName) {
-      Alert.alert("Dato mancante", "Inserisci il Nome.");
+      Alert.alert(t("profilePrompt.missingDataTitle"), t("profilePrompt.missingFirstName"));
       return;
     }
 
     if (missingProfile.lastName && !lastName) {
-      Alert.alert("Dato mancante", "Inserisci il Cognome.");
+      Alert.alert(t("profilePrompt.missingDataTitle"), t("profilePrompt.missingLastName"));
       return;
     }
 
     if (firstName && !isValidHumanName(firstName)) {
       Alert.alert(
-        "Nome non valido",
-        "Il Nome deve avere 2-30 caratteri e contenere solo lettere.",
+        t("profilePrompt.invalidFirstNameTitle"),
+        t("profilePrompt.invalidFirstNameMessage"),
       );
       return;
     }
 
     if (lastName && !isValidHumanName(lastName)) {
       Alert.alert(
-        "Cognome non valido",
-        "Il Cognome deve avere 2-30 caratteri e contenere solo lettere.",
+        t("profilePrompt.invalidLastNameTitle"),
+        t("profilePrompt.invalidLastNameMessage"),
       );
       return;
     }
 
     if (missingProfile.gender && !gender) {
-      Alert.alert("Dato mancante", "Seleziona il genere.");
+      Alert.alert(t("profilePrompt.missingDataTitle"), t("profilePrompt.missingGender"));
       return;
     }
 
     if (missingProfile.dateOfBirth && !hasValidDob) {
-      Alert.alert("Data non valida", "Inserisci una data di nascita valida.");
+      Alert.alert(t("profilePrompt.invalidDateTitle"), t("profilePrompt.invalidDateMessage"));
       return;
     }
 
@@ -517,8 +515,8 @@ function ExpensesScreen() {
       setProfilePromptDismissed(true);
     } catch {
       Alert.alert(
-        "Errore",
-        "Non siamo riusciti a salvare i dati. Controlla la connessione e riprova.",
+        t("common.error"),
+        t("profilePrompt.saveFailed"),
       );
     } finally {
       setProfileSaving(false);
@@ -533,6 +531,7 @@ function ExpensesScreen() {
     missingProfile.gender,
     missingProfile.dateOfBirth,
     authCtx,
+    t,
   ]);
 
   const postponeProfilePrompt = () => {
@@ -543,7 +542,11 @@ function ExpensesScreen() {
   if (isFetching) {
     return (
       <LoadingOverlay
-        message={welcomeText ? `${welcomeText} - carico le spese...` : "Caricamento spese..."}
+        message={
+          welcomeText
+            ? t("expenses.loadingExpensesWithName", { name: welcomeText })
+            : t("expenses.loadingExpenses")
+        }
       />
     );
   }
@@ -553,7 +556,7 @@ function ExpensesScreen() {
       <ErrorOverlay
         message={error}
         onRetry={loadExpenses}
-        retryLabel="Riprova"
+        retryLabel={t("common.retry")}
       />
     );
   }
@@ -602,19 +605,18 @@ function ExpensesScreen() {
             keyboardVerticalOffset={Platform.OS === "ios" ? 86 : 20}
           >
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Completa il profilo</Text>
+              <Text style={styles.modalTitle}>{t("profilePrompt.title")}</Text>
               <Text style={styles.modalSub}>
-                Mancano alcuni dati del tuo account. Puoi salvarli ora oppure continuare e
-                completare piu tardi.
+                {t("profilePrompt.subtitle")}
               </Text>
 
               {missingProfile.firstName ? (
                 <>
-                  <Text style={styles.label}>Nome</Text>
+                  <Text style={styles.label}>{t("profile.firstName")}</Text>
                   <TextInput
                     value={firstNameDraft}
                     onChangeText={setFirstNameDraft}
-                    placeholder="Nome"
+                    placeholder={t("profile.firstName")}
                     placeholderTextColor={colors.white45}
                     style={styles.input}
                     editable={!profileSaving}
@@ -627,11 +629,11 @@ function ExpensesScreen() {
 
               {missingProfile.lastName ? (
                 <>
-                  <Text style={styles.label}>Cognome</Text>
+                  <Text style={styles.label}>{t("profile.lastName")}</Text>
                   <TextInput
                     value={lastNameDraft}
                     onChangeText={setLastNameDraft}
-                    placeholder="Cognome"
+                    placeholder={t("profile.lastName")}
                     placeholderTextColor={colors.white45}
                     style={styles.input}
                     editable={!profileSaving}
@@ -644,11 +646,11 @@ function ExpensesScreen() {
 
               {missingProfile.gender ? (
                 <>
-                  <Text style={styles.label}>Genere</Text>
+                  <Text style={styles.label}>{t("profile.gender")}</Text>
                   <View style={styles.genderRow}>
                     {[
-                      { key: "MALE", label: "Maschio" },
-                      { key: "FEMALE", label: "Femmina" },
+                      { key: "MALE", label: t("auth.male") },
+                      { key: "FEMALE", label: t("auth.female") },
                     ].map((option) => {
                       const active = normalizeGender(genderDraft) === option.key;
                       return (
@@ -676,7 +678,7 @@ function ExpensesScreen() {
               {missingProfile.dateOfBirth ? (
                 <View style={{ marginTop: 4 }}>
                   <CustomDatePicker
-                    label="Data di nascita"
+                    label={t("auth.birthDate")}
                     value={safeBirthDate(dobDraft) || new Date(2000, 0, 1)}
                     onChange={setDobDraft}
                   />
@@ -693,7 +695,7 @@ function ExpensesScreen() {
                     profileSaving && { opacity: 0.6 },
                   ]}
                 >
-                  <Text style={styles.laterBtnText}>Piu tardi</Text>
+                  <Text style={styles.laterBtnText}>{t("profilePrompt.later")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -706,7 +708,7 @@ function ExpensesScreen() {
                   ]}
                 >
                   <Text style={styles.submitBtnText}>
-                    {profileSaving ? "Salvataggio..." : "Salva e continua"}
+                    {profileSaving ? t("profile.saving") : t("profilePrompt.saveAndContinue")}
                   </Text>
                 </Pressable>
               </View>

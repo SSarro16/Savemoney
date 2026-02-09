@@ -22,8 +22,9 @@ import {
   setActiveBudgetId,
   upsertBudget,
 } from "../../util/budget/budget-storage";
+import { useTranslation } from "../../store/language-context";
 
-function BudgetCard({ item, onOpen, onDelete, styles, colors }) {
+function BudgetCard({ item, onOpen, onDelete, styles, colors, t }) {
   const total = Number(item?.total || 0);
   const allocated = Object.values(item?.categories || {}).reduce(
     (sum, value) => sum + Number(value || 0),
@@ -43,10 +44,10 @@ function BudgetCard({ item, onOpen, onDelete, styles, colors }) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.budgetTitle} numberOfLines={1}>
-            {item?.title || item?.name || "Nuovo budget"}
+            {item?.title || item?.name || t("budgetsHub.newBudgetFallback")}
           </Text>
           <Text style={styles.budgetSub}>
-            {allocated.toFixed(2)} / {total.toFixed(2)} EUR
+            {allocated.toFixed(2)} / {total.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
         <View style={styles.budgetPctBadge}>
@@ -61,10 +62,10 @@ function BudgetCard({ item, onOpen, onDelete, styles, colors }) {
       <View style={styles.budgetActions}>
         <Pressable onPress={() => onDelete(item)} style={styles.budgetDeleteBtn}>
           <Ionicons name="trash-outline" size={14} color={colors.error500} />
-          <Text style={[styles.budgetDeleteText, { color: colors.error500 }]}>Elimina</Text>
+          <Text style={[styles.budgetDeleteText, { color: colors.error500 }]}>{t("common.delete")}</Text>
         </Pressable>
         <View style={styles.budgetOpenHint}>
-          <Text style={styles.budgetOpenText}>Apri dettagli</Text>
+          <Text style={styles.budgetOpenText}>{t("budgetsHub.openDetails")}</Text>
           <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
         </View>
       </View>
@@ -76,6 +77,7 @@ export default function BudgetsHubScreen({ navigation }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const authCtx = useContext(AuthContext);
+  const { t } = useTranslation();
   const userId = authCtx.userId;
   const token = authCtx.token;
   const refreshSession = authCtx.refreshSession;
@@ -100,7 +102,7 @@ export default function BudgetsHubScreen({ navigation }) {
         if (value > best.value) {
           return {
             value,
-            title: String(b?.title || b?.name || "Nuovo budget"),
+            title: String(b?.title || b?.name || t("budgetsHub.newBudgetFallback")),
           };
         }
         return best;
@@ -114,7 +116,7 @@ export default function BudgetsHubScreen({ navigation }) {
       topName: richest.title,
       topTotal: richest.value,
     };
-  }, [items]);
+  }, [items, t]);
 
   useEffect(() => {
     refreshSessionRef.current = refreshSession;
@@ -144,7 +146,7 @@ export default function BudgetsHubScreen({ navigation }) {
         const list = await withAuthRetry((t) => getBudgets(userId, t));
         setItems(list);
       } catch (e) {
-        setError(e?.message || "Errore");
+        setError(e?.message || t("common.error"));
       } finally {
         if (showLoader) setIsFetching(false);
         hasLoadedRef.current = true;
@@ -160,7 +162,7 @@ export default function BudgetsHubScreen({ navigation }) {
   );
 
   const openBudget = async (budget) => {
-    const budgetTitle = String(budget?.title || budget?.name || "Nuovo budget");
+    const budgetTitle = String(budget?.title || budget?.name || t("budgetsHub.newBudgetFallback"));
     await setActiveBudgetId(budget.id, userId);
     navigation.navigate("BudgetOverview", {
       budgetId: budget.id,
@@ -169,11 +171,11 @@ export default function BudgetsHubScreen({ navigation }) {
   };
 
   const confirmDelete = (budget) => {
-    const budgetTitle = String(budget?.title || budget?.name || "Nuovo budget");
-    Alert.alert("Elimina budget", `Vuoi eliminare "${budgetTitle}"?`, [
-      { text: "Annulla", style: "cancel" },
+    const budgetTitle = String(budget?.title || budget?.name || t("budgetsHub.newBudgetFallback"));
+    Alert.alert(t("budgetsHub.deleteBudgetTitle"), t("budgetsHub.deleteBudgetMessage", { name: budgetTitle }), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Elimina",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           const next = await withAuthRetry((t) => removeBudget(userId, t, budget.id));
@@ -185,7 +187,7 @@ export default function BudgetsHubScreen({ navigation }) {
 
   const createNew = async () => {
     try {
-      const cleanTitle = String(title || "").trim() || "Nuovo budget";
+      const cleanTitle = String(title || "").trim() || t("budgetsHub.newBudgetFallback");
       const budget = makeEmptyBudget({ title: cleanTitle });
       const next = await withAuthRetry((t) => upsertBudget(userId, t, budget));
       setItems(next);
@@ -196,11 +198,11 @@ export default function BudgetsHubScreen({ navigation }) {
         title: String(budget?.title || budget?.name || cleanTitle),
       });
     } catch (e) {
-      Alert.alert("Errore", e?.message || "Impossibile creare il budget.");
+      Alert.alert(t("common.error"), e?.message || t("budgetsHub.createBudgetFailed"));
     }
   };
 
-  if (isFetching) return <LoadingOverlay message="Caricamento budget..." />;
+  if (isFetching) return <LoadingOverlay message={t("budgetsHub.loadingBudgets")} />;
   if (error) return <ErrorOverlay message={error} onRetry={load} />;
 
   return (
@@ -217,8 +219,8 @@ export default function BudgetsHubScreen({ navigation }) {
               <Ionicons name="layers-outline" size={18} color={colors.textTitle} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroTitle}>Budget Hub</Text>
-              <Text style={styles.heroSub}>Gestione multipla, overview immediata.</Text>
+              <Text style={styles.heroTitle}>{t("budgetsHub.heroTitle")}</Text>
+              <Text style={styles.heroSub}>{t("budgetsHub.heroSub")}</Text>
             </View>
             <Pressable
               onPress={() => setCreating((v) => !v)}
@@ -234,16 +236,16 @@ export default function BudgetsHubScreen({ navigation }) {
 
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Budget</Text>
+              <Text style={styles.statLabel}>{t("drawer.budget")}</Text>
               <Text style={styles.statValue}>{hubStats.totalBudgets}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Plafond totale</Text>
-              <Text style={styles.statValue}>{hubStats.totalPlanned.toFixed(2)} EUR</Text>
+              <Text style={styles.statLabel}>{t("budgetsHub.totalPlanned")}</Text>
+              <Text style={styles.statValue}>{hubStats.totalPlanned.toFixed(2)} {t("common.currencyCode")}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Media</Text>
-              <Text style={styles.statValue}>{hubStats.average.toFixed(2)} EUR</Text>
+              <Text style={styles.statLabel}>{t("budgetsHub.average")}</Text>
+              <Text style={styles.statValue}>{hubStats.average.toFixed(2)} {t("common.currencyCode")}</Text>
             </View>
           </View>
 
@@ -251,7 +253,10 @@ export default function BudgetsHubScreen({ navigation }) {
             <View style={styles.topLine}>
               <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
               <Text style={styles.topLineText} numberOfLines={1}>
-                Top budget: {hubStats.topName} ({hubStats.topTotal.toFixed(2)} EUR)
+                {t("budgetsHub.topBudgetLine", {
+                  name: hubStats.topName,
+                  total: `${hubStats.topTotal.toFixed(2)} ${t("common.currencyCode")}`,
+                })}
               </Text>
             </View>
           ) : null}
@@ -259,13 +264,13 @@ export default function BudgetsHubScreen({ navigation }) {
 
         {creating ? (
           <View style={styles.createCard}>
-            <Text style={styles.createLabel}>Nome budget</Text>
+            <Text style={styles.createLabel}>{t("budgetsHub.budgetName")}</Text>
             <View style={styles.createInputWrap}>
               <Ionicons name="create-outline" size={17} color={colors.textMuted} />
               <TextInput
                 value={title}
                 onChangeText={setTitle}
-                placeholder="Es. Casa, Viaggi, Universita"
+                placeholder={t("budgetsHub.namePlaceholder")}
                 placeholderTextColor={colors.textFaint}
                 style={styles.createInput}
                 returnKeyType="done"
@@ -276,7 +281,7 @@ export default function BudgetsHubScreen({ navigation }) {
               onPress={createNew}
               style={({ pressed }) => [styles.createBtn, pressed && { opacity: 0.9 }]}
             >
-              <Text style={styles.createBtnText}>Crea e apri budget</Text>
+              <Text style={styles.createBtnText}>{t("budgetsHub.createAndOpenBudget")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -286,15 +291,15 @@ export default function BudgetsHubScreen({ navigation }) {
             <View style={styles.emptyIcon}>
               <Ionicons name="sparkles-outline" size={18} color={colors.textTitle} />
             </View>
-            <Text style={styles.emptyTitle}>Nessun budget attivo</Text>
+            <Text style={styles.emptyTitle}>{t("budgetsHub.noBudgetsTitle")}</Text>
             <Text style={styles.emptySub}>
-              Crea il primo budget per iniziare a distribuire i tuoi importi.
+              {t("budgetsHub.noBudgetsSub")}
             </Text>
             <Pressable
               onPress={() => setCreating(true)}
               style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.9 }]}
             >
-              <Text style={styles.emptyBtnText}>Crea budget</Text>
+              <Text style={styles.emptyBtnText}>{t("budgetsHub.createBudget")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -307,6 +312,7 @@ export default function BudgetsHubScreen({ navigation }) {
                 onDelete={confirmDelete}
                 styles={styles}
                 colors={colors}
+                t={t}
               />
             ))}
           </View>
