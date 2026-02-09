@@ -18,6 +18,7 @@ import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { GlobalStyles } from "../../constants/styles";
 import { saveUserProfile } from "../../util/profile-http";
+import CustomDatePicker from "../../components/ui/DatePicker";
 
 export const PRESETS = {
   TODAY: "TODAY",
@@ -125,6 +126,25 @@ function normalizeNameInput(value) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeGender(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  return raw === "MALE" || raw === "FEMALE" ? raw : "";
+}
+
+function safeBirthDate(value) {
+  const parsed = value ? new Date(value) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function isValidBirthDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  const minDate = new Date(1900, 0, 1);
+  return date <= today && date >= minDate;
+}
+
 function isValidHumanName(value) {
   return /^[A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF' -]{2,30}$/.test(
     String(value || ""),
@@ -196,8 +216,11 @@ function ExpensesScreen() {
   const hasLoadedRef = useRef(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [profilePromptDismissed, setProfilePromptDismissed] = useState(false);
   const [firstNameDraft, setFirstNameDraft] = useState("");
   const [lastNameDraft, setLastNameDraft] = useState("");
+  const [genderDraft, setGenderDraft] = useState("");
+  const [dobDraft, setDobDraft] = useState(new Date(2000, 0, 1));
 
   // ✅ IMPORTANT: dipendenze STABILI (evita loop infinito)
   const loadExpenses = useCallback(async () => {
@@ -373,8 +396,31 @@ function ExpensesScreen() {
   const firstName = normalizeNameInput(authCtx.firstName).split(" ")[0];
   const welcomePrefix = getWelcomePrefix(firstName);
   const welcomeText = welcomeName ? `${welcomePrefix}, ${welcomeName}` : "";
-  const needsProfileData =
-    !normalizeNameInput(authCtx.firstName) || !normalizeNameInput(authCtx.lastName);
+  const missingProfile = useMemo(
+    () => ({
+      firstName: !normalizeNameInput(authCtx.firstName),
+      lastName: !normalizeNameInput(authCtx.lastName),
+      gender: !normalizeGender(authCtx.gender),
+      dateOfBirth: !isValidBirthDate(authCtx.dateOfBirth),
+    }),
+    [authCtx.firstName, authCtx.lastName, authCtx.gender, authCtx.dateOfBirth],
+  );
+
+  const needsProfileData = useMemo(
+    () =>
+      Object.values(missingProfile).some(Boolean) &&
+      !authCtx.profileCompletionV2 &&
+      !profilePromptDismissed,
+    [missingProfile, authCtx.profileCompletionV2, profilePromptDismissed],
+  );
+
+  useEffect(() => {
+    setProfilePromptDismissed(false);
+    setFirstNameDraft("");
+    setLastNameDraft("");
+    setGenderDraft("");
+    setDobDraft(new Date(2000, 0, 1));
+  }, [authCtx.userId]);
 
   useEffect(() => {
     if (!authCtx.isAuthenticated) return;
@@ -385,19 +431,39 @@ function ExpensesScreen() {
 
     setFirstNameDraft((current) => current || normalizeNameInput(authCtx.firstName));
     setLastNameDraft((current) => current || normalizeNameInput(authCtx.lastName));
+    setGenderDraft((current) => current || normalizeGender(authCtx.gender));
+    setDobDraft((current) => {
+      const existing = safeBirthDate(authCtx.dateOfBirth);
+      return existing || current;
+    });
     setProfileModalOpen(true);
-  }, [authCtx.isAuthenticated, authCtx.firstName, authCtx.lastName, needsProfileData]);
+  }, [
+    authCtx.isAuthenticated,
+    authCtx.firstName,
+    authCtx.lastName,
+    authCtx.gender,
+    authCtx.dateOfBirth,
+    needsProfileData,
+  ]);
 
   const submitLegacyProfile = useCallback(async () => {
     const firstName = normalizeNameInput(firstNameDraft);
     const lastName = normalizeNameInput(lastNameDraft);
+    const gender = normalizeGender(genderDraft);
+    const dateOfBirthDate = safeBirthDate(dobDraft);
+    const hasValidDob = isValidBirthDate(dateOfBirthDate);
 
-    if (!firstName || !lastName) {
-      Alert.alert("Dati mancanti", "Inserisci sia il Nome che il Cognome.");
+    if (missingProfile.firstName && !firstName) {
+      Alert.alert("Dato mancante", "Inserisci il Nome.");
       return;
     }
 
-    if (!isValidHumanName(firstName)) {
+    if (missingProfile.lastName && !lastName) {
+      Alert.alert("Dato mancante", "Inserisci il Cognome.");
+      return;
+    }
+
+    if (firstName && !isValidHumanName(firstName)) {
       Alert.alert(
         "Nome non valido",
         "Il Nome deve avere 2-30 caratteri e contenere solo lettere.",
@@ -405,7 +471,7 @@ function ExpensesScreen() {
       return;
     }
 
-    if (!isValidHumanName(lastName)) {
+    if (lastName && !isValidHumanName(lastName)) {
       Alert.alert(
         "Cognome non valido",
         "Il Cognome deve avere 2-30 caratteri e contenere solo lettere.",
@@ -413,12 +479,27 @@ function ExpensesScreen() {
       return;
     }
 
+    if (missingProfile.gender && !gender) {
+      Alert.alert("Dato mancante", "Seleziona il genere.");
+      return;
+    }
+
+    if (missingProfile.dateOfBirth && !hasValidDob) {
+      Alert.alert("Data non valida", "Inserisci una data di nascita valida.");
+      return;
+    }
+
     setProfileSaving(true);
     try {
       const payload = {
-        firstName,
-        lastName,
+        firstName: firstName || normalizeNameInput(authCtx.firstName),
+        lastName: lastName || normalizeNameInput(authCtx.lastName),
+        gender: gender || normalizeGender(authCtx.gender),
+        dateOfBirth: hasValidDob
+          ? dateOfBirthDate.toISOString()
+          : String(authCtx.dateOfBirth || ""),
         email: String(authCtx?.profile?.email || "").trim(),
+        profileCompletionV2: true,
       };
 
       try {
@@ -433,6 +514,7 @@ function ExpensesScreen() {
 
       await authCtx.setProfile(payload);
       setProfileModalOpen(false);
+      setProfilePromptDismissed(true);
     } catch {
       Alert.alert(
         "Errore",
@@ -444,8 +526,19 @@ function ExpensesScreen() {
   }, [
     firstNameDraft,
     lastNameDraft,
+    genderDraft,
+    dobDraft,
+    missingProfile.firstName,
+    missingProfile.lastName,
+    missingProfile.gender,
+    missingProfile.dateOfBirth,
     authCtx,
   ]);
+
+  const postponeProfilePrompt = () => {
+    setProfileModalOpen(false);
+    setProfilePromptDismissed(true);
+  };
 
   if (isFetching) {
     return (
@@ -500,7 +593,7 @@ function ExpensesScreen() {
         visible={profileModalOpen}
         animationType="fade"
         transparent
-        onRequestClose={() => {}}
+        onRequestClose={postponeProfilePrompt}
       >
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
@@ -509,49 +602,114 @@ function ExpensesScreen() {
             keyboardVerticalOffset={Platform.OS === "ios" ? 86 : 20}
           >
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>
-                Da questo aggiornamento abbiamo bisogno di questi tuoi dati
+              <Text style={styles.modalTitle}>Completa il profilo</Text>
+              <Text style={styles.modalSub}>
+                Mancano alcuni dati del tuo account. Puoi salvarli ora oppure continuare e
+                completare piu tardi.
               </Text>
 
-              <Text style={styles.label}>Inserisci il tuo Nome</Text>
-              <TextInput
-                value={firstNameDraft}
-                onChangeText={setFirstNameDraft}
-                placeholder="Nome"
-                placeholderTextColor={colors.white45}
-                style={styles.input}
-                editable={!profileSaving}
-                autoCapitalize="words"
-                returnKeyType="next"
-                blurOnSubmit={false}
-              />
+              {missingProfile.firstName ? (
+                <>
+                  <Text style={styles.label}>Nome</Text>
+                  <TextInput
+                    value={firstNameDraft}
+                    onChangeText={setFirstNameDraft}
+                    placeholder="Nome"
+                    placeholderTextColor={colors.white45}
+                    style={styles.input}
+                    editable={!profileSaving}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                  />
+                </>
+              ) : null}
 
-              <Text style={styles.label}>Inserisci il tuo Cognome</Text>
-              <TextInput
-                value={lastNameDraft}
-                onChangeText={setLastNameDraft}
-                placeholder="Cognome"
-                placeholderTextColor={colors.white45}
-                style={styles.input}
-                editable={!profileSaving}
-                autoCapitalize="words"
-                returnKeyType="done"
-                onSubmitEditing={submitLegacyProfile}
-              />
+              {missingProfile.lastName ? (
+                <>
+                  <Text style={styles.label}>Cognome</Text>
+                  <TextInput
+                    value={lastNameDraft}
+                    onChangeText={setLastNameDraft}
+                    placeholder="Cognome"
+                    placeholderTextColor={colors.white45}
+                    style={styles.input}
+                    editable={!profileSaving}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                  />
+                </>
+              ) : null}
 
-              <Pressable
-                onPress={submitLegacyProfile}
-                disabled={profileSaving}
-                style={({ pressed }) => [
-                  styles.submitBtn,
-                  pressed && { opacity: 0.9 },
-                  profileSaving && { opacity: 0.6 },
-                ]}
-              >
-                <Text style={styles.submitBtnText}>
-                  {profileSaving ? "Salvataggio..." : "Inseriti"}
-                </Text>
-              </Pressable>
+              {missingProfile.gender ? (
+                <>
+                  <Text style={styles.label}>Genere</Text>
+                  <View style={styles.genderRow}>
+                    {[
+                      { key: "MALE", label: "Maschio" },
+                      { key: "FEMALE", label: "Femmina" },
+                    ].map((option) => {
+                      const active = normalizeGender(genderDraft) === option.key;
+                      return (
+                        <Pressable
+                          key={option.key}
+                          onPress={() => setGenderDraft(option.key)}
+                          style={({ pressed }) => [
+                            styles.genderChip,
+                            active && styles.genderChipActive,
+                            pressed && { opacity: 0.88 },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.genderChipText, active && styles.genderChipTextActive]}
+                          >
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+
+              {missingProfile.dateOfBirth ? (
+                <View style={{ marginTop: 4 }}>
+                  <CustomDatePicker
+                    label="Data di nascita"
+                    value={safeBirthDate(dobDraft) || new Date(2000, 0, 1)}
+                    onChange={setDobDraft}
+                  />
+                </View>
+              ) : null}
+
+              <View style={styles.actionsRow}>
+                <Pressable
+                  onPress={postponeProfilePrompt}
+                  disabled={profileSaving}
+                  style={({ pressed }) => [
+                    styles.laterBtn,
+                    pressed && { opacity: 0.9 },
+                    profileSaving && { opacity: 0.6 },
+                  ]}
+                >
+                  <Text style={styles.laterBtnText}>Piu tardi</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={submitLegacyProfile}
+                  disabled={profileSaving}
+                  style={({ pressed }) => [
+                    styles.submitBtn,
+                    pressed && { opacity: 0.9 },
+                    profileSaving && { opacity: 0.6 },
+                  ]}
+                >
+                  <Text style={styles.submitBtnText}>
+                    {profileSaving ? "Salvataggio..." : "Salva e continua"}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -582,10 +740,17 @@ function makeStyles(colors) {
     modalTitle: {
       color: colors.textTitle,
       fontWeight: "900",
-      fontSize: 14,
+      fontSize: 16,
       lineHeight: 20,
-      marginBottom: 12,
-      textAlign: "center",
+      marginBottom: 4,
+      textAlign: "left",
+    },
+    modalSub: {
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 12,
+      lineHeight: 18,
+      marginBottom: 8,
     },
     label: {
       color: colors.textMuted,
@@ -604,8 +769,52 @@ function makeStyles(colors) {
       paddingHorizontal: 12,
       paddingVertical: 12,
     },
-    submitBtn: {
+    genderRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 2,
+      marginBottom: 2,
+    },
+    genderChip: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    genderChipActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    genderChipText: {
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 12,
+    },
+    genderChipTextActive: {
+      color: colors.textTitle,
+    },
+    actionsRow: {
       marginTop: 14,
+      flexDirection: "row",
+      gap: 8,
+    },
+    laterBtn: {
+      flex: 1,
+      height: 46,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.white08,
+    },
+    laterBtnText: { color: colors.textTitle, fontWeight: "900" },
+    submitBtn: {
+      flex: 1.4,
       height: 46,
       borderRadius: 14,
       alignItems: "center",
