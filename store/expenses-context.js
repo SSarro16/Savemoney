@@ -60,6 +60,52 @@ function sortByDateDesc(list) {
   });
 }
 
+const DUPLICATE_ADD_WINDOW_MS = 3500;
+
+function normalizeFingerprintText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function dateKey(dateLike) {
+  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function buildExpenseFingerprint(expenseData, defaultCashWalletId = "") {
+  const fixedIcon = normalizeIcon(expenseData?.icon);
+  const category = safeCategoryFromInput(expenseData, fixedIcon);
+  const methodType = safePayMethod(expenseData?.methodType || expenseData?.payMethod);
+  const methodId = safeMethodId(expenseData, methodType, defaultCashWalletId);
+  const amount = safeAmount(expenseData?.amount).toFixed(2);
+  const day = dateKey(expenseData?.date || new Date());
+
+  return [
+    amount,
+    day,
+    normalizeFingerprintText(expenseData?.description),
+    normalizeFingerprintText(category),
+    String(fixedIcon || "pricetag-outline"),
+    methodType,
+    methodId,
+  ].join("|");
+}
+
+function pruneRecentAddFingerprints(mapRef, nowTs) {
+  for (const [key, entry] of mapRef.entries()) {
+    if (!entry?.ts || nowTs - entry.ts > DUPLICATE_ADD_WINDOW_MS) {
+      mapRef.delete(key);
+    }
+  }
+}
+
 function expensesReducer(state, action) {
   switch (action.type) {
     case "ADD":
@@ -160,6 +206,8 @@ export default function ExpensesContextProvider({ children }) {
 
   const lastDeletedRef = useRef(null);
   const pendingDeletesRef = useRef(new Map());
+  const pendingAddsRef = useRef(new Map());
+  const recentAddsRef = useRef(new Map());
   const expensesRef = useRef([]);
   const [canUndo, setCanUndo] = useState(false);
 
@@ -193,11 +241,17 @@ export default function ExpensesContextProvider({ children }) {
   ]);
 
   useEffect(() => {
+    const pendingDeletes = pendingDeletesRef.current;
+    const pendingAdds = pendingAddsRef.current;
+    const recentAdds = recentAddsRef.current;
+
     return () => {
-      pendingDeletesRef.current.forEach((op) => {
+      pendingDeletes.forEach((op) => {
         if (op?.timerId) clearTimeout(op.timerId);
       });
-      pendingDeletesRef.current.clear();
+      pendingDeletes.clear();
+      pendingAdds.clear();
+      recentAdds.clear();
       lastDeletedRef.current = null;
       setCanUndo(false);
     };
@@ -271,46 +325,70 @@ export default function ExpensesContextProvider({ children }) {
   const addExpense = useCallback(
     async (expenseData) => {
       ensureAuth();
+      const defaultCashWalletId = paymentCtx?.defaultCashWalletId || "";
+      const fingerprint = buildExpenseFingerprint(expenseData, defaultCashWalletId);
+      const nowTs = Date.now();
+      pruneRecentAddFingerprints(recentAddsRef.current, nowTs);
 
-      const fixedIcon = normalizeIcon(expenseData?.icon);
-      const category = safeCategoryFromInput(expenseData, fixedIcon);
-
-      const methodType = safePayMethod(expenseData?.methodType || expenseData?.payMethod);
-      const methodId = safeMethodId(
-        expenseData,
-        methodType,
-        paymentCtx?.defaultCashWalletId || "",
-      );
-
-      const payload = {
-        ...expenseData,
-        amount: safeAmount(expenseData?.amount),
-        icon: fixedIcon,
-        category,
-        methodType,
-        methodId,
-        payMethod: methodType,
-        cardId: methodType === PAYMENT_METHOD.CARD ? methodId : "",
-        cashId: methodType === PAYMENT_METHOD.CASH ? methodId : "",
-        budgetId: budgetCtx?.budgetId || null,
-      };
-
-      const id = await withAuthRetry((t) => storeExpense(userId, t, payload));
-      dispatch({ type: "ADD", payload: normalizeExpense({ ...payload, id }) });
-
-      if (methodType === PAYMENT_METHOD.CASH) {
-        const a = safeAmount(payload.amount);
-        if (a > 0) {
-          budgetCtx?.addCashDelta?.(-a);
-          budgetCtx?.saveBudget?.().catch(() => {});
-          await paymentCtx?.applyCashExpense?.(methodId, -a).catch(() => {});
-        }
-      } else if (methodType === PAYMENT_METHOD.CARD) {
-        const a = safeAmount(payload.amount);
-        if (a > 0) {
-          await paymentCtx?.applyCardExpense?.(methodId, -a).catch(() => {});
-        }
+      const recent = recentAddsRef.current.get(fingerprint);
+      if (recent && nowTs - recent.ts <= DUPLICATE_ADD_WINDOW_MS) {
+        return recent.id;
       }
+
+      const inFlight = pendingAddsRef.current.get(fingerprint);
+      if (inFlight) {
+        return await inFlight;
+      }
+
+      const addPromise = (async () => {
+        const fixedIcon = normalizeIcon(expenseData?.icon);
+        const category = safeCategoryFromInput(expenseData, fixedIcon);
+
+        const methodType = safePayMethod(expenseData?.methodType || expenseData?.payMethod);
+        const methodId = safeMethodId(
+          expenseData,
+          methodType,
+          defaultCashWalletId,
+        );
+
+        const payload = {
+          ...expenseData,
+          amount: safeAmount(expenseData?.amount),
+          icon: fixedIcon,
+          category,
+          methodType,
+          methodId,
+          payMethod: methodType,
+          cardId: methodType === PAYMENT_METHOD.CARD ? methodId : "",
+          cashId: methodType === PAYMENT_METHOD.CASH ? methodId : "",
+          budgetId: budgetCtx?.budgetId || null,
+        };
+
+        const id = await withAuthRetry((t) => storeExpense(userId, t, payload));
+        dispatch({ type: "ADD", payload: normalizeExpense({ ...payload, id }) });
+        recentAddsRef.current.set(fingerprint, { id, ts: Date.now() });
+
+        if (methodType === PAYMENT_METHOD.CASH) {
+          const a = safeAmount(payload.amount);
+          if (a > 0) {
+            budgetCtx?.addCashDelta?.(-a);
+            budgetCtx?.saveBudget?.().catch(() => {});
+            await paymentCtx?.applyCashExpense?.(methodId, -a).catch(() => {});
+          }
+        } else if (methodType === PAYMENT_METHOD.CARD) {
+          const a = safeAmount(payload.amount);
+          if (a > 0) {
+            await paymentCtx?.applyCardExpense?.(methodId, -a).catch(() => {});
+          }
+        }
+
+        return id;
+      })().finally(() => {
+        pendingAddsRef.current.delete(fingerprint);
+      });
+
+      pendingAddsRef.current.set(fingerprint, addPromise);
+      return await addPromise;
     },
     [
       ensureAuth,
