@@ -33,6 +33,7 @@ const THEME_GROUPS = [
     title: "Temi base",
     options: [
       { key: "DARK", icon: "moon-outline" },
+      { key: "OBSIDIAN", icon: "contrast-outline" },
       { key: "LIGHT", icon: "sunny-outline" },
       { key: "BLUE", icon: "water-outline" },
       { key: "GREEN", icon: "leaf-outline" },
