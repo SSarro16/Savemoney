@@ -20,7 +20,7 @@ import {
 } from "../util/budget/budget-storage";
 import { logger } from "../util/logger";
 
-const DEFAULT_CATEGORY_NAMES = ["Risparmio", "Spese", "Svago", "Altro"];
+const DEFAULT_CATEGORY_NAMES = ["Risparmio", "Spese", "Svago"];
 
 function normalizeCategoryName(value) {
   const clean = String(value || "").trim();

@@ -142,7 +142,7 @@ export default function InsightsScreen() {
   const byCategory = useMemo(() => {
     const map = new Map();
     for (const e of filtered) {
-      const c = String(e.category || "Altro");
+      const c = String(e.category || "Senza categoria");
       map.set(c, (map.get(c) || 0) + Number(e.amount || 0));
     }
     return Array.from(map.entries())

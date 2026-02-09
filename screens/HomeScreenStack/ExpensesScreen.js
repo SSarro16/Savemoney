@@ -264,7 +264,7 @@ function ExpensesScreen() {
 
     return byRange.filter((expense) => {
       if (selectedCategory !== "ALL") {
-        const category = String(expense?.category || "").trim() || "Altro";
+        const category = String(expense?.category || "").trim() || "Senza categoria";
         if (category !== selectedCategory) return false;
       }
 
@@ -274,7 +274,7 @@ function ExpensesScreen() {
 
       if (normalizedQuery) {
         const description = normalizeForSearch(expense?.description);
-        const category = normalizeForSearch(expense?.category || "Altro");
+        const category = normalizeForSearch(expense?.category || "Senza categoria");
         const method =
           paymentTypeLabel(expense) === "CARD"
             ? "carta card"

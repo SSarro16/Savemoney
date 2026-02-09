@@ -7,7 +7,6 @@ const DEFAULT_BUDGET = {
     Risparmio: 0,
     Spese: 0,
     Svago: 0,
-    Altro: 0,
   },
 };
 
