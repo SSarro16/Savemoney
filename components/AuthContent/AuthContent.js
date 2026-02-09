@@ -179,6 +179,7 @@ function makeStyles(colors) {
       width: "100%",
       maxWidth: 560,
       alignSelf: "center",
+      paddingVertical: 6,
     },
     identityCard: {
       borderRadius: 24,
