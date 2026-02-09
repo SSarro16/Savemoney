@@ -153,6 +153,15 @@ export default function SettingsScreen({ navigation }) {
           colors={colors}
           styles={styles}
         />
+
+        <NavCard
+          icon="flag-outline"
+          title="Obiettivi"
+          subtitle="Monitora i tuoi traguardi di risparmio"
+          onPress={() => goDrawerScreen("Goals")}
+          colors={colors}
+          styles={styles}
+        />
       </View>
 
       <Text style={styles.sectionLabel}>Impostazioni rapide</Text>

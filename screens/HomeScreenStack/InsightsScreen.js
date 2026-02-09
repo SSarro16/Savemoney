@@ -1,9 +1,11 @@
 import React, { useContext, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { Alert, View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ExpensesContext } from "../../store/expenses-context";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
+import { exportCurrentMonthCsv } from "../../util/reports/monthly-csv-export";
+import { logger } from "../../util/logger";
 
 const PRESETS = {
   DAYS_7: "DAYS_7",
@@ -119,6 +121,7 @@ export default function InsightsScreen() {
   const colors = GlobalStyles.colors;
 
   const [preset, setPreset] = useState(PRESETS.DAYS_7);
+  const [exporting, setExporting] = useState(false);
   const range = useMemo(() => getPresetRange(preset), [preset]);
 
   const filtered = useMemo(() => {
@@ -177,6 +180,23 @@ export default function InsightsScreen() {
 
   const maxCat = byCategory[0]?.amount || 0;
 
+  const handleExportMonthlyCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const result = await exportCurrentMonthCsv(expensesCtx.expenses || []);
+      Alert.alert(
+        "Report creato",
+        `${result.count} righe esportate.\nTotale mese: ${euro(result.total)}`,
+      );
+    } catch (error) {
+      logger.warn("Monthly CSV export failed", error);
+      Alert.alert("Errore", "Impossibile esportare il report mensile.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.root, { backgroundColor: colors.bg }]}
@@ -230,6 +250,22 @@ export default function InsightsScreen() {
               Capisci dove stai spendendo davvero.
             </Text>
           </View>
+          <Pressable
+            onPress={handleExportMonthlyCsv}
+            style={({ pressed }) => [
+              styles.exportBtn,
+              {
+                backgroundColor: colors.surface2,
+                borderColor: highContrast ? colors.borderStrong : colors.border,
+              },
+              pressed && { opacity: 0.88 },
+            ]}
+          >
+            <Ionicons name="download-outline" size={14} color={colors.textTitle} />
+            <Text style={[styles.exportBtnText, { color: colors.textTitle }]}>
+              {exporting ? "Export..." : "CSV mese"}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.chipsRow}>
@@ -416,6 +452,16 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontWeight: "900", fontSize: 22 },
   heroSub: { marginTop: 4, fontWeight: "700" },
+  exportBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  exportBtnText: { fontWeight: "900", fontSize: 11 },
 
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   chip: {

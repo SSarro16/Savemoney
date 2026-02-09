@@ -45,6 +45,7 @@ import PaymentMethodDetailScreen from "./screens/DrawerScreens/PaymentMethodDeta
 import SettingsScreen from "./screens/DrawerScreens/SettingsScreen";
 import CategoriesManagerScreen from "./screens/DrawerScreens/CategoriesManagerScreen";
 import UserProfileScreen from "./screens/DrawerScreens/UserProfileScreen";
+import GoalsScreen from "./screens/DrawerScreens/GoalsScreen";
 
 import AuthContextProvider, { AuthContext } from "./store/auth-context";
 import ExpensesContextProvider from "./store/expenses-context";
@@ -55,6 +56,7 @@ import CustomizationContextProvider, {
 } from "./store/customization-context";
 import PaymentContextProvider from "./store/payment-context";
 import ExpenseCategoriesContextProvider from "./store/expense-categories-context";
+import GoalsContextProvider from "./store/goals-context";
 
 import IconButton from "./components/ui/IconButton";
 import AppErrorBoundary from "./components/ui/AppErrorBoundary";
@@ -804,6 +806,36 @@ function SettingsStack() {
   );
 }
 
+function GoalsStack() {
+  const { colors } = useContext(ThemeContext);
+  const { textScale } = useContext(CustomizationContext);
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        ...screenHeader(colors, textScale),
+        ...screenContent(colors),
+      }}
+    >
+      <Stack.Screen
+        name="GoalsHome"
+        component={GoalsScreen}
+        options={({ navigation }) => ({
+          title: "Obiettivi",
+          headerLeft: () => (
+            <IconButton
+              icon="menu"
+              size={24}
+              color={colors.textTitle}
+              onPress={() => navigation.getParent()?.openDrawer()}
+            />
+          ),
+        })}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function AppDrawer() {
   const authCtx = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
@@ -897,6 +929,17 @@ function AppDrawer() {
           title: "Impostazioni",
           drawerIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Drawer.Screen
+        name="Goals"
+        component={GoalsStack}
+        options={{
+          title: "Obiettivi",
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
           ),
         }}
       />
@@ -997,15 +1040,17 @@ export default function App() {
         <AuthContextProvider>
           <ThemeContextProvider>
             <CustomizationContextProvider>
-              <ExpenseCategoriesContextProvider>
-                <BudgetContextProvider>
-                  <PaymentContextProvider>
+            <ExpenseCategoriesContextProvider>
+              <BudgetContextProvider>
+                <PaymentContextProvider>
+                  <GoalsContextProvider>
                     <ExpensesContextProvider>
                       <Navigation />
                     </ExpensesContextProvider>
-                  </PaymentContextProvider>
-                </BudgetContextProvider>
-              </ExpenseCategoriesContextProvider>
+                  </GoalsContextProvider>
+                </PaymentContextProvider>
+              </BudgetContextProvider>
+            </ExpenseCategoriesContextProvider>
             </CustomizationContextProvider>
           </ThemeContextProvider>
         </AuthContextProvider>
