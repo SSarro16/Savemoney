@@ -10,7 +10,7 @@ import {
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
-  DrawerItemList,
+  DrawerItem,
 } from "@react-navigation/drawer";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -424,48 +424,112 @@ const tabBarStyles = StyleSheet.create({
 function makeDrawerStyles(colors, textScale) {
   return StyleSheet.create({
     contentContainer: {
-      paddingTop: 30,
-      paddingBottom: 14,
+      paddingTop: 28,
+      paddingBottom: 18,
       minHeight: "100%",
+      paddingHorizontal: 12,
     },
     brandCard: {
-      marginHorizontal: 12,
-      marginBottom: 14,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: colors.white12,
-      backgroundColor: colors.white06,
-      paddingVertical: 12,
-      paddingHorizontal: 12,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
-    brandCardPressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
-    brandIcon: {
-      width: 38,
-      height: 38,
-      borderRadius: 13,
+      marginBottom: 16,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.accent30,
-      backgroundColor: colors.accent16,
+      backgroundColor: colors.surface,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      overflow: "hidden",
+    },
+    brandCardPressed: { opacity: 0.92, transform: [{ scale: 0.994 }] },
+    brandOrb: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent18,
+      backgroundColor: colors.accent12,
+    },
+    brandOrbTop: {
+      width: 88,
+      height: 88,
+      top: -26,
+      right: -24,
+    },
+    brandOrbBottom: {
+      width: 56,
+      height: 56,
+      right: 36,
+      bottom: -26,
+    },
+    brandIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.surface2,
       alignItems: "center",
       justifyContent: "center",
     },
     brandTitle: {
       color: colors.textTitle,
       fontWeight: "900",
-      fontSize: Math.round(15 * textScale),
-      lineHeight: Math.round(19 * textScale),
+      fontSize: Math.round(16 * textScale),
+      lineHeight: Math.round(20 * textScale),
     },
     brandSub: {
-      marginTop: 1,
+      marginTop: 2,
       color: colors.textMuted,
-      fontWeight: "700",
+      fontWeight: "800",
+      fontSize: Math.round(11.5 * textScale),
+    },
+    section: {
+      marginBottom: 12,
+    },
+    sectionLabel: {
+      color: colors.textMuted,
+      fontWeight: "900",
       fontSize: Math.round(11 * textScale),
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginLeft: 4,
+      marginBottom: 4,
+    },
+    sectionBody: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      paddingVertical: 4,
+      paddingHorizontal: 3,
+    },
+    drawerItem: {
+      borderRadius: 14,
+      marginVertical: 2,
+      marginHorizontal: 2,
+      paddingHorizontal: 4,
+    },
+    drawerLabel: {
+      fontWeight: "900",
+      fontSize: Math.round(13.5 * textScale),
+      marginLeft: -10,
+    },
+    sectionDivider: {
+      marginHorizontal: 4,
+      marginTop: 8,
+      marginBottom: 12,
+      height: 1,
+      backgroundColor: colors.white10,
     },
   });
 }
+
+const DRAWER_SECTIONS = [
+  { key: "Operativo", routes: ["Spese", "Budget", "Recurring", "Payments"] },
+  { key: "Organizzazione", routes: ["Settings", "Goals"] },
+  { key: "Account", routes: ["Logout"] },
+];
 
 function AppDrawerContent(props) {
   const authCtx = useContext(AuthContext);
@@ -473,18 +537,77 @@ function AppDrawerContent(props) {
   const { textScale } = useContext(CustomizationContext);
   const insets = useSafeAreaInsets();
   const styles = makeDrawerStyles(colors, textScale);
+  const state = props.state;
 
   const fullName = [authCtx.firstName, authCtx.lastName]
     .map((item) => String(item || "").trim())
     .filter(Boolean)
     .join(" ");
 
+  function renderDrawerItem(routeName) {
+    const route = state.routes.find((item) => item.name === routeName);
+    if (!route) return null;
+
+    const descriptor = props.descriptors[route.key];
+    const options = descriptor?.options || {};
+    const isFocused = state.index === state.routes.findIndex((x) => x.key === route.key);
+    const drawerLabel = options.drawerLabel;
+    const title =
+      typeof drawerLabel === "string"
+        ? drawerLabel
+        : typeof options.title === "string"
+          ? options.title
+          : route.name;
+
+    const onPress = () => {
+      const event = props.navigation.emit({
+        type: "drawerItemPress",
+        target: route.key,
+        canPreventDefault: true,
+      });
+
+      if (!event.defaultPrevented) {
+        props.navigation.navigate(route.name);
+      }
+    };
+
+    const onLongPress = () => {
+      props.navigation.emit({
+        type: "drawerItemLongPress",
+        target: route.key,
+      });
+    };
+
+    const color = isFocused ? colors.textTitle : colors.white72;
+
+    return (
+      <DrawerItem
+        key={route.key}
+        label={title}
+        icon={({ size }) =>
+          typeof options.drawerIcon === "function"
+            ? options.drawerIcon({ color, size, focused: isFocused })
+            : null
+        }
+        focused={isFocused}
+        activeTintColor={colors.textTitle}
+        inactiveTintColor={colors.white72}
+        activeBackgroundColor={colors.accent18}
+        inactiveBackgroundColor="transparent"
+        style={styles.drawerItem}
+        labelStyle={styles.drawerLabel}
+        onPress={onPress}
+        onLongPress={onLongPress}
+      />
+    );
+  }
+
   return (
     <DrawerContentScrollView
       {...props}
       contentContainerStyle={[
         styles.contentContainer,
-        { paddingTop: Math.max(42, insets.top + 48) },
+        { paddingTop: Math.max(40, insets.top + 42) },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -495,6 +618,8 @@ function AppDrawerContent(props) {
         }}
         style={({ pressed }) => [styles.brandCard, pressed && styles.brandCardPressed]}
       >
+        <View style={[styles.brandOrb, styles.brandOrbTop]} />
+        <View style={[styles.brandOrb, styles.brandOrbBottom]} />
         <View style={styles.brandIcon}>
           <Ionicons name="wallet-outline" size={20} color={colors.accent500} />
         </View>
@@ -507,7 +632,17 @@ function AppDrawerContent(props) {
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </Pressable>
 
-      <DrawerItemList {...props} />
+      {DRAWER_SECTIONS.map((section, index) => (
+        <View key={section.key} style={styles.section}>
+          <Text style={styles.sectionLabel}>{section.key}</Text>
+          <View style={styles.sectionBody}>
+            {section.routes.map((routeName) => renderDrawerItem(routeName))}
+          </View>
+          {index !== DRAWER_SECTIONS.length - 1 ? (
+            <View style={styles.sectionDivider} />
+          ) : null}
+        </View>
+      ))}
     </DrawerContentScrollView>
   );
 }
