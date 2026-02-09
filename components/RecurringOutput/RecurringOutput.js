@@ -1,7 +1,9 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 import RecurringTimeline from "./RecurringTimeline";
 
 function ActionCard({ title, subtitle, icon, onPress, styles, colors }) {
@@ -38,14 +40,15 @@ export default function RecurringOutputHeader({
 }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
   const totalItems = Array.isArray(items) ? items.length : 0;
   const subscriptions = (items || []).filter((x) => x?.type === "SUBSCRIPTION").length;
   const habits = Math.max(0, totalItems - subscriptions);
 
   const hiddenPaidText =
     hiddenPaidCount === 1
-      ? "1 abbonamento gia pagato nascosto"
-      : `${hiddenPaidCount} abbonamenti pagati nascosti`;
+      ? t("recurring.hiddenPaidOne")
+      : t("recurring.hiddenPaidMany", { count: hiddenPaidCount });
 
   return (
     <View style={styles.wrap}>
@@ -57,11 +60,11 @@ export default function RecurringOutputHeader({
             <Ionicons name="repeat-outline" size={18} color={colors.textTitle} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>Recurring Control</Text>
+            <Text style={styles.heroTitle}>{t("recurring.heroTitle")}</Text>
             <Text style={styles.heroSub}>
               {dueCount > 0
-                ? `${dueCount} pagamento/i da registrare`
-                : "Nessuna scadenza urgente al momento"}
+                ? t("recurring.heroDueCount", { count: dueCount })
+                : t("recurring.heroNoUrgent")}
             </Text>
           </View>
         </View>
@@ -69,27 +72,31 @@ export default function RecurringOutputHeader({
         <View style={styles.heroStats}>
           <View style={styles.heroStatChip}>
             <Ionicons name="repeat-outline" size={13} color={colors.textTitle} />
-            <Text style={styles.heroStatText}>Abbonamenti {subscriptions}</Text>
+            <Text style={styles.heroStatText}>
+              {t("recurring.subscriptionsCount", { count: subscriptions })}
+            </Text>
           </View>
           <View style={styles.heroStatChip}>
             <Ionicons name="flash-outline" size={13} color={colors.textTitle} />
-            <Text style={styles.heroStatText}>Abitudini {habits}</Text>
+            <Text style={styles.heroStatText}>
+              {t("recurring.habitsCount", { count: habits })}
+            </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.actionsRow}>
         <ActionCard
-          title="Nuova Abitudine"
-          subtitle="Aggiunte frequenti con un tap"
+          title={t("recurring.newHabitTitle")}
+          subtitle={t("recurring.newHabitSubtitle")}
           icon="flash-outline"
           onPress={onCreateHabit}
           styles={styles}
           colors={colors}
         />
         <ActionCard
-          title="Nuovo Abbonamento"
-          subtitle="Scadenze e pagamenti ricorrenti"
+          title={t("recurring.newSubscriptionTitle")}
+          subtitle={t("recurring.newSubscriptionSubtitle")}
           icon="repeat-outline"
           onPress={onCreateSubscription}
           styles={styles}
@@ -103,7 +110,7 @@ export default function RecurringOutputHeader({
           style={({ pressed }) => [styles.addAllBtn, pressed && { opacity: 0.9 }]}
         >
           <Ionicons name="checkmark-done-outline" size={18} color={colors.textOnAccentStrong} />
-          <Text style={styles.addAllText}>Registra tutto ({dueCount})</Text>
+          <Text style={styles.addAllText}>{t("recurring.addAll", { count: dueCount })}</Text>
         </Pressable>
       ) : null}
 
@@ -114,8 +121,8 @@ export default function RecurringOutputHeader({
           <Ionicons name="list-outline" size={16} color={colors.textTitle} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.sectionTitle}>Le tue ricorrenze</Text>
-          <Text style={styles.sectionSub}>Tocca per modificare - swipe per eliminare</Text>
+          <Text style={styles.sectionTitle}>{t("recurring.sectionTitle")}</Text>
+          <Text style={styles.sectionSub}>{t("recurring.sectionSub")}</Text>
         </View>
         <Pressable
           onPress={onToggleShowPaid}
@@ -131,7 +138,7 @@ export default function RecurringOutputHeader({
             color={colors.textTitle}
           />
           <Text style={styles.togglePaidText} numberOfLines={1}>
-            {showPaidSubscriptions ? "Mostra tutti" : "Nascondi pagati"}
+            {showPaidSubscriptions ? t("recurring.showAll") : t("recurring.hidePaid")}
           </Text>
         </Pressable>
       </View>
@@ -146,7 +153,7 @@ export default function RecurringOutputHeader({
       {!items?.length ? (
         <View style={styles.empty}>
           <Ionicons name="sparkles-outline" size={18} color={colors.textMuted} />
-          <Text style={styles.emptyText}>Nessuna abitudine o abbonamento ancora.</Text>
+          <Text style={styles.emptyText}>{t("recurring.empty")}</Text>
         </View>
       ) : null}
     </View>

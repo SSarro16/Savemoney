@@ -19,6 +19,7 @@ import { BudgetContext } from "../../store/budget-context";
 import { ExpenseCategoriesContext } from "../../store/expense-categories-context";
 import { GlobalStyles } from "../../constants/styles";
 import ProgressBar from "./ProgressBar";
+import { useTranslation } from "../../store/language-context";
 
 const toNumber = (s) => {
   const cleaned = String(s ?? "")
@@ -128,11 +129,12 @@ export default function ManageBudget({ onSave }) {
   const styles = makeStyles(colors);
   const budgetCtx = useContext(BudgetContext);
   const categoriesCtx = useContext(ExpenseCategoriesContext);
+  const { t } = useTranslation();
   const scrollRef = useRef(null);
   const currentTitle = String(
     budgetCtx.activeBudgetMeta?.title ||
       budgetCtx.activeBudgetMeta?.name ||
-      "Nuovo budget",
+      t("budgetsHub.newBudgetFallback"),
   );
 
   const [localTitleText, setLocalTitleText] = useState(currentTitle);
@@ -223,7 +225,7 @@ export default function ManageBudget({ onSave }) {
   async function addCategoryHandler() {
     const clean = normalizeBudgetCategoryName(newCategoryText);
     if (!clean) {
-      Alert.alert("Categoria mancante", "Inserisci un nome categoria valido.");
+      Alert.alert(t("categories.invalidTitle"), t("manageBudget.invalidCategoryMessage"));
       return;
     }
 
@@ -231,7 +233,7 @@ export default function ManageBudget({ onSave }) {
       (x) => String(x).toLowerCase() === clean.toLowerCase(),
     );
     if (exists) {
-      Alert.alert("Gia presente", "Questa categoria esiste gia nel budget.");
+      Alert.alert(t("manageBudget.alreadyExistsTitle"), t("manageBudget.alreadyExistsMessage"));
       return;
     }
 
@@ -244,7 +246,7 @@ export default function ManageBudget({ onSave }) {
     }));
     budgetCtx.updateCategory(finalName, 0);
     setNewCategoryText("");
-    showToast("success", `Categoria "${finalName}" aggiunta`);
+    showToast("success", t("manageBudget.categoryAdded", { name: finalName }));
     requestAnimationFrame(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     });
@@ -287,14 +289,14 @@ export default function ManageBudget({ onSave }) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         () => {},
       );
-      showToast("success", "Budget salvato ✓");
+      showToast("success", t("manageBudget.savedToast"));
       setTimeout(() => onSave?.(), 250);
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
         () => {},
       );
-      showToast("error", "Errore nel salvataggio");
-      Alert.alert("Errore", err?.message || "Impossibile salvare il budget!");
+      showToast("error", t("manageBudget.saveErrorToast"));
+      Alert.alert(t("common.error"), err?.message || t("manageBudget.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -312,7 +314,7 @@ export default function ManageBudget({ onSave }) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
       () => {},
     );
-    showToast("success", "Budget resettato");
+    showToast("success", t("manageBudget.resetToast"));
   }
 
   function resetHandlerLongPress() {
@@ -322,9 +324,9 @@ export default function ManageBudget({ onSave }) {
       () => {},
     );
 
-    Alert.alert("Azzera budget", "Vuoi azzerare totale e categorie?", [
-      { text: "Annulla", style: "cancel" },
-      { text: "Azzera", style: "destructive", onPress: doReset },
+    Alert.alert(t("manageBudget.resetTitle"), t("manageBudget.resetMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("manageBudget.resetAction"), style: "destructive", onPress: doReset },
     ]);
   }
 
@@ -362,15 +364,14 @@ export default function ManageBudget({ onSave }) {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.summaryTitle}>Rimanenti</Text>
+                <Text style={styles.summaryTitle}>{t("budgetOverview.remaining")}</Text>
                 <Text style={styles.summarySub}>
-                  {budgetCtx.formatEuro(used)} allocati •{" "}
-                  {budgetCtx.formatEuro(totalNumber)} totali
+                  {t("manageBudget.allocatedTotalLine", { allocated: budgetCtx.formatEuro(used), total: budgetCtx.formatEuro(totalNumber) })}
                 </Text>
               </View>
 
               <View style={[styles.pill, isOver && styles.pillOver]}>
-                <Text style={styles.pillText}>{isOver ? "SFORATO" : "OK"}</Text>
+                <Text style={styles.pillText}>{isOver ? t("budgetOverview.overBudget") : t("budgetOverview.ok")}</Text>
               </View>
             </View>
 
@@ -386,13 +387,13 @@ export default function ManageBudget({ onSave }) {
 
             <View style={styles.summaryRow}>
               <View style={styles.smallBox}>
-                <Text style={styles.smallLabel}>Allocati</Text>
+                <Text style={styles.smallLabel}>{t("budgetOverview.allocated")}</Text>
                 <Text style={styles.smallValue}>
                   {budgetCtx.formatEuro(used)}
                 </Text>
               </View>
               <View style={styles.smallBox}>
-                <Text style={styles.smallLabel}>Totale</Text>
+                <Text style={styles.smallLabel}>{t("budgetOverview.total")}</Text>
                 <Text style={styles.smallValue}>
                   {budgetCtx.formatEuro(totalNumber)}
                 </Text>
@@ -402,13 +403,13 @@ export default function ManageBudget({ onSave }) {
 
           {/* FORM */}
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Modifica Budget</Text>
+            <Text style={styles.formTitle}>{t("manageBudget.editBudgetTitle")}</Text>
             <Text style={styles.formSub}>
-              Aggiorna totale e importi per categoria.
+              {t("manageBudget.editBudgetSub")}
             </Text>
 
             <View style={{ marginTop: 14 }}>
-              <Text style={styles.label}>Nome budget</Text>
+              <Text style={styles.label}>{t("budgetsHub.budgetName")}</Text>
               <View style={styles.field}>
                 <Ionicons
                   name="pencil-outline"
@@ -419,7 +420,7 @@ export default function ManageBudget({ onSave }) {
                   style={styles.input}
                   value={localTitleText}
                   onChangeText={setLocalTitleText}
-                  placeholder="Es. Casa, Viaggi, Universita"
+                  placeholder={t("budgetsHub.namePlaceholder")}
                   placeholderTextColor={colors.white40}
                   returnKeyType="done"
                   maxLength={36}
@@ -428,7 +429,7 @@ export default function ManageBudget({ onSave }) {
             </View>
 
             <View style={{ marginTop: 14 }}>
-              <Text style={styles.label}>Budget Totale</Text>
+              <Text style={styles.label}>{t("manageBudget.totalBudget")}</Text>
               <View style={styles.field}>
                 <Ionicons
                   name="cash-outline"
@@ -444,12 +445,12 @@ export default function ManageBudget({ onSave }) {
                   placeholderTextColor={colors.white40}
                   returnKeyType="done"
                 />
-                <Text style={styles.suffix}>€</Text>
+                <Text style={styles.suffix}>{t("common.currencyCode")}</Text>
               </View>
             </View>
 
             <View style={{ marginTop: 12 }}>
-              <Text style={styles.label}>Categorie</Text>
+              <Text style={styles.label}>{t("categories.heroTitle")}</Text>
 
               {Object.entries(localCategoriesText).map(([cat, val]) => (
                 <View key={cat} style={styles.categoryRow}>
@@ -465,8 +466,10 @@ export default function ManageBudget({ onSave }) {
                     <Text style={styles.categoryLabel}>{cat}</Text>
                     <Text style={styles.categoryHint}>
                       {Number(totalNumber) > 0
-                        ? `${((toNumber(val) / totalNumber) * 100 || 0).toFixed(0)}% del totale`
-                        : "Imposta un totale"}
+                        ? t("insights.percentOfTotal", {
+                          percent: ((toNumber(val) / totalNumber) * 100 || 0).toFixed(0),
+                        })
+                        : t("manageBudget.setTotalHint")}
                     </Text>
                   </View>
 
@@ -481,7 +484,7 @@ export default function ManageBudget({ onSave }) {
                       placeholderTextColor={colors.white40}
                       returnKeyType="done"
                     />
-                    <Text style={styles.suffix}>€</Text>
+                    <Text style={styles.suffix}>{t("common.currencyCode")}</Text>
                   </View>
                 </View>
               ))}
@@ -493,7 +496,7 @@ export default function ManageBudget({ onSave }) {
                     style={styles.input}
                     value={newCategoryText}
                     onChangeText={setNewCategoryText}
-                    placeholder="Nuova categoria budget"
+                    placeholder={t("manageBudget.newBudgetCategoryPlaceholder")}
                     placeholderTextColor={colors.white40}
                     returnKeyType="done"
                     maxLength={24}
@@ -513,7 +516,7 @@ export default function ManageBudget({ onSave }) {
             </View>
 
             <Text style={styles.resetHint}>
-              Suggerimento: tieni premuto "Azzera" per azzerare.
+              {t("manageBudget.resetHint")}
             </Text>
           </View>
 
@@ -535,7 +538,7 @@ export default function ManageBudget({ onSave }) {
               ]}
             >
               <Ionicons name="refresh-outline" size={18} color="white" />
-              <Text style={styles.btnText}>Azzera</Text>
+              <Text style={styles.btnText}>{t("manageBudget.resetAction")}</Text>
             </Pressable>
 
             <Pressable
@@ -552,7 +555,7 @@ export default function ManageBudget({ onSave }) {
                 <>
                   <MiniSpinner size={18} color={colors.textOnAccentStrong} />
                   <Text style={[styles.btnText, { color: colors.textOnAccentStrong }]}>
-                    Salvataggio...
+                    {t("profile.saving")}
                   </Text>
                 </>
               ) : (
@@ -563,7 +566,7 @@ export default function ManageBudget({ onSave }) {
                     color={colors.textOnAccentStrong}
                   />
                   <Text style={[styles.btnText, { color: colors.textOnAccentStrong }]}>
-                    Salva
+                    {t("common.save")}
                   </Text>
                 </>
               )}
@@ -822,5 +825,8 @@ function makeStyles(colors) {
   pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
   });
 }
+
+
+
 
 

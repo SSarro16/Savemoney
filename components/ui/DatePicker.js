@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "../../store/language-context";
 
 function formatDatePretty(d) {
   if (!d) return "";
@@ -46,12 +47,14 @@ export default function CustomDatePicker({
   value,
   onChange,
   disabled = false,
-  label = "Data",
+  label,
 }) {
   const colors = GlobalStyles.colors;
   const { compactMode, highContrast } = useContext(CustomizationContext);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const labelText = label || t("datePicker.label");
 
   const [open, setOpen] = useState(false);
   const [tempDate, setTempDate] = useState(value ?? new Date());
@@ -107,7 +110,7 @@ export default function CustomDatePicker({
   return (
     <View>
       <View style={[styles.labelRow, { minHeight: compactMode ? 22 : 26 }]}>
-        <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>{labelText}</Text>
 
         <View style={styles.quickRow}>
           <Pressable
@@ -129,7 +132,7 @@ export default function CustomDatePicker({
                 { color: isToday ? colors.textTitle : colors.textBody },
               ]}
             >
-              Oggi
+              {t("common.today")}
             </Text>
           </Pressable>
 
@@ -156,7 +159,7 @@ export default function CustomDatePicker({
                 { color: isYesterday ? colors.textTitle : colors.textBody },
               ]}
             >
-              Ieri
+              {t("common.yesterday")}
             </Text>
           </Pressable>
         </View>
@@ -215,7 +218,7 @@ export default function CustomDatePicker({
               showsVerticalScrollIndicator={false}
             >
               <Text style={[styles.modalTitle, { color: colors.textTitle }]}>
-                Seleziona data
+                {t("datePicker.selectDate")}
               </Text>
 
               <View style={styles.pickerWrap}>
@@ -253,7 +256,7 @@ export default function CustomDatePicker({
                     <Text
                       style={[styles.actionText, { color: colors.textTitle }]}
                     >
-                      Annulla
+                      {t("common.cancel")}
                     </Text>
                   </Pressable>
 
@@ -270,7 +273,7 @@ export default function CustomDatePicker({
                     <Text
                       style={[styles.actionText, { color: colors.textOnAccent }]}
                     >
-                      Conferma
+                      {t("common.confirm")}
                     </Text>
                   </Pressable>
                 </View>

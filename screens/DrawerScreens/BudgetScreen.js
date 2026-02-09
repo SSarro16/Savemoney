@@ -5,11 +5,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import ManageBudget from "../../components/ManageBudget/ManageBudget";
 import { BudgetContext } from "../../store/budget-context";
+import { useTranslation } from "../../store/language-context";
 
 export default function BudgetScreen({ navigation, route }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const budgetCtx = useContext(BudgetContext);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const budgetId = route?.params?.budgetId;
@@ -20,7 +22,7 @@ export default function BudgetScreen({ navigation, route }) {
   const title = String(
     budgetCtx.activeBudgetMeta?.title ||
       budgetCtx.activeBudgetMeta?.name ||
-      "Nuovo budget",
+      t("budgetsHub.newBudgetFallback"),
   );
 
   const stats = useMemo(() => {
@@ -47,20 +49,20 @@ export default function BudgetScreen({ navigation, route }) {
             <Text style={styles.heroTitle} numberOfLines={1}>
               {title}
             </Text>
-            <Text style={styles.heroSub}>Editor completo di totale e categorie</Text>
+            <Text style={styles.heroSub}>{t("budgetScreen.heroSub")}</Text>
           </View>
         </View>
         <View style={styles.kpisRow}>
           <View style={styles.kpiBox}>
-            <Text style={styles.kpiLabel}>Allocato</Text>
-            <Text style={styles.kpiValue}>{stats.allocated.toFixed(2)} EUR</Text>
+            <Text style={styles.kpiLabel}>{t("budgetOverview.allocated")}</Text>
+            <Text style={styles.kpiValue}>{stats.allocated.toFixed(2)} {t("common.currencyCode")}</Text>
           </View>
           <View style={styles.kpiBox}>
-            <Text style={styles.kpiLabel}>Residuo</Text>
-            <Text style={styles.kpiValue}>{stats.remaining.toFixed(2)} EUR</Text>
+            <Text style={styles.kpiLabel}>{t("budgetOverview.remaining")}</Text>
+            <Text style={styles.kpiValue}>{stats.remaining.toFixed(2)} {t("common.currencyCode")}</Text>
           </View>
           <View style={styles.kpiBox}>
-            <Text style={styles.kpiLabel}>Uso</Text>
+            <Text style={styles.kpiLabel}>{t("budgetOverview.usage")}</Text>
             <Text style={styles.kpiValue}>{stats.pct}%</Text>
           </View>
         </View>

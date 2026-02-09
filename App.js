@@ -51,6 +51,7 @@ import GoalsScreen from "./screens/DrawerScreens/GoalsScreen";
 import AuthContextProvider, { AuthContext } from "./store/auth-context";
 import ExpensesContextProvider from "./store/expenses-context";
 import ThemeContextProvider, { ThemeContext } from "./store/theme-context";
+import LanguageContextProvider, { useTranslation } from "./store/language-context";
 import BudgetContextProvider from "./store/budget-context";
 import CustomizationContextProvider, {
   CustomizationContext,
@@ -516,15 +517,19 @@ function makeDrawerStyles(colors, textScale) {
 }
 
 const DRAWER_SECTIONS = [
-  { key: "Operativo", routes: ["Spese", "Budget", "Recurring", "Payments"] },
-  { key: "Organizzazione", routes: ["Goals", "Settings"] },
-  { key: "Account", routes: ["Logout"] },
+  {
+    key: "drawer.sectionOperations",
+    routes: ["Spese", "Budget", "Recurring", "Payments"],
+  },
+  { key: "drawer.sectionOrganization", routes: ["Goals", "Settings"] },
+  { key: "drawer.sectionAccount", routes: ["Logout"] },
 ];
 
 function AppDrawerContent(props) {
   const authCtx = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const styles = makeDrawerStyles(colors, textScale);
   const state = props.state;
@@ -533,8 +538,8 @@ function AppDrawerContent(props) {
     .map((item) => String(item || "").trim())
     .filter(Boolean)
     .join(" ");
-  const drawerDisplayName = fullName || "Utente Savemoney";
-  const drawerSubtitle = authCtx.profile?.email || "Controllo spese personale";
+  const drawerDisplayName = fullName || t("drawer.defaultUserName");
+  const drawerSubtitle = authCtx.profile?.email || t("drawer.defaultSubtitle");
 
   function renderDrawerItem(routeName) {
     const route = state.routes.find((item) => item.name === routeName);
@@ -626,7 +631,7 @@ function AppDrawerContent(props) {
 
       {DRAWER_SECTIONS.map((section, index) => (
         <View key={section.key} style={styles.section}>
-          <Text style={styles.sectionLabel}>{section.key}</Text>
+          <Text style={styles.sectionLabel}>{t(section.key)}</Text>
           <View style={styles.sectionBody}>
             {section.routes.map((routeName) => renderDrawerItem(routeName))}
           </View>
@@ -642,6 +647,7 @@ function AppDrawerContent(props) {
 function AuthStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -651,14 +657,14 @@ function AuthStack() {
       }}
     >
       <Stack.Screen
-        name="Accedi"
+        name="Login"
         component={LoginScreen}
-        options={{ title: "Accedi" }}
+        options={{ title: t("auth.loginTitle") }}
       />
       <Stack.Screen
-        name="Registrazione"
+        name="Signup"
         component={SignupScreen}
-        options={{ title: "Crea account" }}
+        options={{ title: t("auth.signupTitle") }}
       />
     </Stack.Navigator>
   );
@@ -671,6 +677,7 @@ function ExpensesTabs() {
 function ExpensesTabsClassic() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -698,8 +705,8 @@ function ExpensesTabsClassic() {
         name="Expenses"
         component={ExpensesScreen}
         options={({ navigation }) => ({
-          title: "Spese",
-          tabBarLabel: "Spese",
+          title: t("drawer.expenses"),
+          tabBarLabel: t("drawer.expenses"),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={TAB_BAR_ICONS.EXPENSES.ionicon}
@@ -730,8 +737,8 @@ function ExpensesTabsClassic() {
         name="Insights"
         component={InsightsScreen}
         options={({ navigation }) => ({
-          title: "Insights",
-          tabBarLabel: "Insights",
+          title: t("navigation.insights"),
+          tabBarLabel: t("navigation.insights"),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={TAB_BAR_ICONS.INSIGHTS.ionicon}
@@ -756,6 +763,7 @@ function ExpensesTabsClassic() {
 function BudgetStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -768,7 +776,7 @@ function BudgetStack() {
         name="BudgetsHub"
         component={BudgetsHubScreen}
         options={({ navigation }) => ({
-          title: "Budget",
+          title: t("drawer.budget"),
           headerLeft: () => (
             <IconButton
               icon="menu"
@@ -784,7 +792,9 @@ function BudgetStack() {
         name="BudgetOverview"
         component={BudgetOverviewScreen}
         options={({ navigation, route }) => ({
-          title: route?.params?.title ? `Budget - ${route.params.title}` : "Budget",
+          title: route?.params?.title
+            ? t("navigation.budgetOverviewWithName", { name: route.params.title })
+            : t("navigation.budgetOverviewTitle"),
           headerRight: () => (
             <IconButton
               icon="pencil"
@@ -803,7 +813,7 @@ function BudgetStack() {
       <Stack.Screen
         name="BudgetScreen"
         component={BudgetScreen}
-        options={{ title: "Modifica Budget" }}
+        options={{ title: t("navigation.editBudget") }}
       />
     </Stack.Navigator>
   );
@@ -812,6 +822,7 @@ function BudgetStack() {
 function RecurringStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -824,7 +835,7 @@ function RecurringStack() {
         name="RecurringHome"
         component={RecurringScreen}
         options={({ navigation }) => ({
-          title: "Abbonamenti/Abitudinali",
+          title: t("navigation.recurringHome"),
           headerLeft: () => (
             <IconButton
               icon="menu"
@@ -842,6 +853,7 @@ function RecurringStack() {
 function PaymentsStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -854,7 +866,7 @@ function PaymentsStack() {
         name="PaymentsHome"
         component={PaymentsScreen}
         options={({ navigation }) => ({
-          title: "Carte e Contanti",
+          title: t("navigation.paymentsHome"),
           headerLeft: () => (
             <IconButton
               icon="menu"
@@ -871,8 +883,8 @@ function PaymentsStack() {
         options={({ route }) => ({
           title:
             route?.params?.methodType === "CARD"
-              ? "Dettaglio Carta"
-              : "Dettaglio Contanti",
+              ? t("navigation.cardDetails")
+              : t("navigation.cashDetails"),
         })}
       />
     </Stack.Navigator>
@@ -882,6 +894,7 @@ function PaymentsStack() {
 function SettingsStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -894,7 +907,7 @@ function SettingsStack() {
         name="SettingsHome"
         component={SettingsScreen}
         options={({ navigation }) => ({
-          title: "Impostazioni",
+          title: t("navigation.settings"),
           headerLeft: () => (
             <IconButton
               icon="menu"
@@ -908,23 +921,23 @@ function SettingsStack() {
       <Stack.Screen
         name="QuickSettings"
         component={QuickSettingsScreen}
-        options={{ title: "Impostazioni rapide" }}
+        options={{ title: t("navigation.quickSettings") }}
       />
       <Stack.Screen
         name="CustomizeHome"
         component={CustomizeScreen}
-        options={{ title: "Personalizzazione" }}
+        options={{ title: t("navigation.customize") }}
       />
       <Stack.Screen
         name="CategoriesManager"
         component={CategoriesManagerScreen}
-        options={{ title: "Gestione Categorie" }}
+        options={{ title: t("navigation.categoriesManager") }}
       />
       <Stack.Screen
         name="UserProfile"
         component={UserProfileScreen}
         options={({ navigation }) => ({
-          title: "Profilo Utente",
+          title: t("navigation.profile"),
           headerLeft: () => (
             <IconButton
               icon="menu"
@@ -942,6 +955,7 @@ function SettingsStack() {
 function GoalsStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -954,7 +968,7 @@ function GoalsStack() {
         name="GoalsHome"
         component={GoalsScreen}
         options={({ navigation }) => ({
-          title: "Obiettivi",
+          title: t("navigation.goals"),
           headerLeft: () => (
             <IconButton
               icon="menu"
@@ -973,6 +987,7 @@ function AppDrawer() {
   const authCtx = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Drawer.Navigator
@@ -1015,7 +1030,7 @@ function AppDrawer() {
         name="Spese"
         component={ExpensesTabs}
         options={{
-          title: "Spese",
+          title: t("drawer.expenses"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="wallet-outline" size={size} color={color} />
           ),
@@ -1026,7 +1041,7 @@ function AppDrawer() {
         name="Budget"
         component={BudgetStack}
         options={{
-          title: "Budget",
+          title: t("drawer.budget"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="cash-outline" size={size} color={color} />
           ),
@@ -1037,7 +1052,7 @@ function AppDrawer() {
         name="Recurring"
         component={RecurringStack}
         options={{
-          title: "Abbonamenti/Abitudinali",
+          title: t("drawer.recurring"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="repeat-outline" size={size} color={color} />
           ),
@@ -1048,7 +1063,7 @@ function AppDrawer() {
         name="Payments"
         component={PaymentsStack}
         options={{
-          title: "Carte/Contanti",
+          title: t("drawer.payments"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="card-outline" size={size} color={color} />
           ),
@@ -1059,7 +1074,7 @@ function AppDrawer() {
         name="Goals"
         component={GoalsStack}
         options={{
-          title: "Obiettivi",
+          title: t("drawer.goals"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="flag-outline" size={size} color={color} />
           ),
@@ -1070,7 +1085,7 @@ function AppDrawer() {
         name="Settings"
         component={SettingsStack}
         options={{
-          title: "Impostazioni",
+          title: t("drawer.settings"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),
@@ -1081,7 +1096,7 @@ function AppDrawer() {
         name="Logout"
         component={ExpensesTabs}
         options={{
-          title: "Logout",
+          title: t("drawer.logout"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="exit-outline" size={size} color={color} />
           ),
@@ -1090,12 +1105,12 @@ function AppDrawer() {
           drawerItemPress: (e) => {
             e.preventDefault();
             Alert.alert(
-              "Conferma logout",
-              "Vuoi uscire dal tuo account?",
+              t("navigation.logoutConfirmTitle"),
+              t("navigation.logoutConfirmMessage"),
               [
-                { text: "Annulla", style: "cancel" },
+                { text: t("common.cancel"), style: "cancel" },
                 {
-                  text: "Esci",
+                  text: t("navigation.logoutAction"),
                   style: "destructive",
                   onPress: () => authCtx.logout(),
                 },
@@ -1111,6 +1126,7 @@ function AppDrawer() {
 function AuthenticatedStack() {
   const { colors } = useContext(ThemeContext);
   const { textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   return (
     <Stack.Navigator
@@ -1138,7 +1154,7 @@ function AuthenticatedStack() {
       <Stack.Screen
         name="ManageExpenses"
         component={ManageExpenses}
-        options={{ title: "Gestisci Spesa", presentation: "modal" }}
+        options={{ title: t("navigation.manageExpense"), presentation: "modal" }}
       />
     </Stack.Navigator>
   );
@@ -1148,14 +1164,18 @@ function Navigation() {
   const authCtx = useContext(AuthContext);
   const { colors, ready } = useContext(ThemeContext);
   const { ready: prefsReady } = useContext(CustomizationContext);
+  const {
+    ready: languageReady,
+    version: languageVersion,
+  } = useTranslation();
   const navTheme = useNavTheme(colors);
 
-  if (!ready || !prefsReady) return null;
+  if (!ready || !prefsReady || !languageReady) return null;
 
   return (
     <>
       <StatusBar style={colors.textTitle === "#ffffff" ? "light" : "dark"} />
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer theme={navTheme} key={`lang-${languageVersion}`}>
         {!authCtx.isAuthenticated ? <AuthStack /> : <AuthenticatedStack />}
       </NavigationContainer>
     </>
@@ -1171,21 +1191,23 @@ export default function App() {
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AuthContextProvider>
-          <ThemeContextProvider>
-            <CustomizationContextProvider>
-            <ExpenseCategoriesContextProvider>
-              <BudgetContextProvider>
-                <PaymentContextProvider>
-                  <GoalsContextProvider>
-                    <ExpensesContextProvider>
-                      <Navigation />
-                    </ExpensesContextProvider>
-                  </GoalsContextProvider>
-                </PaymentContextProvider>
-              </BudgetContextProvider>
-            </ExpenseCategoriesContextProvider>
-            </CustomizationContextProvider>
-          </ThemeContextProvider>
+          <LanguageContextProvider>
+            <ThemeContextProvider>
+              <CustomizationContextProvider>
+                <ExpenseCategoriesContextProvider>
+                  <BudgetContextProvider>
+                    <PaymentContextProvider>
+                      <GoalsContextProvider>
+                        <ExpensesContextProvider>
+                          <Navigation />
+                        </ExpensesContextProvider>
+                      </GoalsContextProvider>
+                    </PaymentContextProvider>
+                  </BudgetContextProvider>
+                </ExpenseCategoriesContextProvider>
+              </CustomizationContextProvider>
+            </ThemeContextProvider>
+          </LanguageContextProvider>
         </AuthContextProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>

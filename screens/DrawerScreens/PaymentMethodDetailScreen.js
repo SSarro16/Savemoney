@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import { PaymentContext } from "../../store/payment-context";
 import { ExpensesContext } from "../../store/expenses-context";
+import { useTranslation } from "../../store/language-context";
 import { formatDateIT } from "../../util/date";
 
 function AmountCard({ title, value, icon, colors, styles }) {
@@ -25,6 +26,7 @@ export default function PaymentMethodDetailScreen({ route, navigation }) {
 
   const paymentCtx = useContext(PaymentContext);
   const expensesCtx = useContext(ExpensesContext);
+  const { t } = useTranslation();
 
   const methodType = route?.params?.methodType === "CARD" ? "CARD" : "CASH";
   const methodId = String(route?.params?.methodId || "").trim();
@@ -32,19 +34,19 @@ export default function PaymentMethodDetailScreen({ route, navigation }) {
   const target = useMemo(() => {
     if (!methodId) return null;
     if (methodType === "CARD") {
-      return (paymentCtx.cards || []).find((c) => String(c.id) === methodId) || null;
+      return (paymentCtx.cards || []).find((card) => String(card.id) === methodId) || null;
     }
     return (
-      (paymentCtx.cashWallets || []).find((w) => String(w.id) === methodId) || null
+      (paymentCtx.cashWallets || []).find((wallet) => String(wallet.id) === methodId) || null
     );
   }, [methodType, methodId, paymentCtx.cards, paymentCtx.cashWallets]);
 
   const movements = useMemo(() => {
     return [...(expensesCtx.expenses || [])]
-      .filter((e) => {
-        const type = e?.methodType === "CARD" || e?.payMethod === "CARD" ? "CARD" : "CASH";
+      .filter((expense) => {
+        const type = expense?.methodType === "CARD" || expense?.payMethod === "CARD" ? "CARD" : "CASH";
         if (type !== methodType) return false;
-        const id = String(e?.methodId || e?.cardId || e?.cashId || "").trim();
+        const id = String(expense?.methodId || expense?.cardId || expense?.cashId || "").trim();
         return id === methodId;
       })
       .sort((a, b) => new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime());
@@ -56,12 +58,12 @@ export default function PaymentMethodDetailScreen({ route, navigation }) {
 
   const balance = Number(target?.balance || 0);
   const isCard = methodType === "CARD";
-  const title = target?.name || (isCard ? "Carta" : "Contanti");
+  const title = target?.name || (isCard ? t("paymentDetail.cardFallback") : t("paymentDetail.cashFallback"));
   const subtitle = isCard
-    ? `${target?.brand || "Virtual"}${target?.last4 ? ` • **** ${target.last4}` : ""}`
+    ? `${target?.brand || t("paymentDetail.virtualBrand")}${target?.last4 ? ` - **** ${target.last4}` : ""}`
     : target?.isDefault
-      ? "Wallet predefinito"
-      : "Wallet contanti";
+      ? t("paymentDetail.defaultWallet")
+      : t("paymentDetail.cashWallet");
 
   return (
     <ScrollView
@@ -93,21 +95,21 @@ export default function PaymentMethodDetailScreen({ route, navigation }) {
         <Text style={styles.visualSub}>{subtitle}</Text>
 
         <View style={styles.visualFooter}>
-          <Text style={styles.visualLabel}>Saldo corrente</Text>
-          <Text style={styles.visualAmount}>{balance.toFixed(2)} EUR</Text>
+          <Text style={styles.visualLabel}>{t("paymentDetail.balanceLabel")}</Text>
+          <Text style={styles.visualAmount}>{balance.toFixed(2)} {t("common.currencyCode")}</Text>
         </View>
       </View>
 
       <View style={styles.amountRow}>
         <AmountCard
-          title="Spese totali"
-          value={`${spent.toFixed(2)} EUR`}
+          title={t("paymentDetail.totalExpenses")}
+          value={`${spent.toFixed(2)} ${t("common.currencyCode")}`}
           icon="trending-down-outline"
           colors={colors}
           styles={styles}
         />
         <AmountCard
-          title="Movimenti"
+          title={t("paymentDetail.movements")}
           value={String(movements.length)}
           icon="receipt-outline"
           colors={colors}
@@ -116,13 +118,13 @@ export default function PaymentMethodDetailScreen({ route, navigation }) {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Ultimi movimenti</Text>
-        <Text style={styles.sectionSub}>Transazioni collegate a questo metodo</Text>
+        <Text style={styles.sectionTitle}>{t("paymentDetail.latestMovements")}</Text>
+        <Text style={styles.sectionSub}>{t("paymentDetail.linkedTransactions")}</Text>
 
         {!movements.length ? (
           <View style={styles.empty}>
             <Ionicons name="sparkles-outline" size={18} color={colors.textMuted} />
-            <Text style={styles.emptyText}>Nessun movimento registrato.</Text>
+            <Text style={styles.emptyText}>{t("paymentDetail.noMovements")}</Text>
           </View>
         ) : (
           <View style={{ gap: 10 }}>
@@ -133,13 +135,13 @@ export default function PaymentMethodDetailScreen({ route, navigation }) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowTitle} numberOfLines={1}>
-                    {String(item?.description || "Spesa")}
+                    {String(item?.description || t("paymentDetail.expenseFallback"))}
                   </Text>
                   <Text style={styles.rowSub} numberOfLines={1}>
                     {formatDateIT(item?.date)}
                   </Text>
                 </View>
-                <Text style={styles.rowAmount}>-{Number(item?.amount || 0).toFixed(2)} EUR</Text>
+                <Text style={styles.rowAmount}>-{Number(item?.amount || 0).toFixed(2)} {t("common.currencyCode")}</Text>
               </View>
             ))}
           </View>

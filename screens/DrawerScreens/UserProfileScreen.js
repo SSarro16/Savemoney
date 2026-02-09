@@ -23,6 +23,7 @@ import { saveUserProfile } from "../../util/profile-http";
 import AppLogo from "../../components/ui/AppLogo";
 import Button from "../../components/ui/CButton";
 import CustomDatePicker from "../../components/ui/DatePicker";
+import { useTranslation } from "../../store/language-context";
 
 function isAuthHttpError(error) {
   const status = Number(error?.response?.status || 0);
@@ -35,16 +36,16 @@ function safeDate(value) {
   return parsed;
 }
 
-function formatDate(value) {
+function formatDate(value, localeTag, fallbackLabel) {
   const parsed = value ? new Date(value) : null;
-  if (!parsed || Number.isNaN(parsed.getTime())) return "Non impostata";
-  return parsed.toLocaleDateString("it-IT");
+  if (!parsed || Number.isNaN(parsed.getTime())) return fallbackLabel;
+  return parsed.toLocaleDateString(localeTag);
 }
 
-function genderLabel(value) {
-  if (value === "MALE") return "Maschio";
-  if (value === "FEMALE") return "Femmina";
-  return "Non impostato";
+function genderLabel(value, t) {
+  if (value === "MALE") return t("auth.male");
+  if (value === "FEMALE") return t("auth.female");
+  return t("profile.notSet");
 }
 
 function MetricCard({ icon, title, value, subtitle, colors, styles }) {
@@ -108,11 +109,12 @@ function InfoRow({ icon, label, value, styles, colors }) {
 }
 
 function GenderSelector({ value, onChange, styles }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.genderRow}>
       {[
-        { key: "MALE", label: "Maschio" },
-        { key: "FEMALE", label: "Femmina" },
+        { key: "MALE", label: t("auth.male") },
+        { key: "FEMALE", label: t("auth.female") },
       ].map((option) => {
         const active = value === option.key;
         return (
@@ -138,6 +140,7 @@ function GenderSelector({ value, onChange, styles }) {
 export default function UserProfileScreen({ navigation }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t, localeTag } = useTranslation();
 
   const authCtx = useContext(AuthContext);
   const paymentCtx = useContext(PaymentContext);
@@ -204,8 +207,8 @@ export default function UserProfileScreen({ navigation }) {
       .map((x) => String(x || "").trim())
       .filter(Boolean)
       .join(" ");
-    return joined || "Profilo utente";
-  }, [authCtx.firstName, authCtx.lastName]);
+    return joined || t("profile.profileTitleFallback");
+  }, [authCtx.firstName, authCtx.lastName, t]);
 
   const monthExpenseTotal = useMemo(() => {
     const now = new Date();
@@ -267,11 +270,14 @@ export default function UserProfileScreen({ navigation }) {
     try {
       const result = await exportCurrentMonthCsv(expensesCtx.expenses || []);
       Alert.alert(
-        "Export completato",
-        `${result.count} movimenti - Totale ${Number(result.total || 0).toFixed(2)} EUR`,
+        t("profile.exportDoneTitle"),
+        t("profile.exportDoneMessage", {
+          count: result.count,
+          total: Number(result.total || 0).toFixed(2),
+        }),
       );
     } catch {
-      Alert.alert("Export fallito", "Impossibile esportare il report CSV.");
+      Alert.alert(t("profile.exportFailedTitle"), t("profile.exportFailedMessage"));
     } finally {
       setIsExporting(false);
     }
@@ -293,7 +299,7 @@ export default function UserProfileScreen({ navigation }) {
     try {
       const saved = await saveUserProfile(authCtx.userId, authCtx.token, payload);
       await authCtx.setProfile(saved || payload);
-      Alert.alert("Profilo aggiornato", "I dati account sono stati salvati.");
+      Alert.alert(t("profile.profileUpdatedTitle"), t("profile.profileUpdatedMessage"));
     } catch (error) {
       if (isAuthHttpError(error)) {
         const refreshed = await refreshSessionRef.current?.(true).catch(() => null);
@@ -301,14 +307,17 @@ export default function UserProfileScreen({ navigation }) {
           try {
             const saved = await saveUserProfile(authCtx.userId, refreshed.token, payload);
             await authCtx.setProfile(saved || payload);
-            Alert.alert("Profilo aggiornato", "I dati account sono stati salvati.");
+            Alert.alert(t("profile.profileUpdatedTitle"), t("profile.profileUpdatedMessage"));
             return;
           } catch {
             // handled below
           }
         }
       }
-      Alert.alert("Aggiornamento fallito", "Impossibile salvare il profilo.");
+      Alert.alert(
+        t("profile.profileUpdateFailedTitle"),
+        t("profile.profileUpdateFailedMessage"),
+      );
     } finally {
       setIsSavingProfile(false);
     }
@@ -329,7 +338,7 @@ export default function UserProfileScreen({ navigation }) {
             {fullName}
           </Text>
           <Text style={styles.heroSub} numberOfLines={1}>
-            {authCtx.profile?.email || "Gestisci account e preferenze"}
+            {authCtx.profile?.email || t("profile.profileSubtitleFallback")}
           </Text>
         </View>
       </View>
@@ -337,72 +346,72 @@ export default function UserProfileScreen({ navigation }) {
       <View style={styles.infoCard}>
         <InfoRow
           icon="mail-outline"
-          label="Email"
+          label={t("profile.email")}
           value={authCtx.profile?.email || "-"}
           styles={styles}
           colors={colors}
         />
         <InfoRow
           icon="id-card-outline"
-          label="ID"
-          value={userIdShort || "n/d"}
+          label={t("profile.id")}
+          value={userIdShort || t("profile.notAvailable")}
           styles={styles}
           colors={colors}
         />
         <InfoRow
           icon="male-female-outline"
-          label="Genere"
-          value={genderLabel(authCtx.gender)}
+          label={t("profile.gender")}
+          value={genderLabel(authCtx.gender, t)}
           styles={styles}
           colors={colors}
         />
         <InfoRow
           icon="calendar-outline"
-          label="Nascita"
-          value={formatDate(authCtx.dateOfBirth)}
+          label={t("profile.birthDate")}
+          value={formatDate(authCtx.dateOfBirth, localeTag, t("profile.notSet"))}
           styles={styles}
           colors={colors}
         />
         <InfoRow
           icon="pricetags-outline"
-          label="Categorie"
+          label={t("profile.categories")}
           value={String((categoriesCtx.categories || []).length)}
           styles={styles}
           colors={colors}
         />
       </View>
 
-      <Text style={styles.sectionTitle}>Account settings</Text>
+      <Text style={styles.sectionTitle}>{t("profile.accountSettings")}</Text>
       <View style={styles.editorCard}>
         <View style={styles.editorRow}>
           <View style={styles.editorField}>
-            <Text style={styles.editorLabel}>Nome</Text>
+            <Text style={styles.editorLabel}>{t("profile.firstName")}</Text>
             <TextInput
               value={draftFirstName}
               onChangeText={setDraftFirstName}
-              placeholder="Nome"
+              placeholder={t("profile.firstName")}
               placeholderTextColor={colors.textFaint}
               style={styles.editorInput}
             />
           </View>
           <View style={styles.editorField}>
-            <Text style={styles.editorLabel}>Cognome</Text>
+            <Text style={styles.editorLabel}>{t("profile.lastName")}</Text>
             <TextInput
               value={draftLastName}
               onChangeText={setDraftLastName}
-              placeholder="Cognome"
+              placeholder={t("profile.lastName")}
               placeholderTextColor={colors.textFaint}
               style={styles.editorInput}
             />
           </View>
         </View>
 
-        <Text style={styles.editorLabel}>Genere</Text>
+        <Text style={styles.editorLabel}>{t("profile.gender")}</Text>
         <GenderSelector value={draftGender} onChange={setDraftGender} styles={styles} />
 
         <View style={{ marginTop: 10 }}>
           <CustomDatePicker
-            label="Data di nascita"
+            label={t("auth.birthDate")}
             value={safeDate(draftDob)}
             onChange={setDraftDob}
           />
@@ -410,16 +419,16 @@ export default function UserProfileScreen({ navigation }) {
 
         <View style={styles.editorSaveWrap}>
           <Button onPress={handleSaveProfile} disabled={!profileDirty || isSavingProfile}>
-            {isSavingProfile ? "Salvataggio..." : "Salva dati account"}
+            {isSavingProfile ? t("profile.saving") : t("profile.saveAccountData")}
           </Button>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Panoramica</Text>
+      <Text style={styles.sectionTitle}>{t("profile.overview")}</Text>
       <View style={styles.metricGrid}>
         <MetricCard
           icon="card-outline"
-          title="Carte / Wallet"
+          title={t("profile.cardsWallets")}
           value={`${(paymentCtx.cards || []).length} / ${(paymentCtx.cashWallets || []).length}`}
           subtitle={`${(cardsTotal + cashTotal).toFixed(2)} EUR`}
           colors={colors}
@@ -427,68 +436,68 @@ export default function UserProfileScreen({ navigation }) {
         />
         <MetricCard
           icon="wallet-outline"
-          title="Spese mese"
+          title={t("profile.monthExpenses")}
           value={`${monthExpenseTotal.toFixed(2)} EUR`}
-          subtitle={`${(expensesCtx.expenses || []).length} movimenti`}
+          subtitle={`${(expensesCtx.expenses || []).length} ${t("profile.movements")}`}
           colors={colors}
           styles={styles}
         />
         <MetricCard
           icon="pie-chart-outline"
-          title="Budget"
+          title={t("drawer.budget")}
           value={`${(budgetCtx.budgets || []).length}`}
-          subtitle={budgetCtx.activeBudgetMeta?.title || "Nessun attivo"}
+          subtitle={budgetCtx.activeBudgetMeta?.title || t("profile.noActiveBudget")}
           colors={colors}
           styles={styles}
         />
         <MetricCard
           icon="repeat-outline"
-          title="Ricorrenze"
+          title={t("profile.recurring")}
           value={`${recurringCount}`}
-          subtitle={`${dueRecurringCount} in scadenza`}
+          subtitle={`${dueRecurringCount} ${t("profile.due")}`}
           colors={colors}
           styles={styles}
         />
       </View>
 
-      <Text style={styles.sectionTitle}>Azioni rapide</Text>
+      <Text style={styles.sectionTitle}>{t("profile.quickActions")}</Text>
       <View style={styles.actionsWrap}>
         <QuickAction
           icon="settings-outline"
-          title="Impostazioni complete"
-          subtitle="Centro configurazione generale dell'app"
+          title={t("profile.fullSettings")}
+          subtitle={t("profile.fullSettingsSub")}
           onPress={() => navigation.navigate("SettingsHome")}
           colors={colors}
           styles={styles}
         />
         <QuickAction
           icon={isExporting ? "time-outline" : "download-outline"}
-          title={isExporting ? "Export in corso..." : "Esporta report mese"}
-          subtitle="CSV con spese del mese corrente"
+          title={isExporting ? t("profile.exportInProgress") : t("profile.exportMonth")}
+          subtitle={t("profile.exportMonthSub")}
           onPress={handleExport}
           colors={colors}
           styles={styles}
         />
         <QuickAction
           icon="flash-outline"
-          title="Impostazioni rapide"
-          subtitle="Accessibilita, notifiche, modalita compatta"
+          title={t("settings.quickSettingsTitle")}
+          subtitle={t("profile.quickSettingsSub")}
           onPress={() => navigation.navigate("QuickSettings")}
           colors={colors}
           styles={styles}
         />
         <QuickAction
           icon="color-palette-outline"
-          title="Personalizzazione"
-          subtitle="Scegli tema e stile dell'app"
+          title={t("settings.customizationTitle")}
+          subtitle={t("profile.customizeSub")}
           onPress={() => navigation.navigate("CustomizeHome")}
           colors={colors}
           styles={styles}
         />
         <QuickAction
           icon="pricetags-outline"
-          title="Gestione categorie"
-          subtitle="Aggiungi o modifica categorie spesa"
+          title={t("profile.manageCategories")}
+          subtitle={t("profile.manageCategoriesSub")}
           onPress={() => navigation.navigate("CategoriesManager")}
           colors={colors}
           styles={styles}

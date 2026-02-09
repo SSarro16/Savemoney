@@ -28,6 +28,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { EXPENSE_ICONS } from "../../constants/expense-icons";
 import { PAYMENT_METHOD } from "../../util/expenses/expense-presets";
 import { ExpenseCategoriesContext } from "../../store/expense-categories-context";
+import { useTranslation } from "../../store/language-context";
 
 function parseAmount(text) {
   const cleaned = String(text ?? "")
@@ -45,10 +46,10 @@ function safePayMethod(v) {
   return v === PAYMENT_METHOD.CARD ? PAYMENT_METHOD.CARD : PAYMENT_METHOD.CASH;
 }
 
-function formatCompactDate(value) {
+function formatCompactDate(value, localeTag) {
   const date = value instanceof Date ? value : new Date(value);
   if (!date || Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("it-IT", {
+  return date.toLocaleDateString(localeTag || "it-IT", {
     day: "2-digit",
     month: "short",
   });
@@ -72,6 +73,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
   const styles = makeStyles(colors);
   const { height: windowHeight } = useWindowDimensions();
   const categoriesCtx = useContext(ExpenseCategoriesContext);
+  const { t, localeTag } = useTranslation();
   const stackDateField = windowHeight < 760;
 
   const initialPayMethod = safePayMethod(
@@ -145,7 +147,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         : String(inputs.methodId || defaultCashWalletId || "").trim();
 
     if (payMethod === PAYMENT_METHOD.CARD && !methodId) {
-      Alert.alert("Carta mancante", "Se hai pagato con carta, seleziona quale.");
+      Alert.alert(t("expenseForm.cardMissingTitle"), t("expenseForm.cardMissingMessage"));
       return;
     }
 
@@ -168,7 +170,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
     const descriptionIsValid = expenseData.description.length > 0;
 
     if (!amountIsValid || !dateIsValid || !descriptionIsValid) {
-      Alert.alert("Input non valido", "Controlla descrizione, importo e data.");
+      Alert.alert(t("expenseForm.invalidInputTitle"), t("expenseForm.invalidInputMessage"));
       return;
     }
 
@@ -191,7 +193,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           : String(inputs.methodId || defaultCashWalletId || "").trim();
 
       return {
-        title: (desc || category || "Preferito").slice(0, 22),
+        title: (desc || category || t("expenseForm.favoriteFallback")).slice(0, 22),
         description: desc.slice(0, 40),
         icon,
         category,
@@ -234,7 +236,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
   const [payModalOpen, setPayModalOpen] = useState(false);
 
   const payLabel =
-    inputs.payMethod === PAYMENT_METHOD.CARD ? "Carta" : "Contanti";
+    inputs.payMethod === PAYMENT_METHOD.CARD ? t("expensesOutput.card") : t("expensesOutput.cash");
 
   const selectedCardName = useMemo(() => {
     if (inputs.payMethod !== PAYMENT_METHOD.CARD) return "";
@@ -251,13 +253,13 @@ const ExpenseForm = forwardRef(function ExpenseForm(
   const addCustomCategory = async () => {
     const clean = String(newCategory || "").trim();
     if (!clean) {
-      Alert.alert("Categoria mancante", "Inserisci un nome categoria.");
+      Alert.alert(t("categories.invalidTitle"), t("expenseForm.categoryMissingMessage"));
       return;
     }
 
     const added = await categoriesCtx?.addCategory?.(clean);
     if (!added) {
-      Alert.alert("Categoria non valida", "Usa almeno 1 carattere valido.");
+      Alert.alert(t("categories.invalidTitle"), t("expenseForm.categoryInvalidMessage"));
       return;
     }
 
@@ -272,13 +274,13 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         <View style={styles.brandLeft}>
           <AppLogo size={34} borderRadius={12} />
           <View>
-            <Text style={styles.brandTitle}>Expense Studio</Text>
-            <Text style={styles.brandSub}>Stile premium, stessa precisione</Text>
+            <Text style={styles.brandTitle}>{t("expenseForm.brandTitle")}</Text>
+            <Text style={styles.brandSub}>{t("expenseForm.brandSubtitle")}</Text>
           </View>
         </View>
         <View style={styles.brandBadge}>
           <Ionicons name="sparkles-outline" size={12} color={colors.textOnAccentStrong} />
-          <Text style={styles.brandBadgeText}>NEW UI</Text>
+          <Text style={styles.brandBadgeText}>{t("expenseForm.newBadge")}</Text>
         </View>
       </View>
 
@@ -291,8 +293,8 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           )}
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Cosa hai comprato?</Text>
-          <Text style={styles.subtitle}>Compila i campi e salva.</Text>
+          <Text style={styles.title}>{t("expenseForm.title")}</Text>
+          <Text style={styles.subtitle}>{t("expenseForm.subtitle")}</Text>
         </View>
       </View>
 
@@ -301,13 +303,13 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           <Ionicons name="cash-outline" size={14} color={colors.textMuted} />
           <Text style={styles.previewText}>
             {Number.isFinite(amountNumber) && amountNumber > 0
-              ? `${amountNumber.toFixed(2)} EUR`
-              : "Importo da definire"}
+              ? `${amountNumber.toFixed(2)} ${t("common.currencyCode")}`
+              : t("expenseForm.amountPending")}
           </Text>
         </View>
         <View style={styles.previewChip}>
           <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.previewText}>{formatCompactDate(inputs.date)}</Text>
+          <Text style={styles.previewText}>{formatCompactDate(inputs.date, localeTag)}</Text>
         </View>
         <View style={styles.previewChip}>
           <Ionicons name="card-outline" size={14} color={colors.textMuted} />
@@ -317,7 +319,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
 
       <View style={styles.card}>
         <View style={styles.sectionCard}>
-          <Text style={styles.label}>Come hai pagato</Text>
+          <Text style={styles.label}>{t("expenseForm.paymentHow")}</Text>
 
           <Pressable
             disabled={disabled}
@@ -346,12 +348,12 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           </Pressable>
 
           {inputs.payMethod === PAYMENT_METHOD.CARD && !selectedCardName ? (
-            <Text style={styles.hintText}>Seleziona una carta prima di salvare.</Text>
+            <Text style={styles.hintText}>{t("expenseForm.selectCardHint")}</Text>
           ) : null}
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.label}>Categoria</Text>
+          <Text style={styles.label}>{t("expenseForm.category")}</Text>
 
           <Pressable
             disabled={disabled}
@@ -370,7 +372,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
             </View>
 
             <Text style={styles.iconPickerText} numberOfLines={1}>
-              {inputs.category ? inputs.category : "Seleziona categoria"}
+              {inputs.category ? inputs.category : t("expenseForm.selectCategory")}
             </Text>
 
             <Ionicons name="chevron-down" size={18} color={colors.white65} />
@@ -378,7 +380,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.label}>Icona</Text>
+          <Text style={styles.label}>{t("expenseForm.icon")}</Text>
 
           <Pressable
             disabled={disabled}
@@ -401,7 +403,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
             </View>
 
             <Text style={styles.iconPickerText} numberOfLines={1}>
-              Seleziona icona
+              {t("expenseForm.selectIcon")}
             </Text>
 
             <Ionicons name="chevron-down" size={18} color={colors.white65} />
@@ -412,7 +414,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
           <View style={[styles.row, stackDateField && styles.rowStack]}>
             <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Importo EUR</Text>
+                <Text style={styles.label}>{t("expenseForm.amount")}</Text>
                 <View style={styles.labelSpacer} />
               </View>
 
@@ -431,7 +433,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                   value={inputs.amount}
                   onChangeText={(t) => inputChangedHandler("amount", t)}
                   editable={!disabled}
-                  placeholder="12,50"
+                  placeholder={t("expenseForm.amountPlaceholder")}
                   placeholderTextColor={placeholder}
                   onFocus={() => {
                     Animated.timing(amountFocus, {
@@ -450,17 +452,17 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                   }}
                   returnKeyType="done"
                 />
-                <Text style={styles.suffix}>EUR</Text>
+                <Text style={styles.suffix}>{t("common.currencyCode")}</Text>
               </Animated.View>
 
               {showAmountError ? (
-                <Text style={styles.errorText}>Inserisci un importo valido.</Text>
+                <Text style={styles.errorText}>{t("expenseForm.invalidAmount")}</Text>
               ) : null}
             </View>
 
             <View style={[styles.rowItem, stackDateField && styles.rowItemStack]}>
               <CustomDatePicker
-                label="Data"
+                label={t("datePicker.label")}
                 value={inputs.date}
                 onChange={(date) => inputChangedHandler("date", date)}
                 disabled={disabled}
@@ -470,7 +472,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.label}>Titolo della spesa</Text>
+          <Text style={styles.label}>{t("expenseForm.expenseTitle")}</Text>
           <View style={[styles.fieldTextArea, showDescriptionError && styles.fieldError]}>
             <Ionicons
               name="chatbubble-ellipses-outline"
@@ -484,20 +486,20 @@ const ExpenseForm = forwardRef(function ExpenseForm(
               value={inputs.description}
               onChangeText={(t) => inputChangedHandler("description", t)}
               editable={!disabled}
-              placeholder="Es. spesa supermercato"
+              placeholder={t("expenseForm.expenseTitlePlaceholder")}
               placeholderTextColor={placeholder}
               onBlur={() => markTouched("description")}
             />
           </View>
           {showDescriptionError ? (
-            <Text style={styles.hintText}>Inserisci cosa hai comprato.</Text>
+            <Text style={styles.hintText}>{t("expenseForm.descriptionHint")}</Text>
           ) : null}
         </View>
 
         <View style={styles.buttons}>
           <View style={{ flex: 1 }}>
             <Button mode="flat" onPress={onCancel} disabled={disabled}>
-              Annulla
+              {t("common.cancel")}
             </Button>
           </View>
           <View style={{ flex: 1 }}>
@@ -511,7 +513,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
       <Modal visible={payModalOpen} transparent animationType="fade" onRequestClose={() => setPayModalOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Come hai pagato?</Text>
+            <Text style={styles.modalTitle}>{t("expenseForm.paymentHow")}</Text>
 
             <View style={styles.catGrid}>
               <Pressable
@@ -526,7 +528,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                   inputs.payMethod === PAYMENT_METHOD.CASH && styles.cellActive,
                 ]}
               >
-                <Text style={styles.catText}>Contanti</Text>
+                <Text style={styles.catText}>{t("expensesOutput.cash")}</Text>
               </Pressable>
 
               <Pressable
@@ -541,19 +543,19 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                   inputs.payMethod === PAYMENT_METHOD.CARD && styles.cellActive,
                 ]}
               >
-                <Text style={styles.catText}>Carta</Text>
+                <Text style={styles.catText}>{t("expensesOutput.card")}</Text>
               </Pressable>
             </View>
 
             {inputs.payMethod === PAYMENT_METHOD.CARD ? (
               <>
-                <Text style={[styles.label, { marginTop: 6 }]}>Seleziona carta</Text>
+                <Text style={[styles.label, { marginTop: 6 }]}>{t("expenseForm.selectCard")}</Text>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={styles.catGrid}>
                     {(cards || []).length ? (
                       (cards || []).map((c) => {
                         const id = String(c.id);
-                        const name = String(c.name || "Carta");
+                        const name = String(c.name || t("expensesOutput.card"));
                         const active = id === String(inputs.methodId);
                         return (
                           <Pressable
@@ -570,7 +572,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                       })
                     ) : (
                       <View style={{ paddingVertical: 6 }}>
-                        <Text style={styles.hintText}>Nessuna carta salvata in Carte/Contanti.</Text>
+                        <Text style={styles.hintText}>{t("expenseForm.noCardsSaved")}</Text>
                       </View>
                     )}
                   </View>
@@ -578,13 +580,13 @@ const ExpenseForm = forwardRef(function ExpenseForm(
               </>
             ) : (
               <>
-                <Text style={[styles.label, { marginTop: 6 }]}>Wallet contanti</Text>
+                <Text style={[styles.label, { marginTop: 6 }]}>{t("expenseForm.cashWallet")}</Text>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={styles.catGrid}>
                     {(cashWallets || []).length ? (
                       (cashWallets || []).map((w) => {
                         const id = String(w.id);
-                        const name = String(w.name || "Contanti");
+                        const name = String(w.name || t("expensesOutput.cash"));
                         const active = id === String(inputs.methodId);
                         return (
                           <Pressable
@@ -601,7 +603,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                       })
                     ) : (
                       <View style={{ paddingVertical: 6 }}>
-                        <Text style={styles.hintText}>Nessun wallet contanti salvato.</Text>
+                        <Text style={styles.hintText}>{t("expenseForm.noCashWalletsSaved")}</Text>
                       </View>
                     )}
                   </View>
@@ -610,7 +612,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
             )}
 
             <Pressable style={styles.modalClose} onPress={() => setPayModalOpen(false)}>
-              <Text style={styles.modalCloseText}>Chiudi</Text>
+              <Text style={styles.modalCloseText}>{t("common.close")}</Text>
             </Pressable>
           </View>
         </View>
@@ -620,7 +622,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {activeTab === "CATEGORY" ? "Scegli una categoria" : "Scegli un'icona"}
+              {activeTab === "CATEGORY" ? t("expenseForm.selectCategory") : t("expenseForm.selectIcon")}
             </Text>
 
             <View style={styles.tabsRow}>
@@ -629,7 +631,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                 style={[styles.tabBtn, activeTab === "CATEGORY" && styles.tabBtnActive]}
               >
                 <Text style={[styles.tabText, activeTab === "CATEGORY" && styles.tabTextActive]}>
-                  Categorie
+                  {t("expenseForm.categoriesTab")}
                 </Text>
               </Pressable>
 
@@ -638,7 +640,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                 style={[styles.tabBtn, activeTab === "ICONS" && styles.tabBtnActive]}
               >
                 <Text style={[styles.tabText, activeTab === "ICONS" && styles.tabTextActive]}>
-                  Icone
+                  {t("expenseForm.iconsTab")}
                 </Text>
               </Pressable>
             </View>
@@ -650,7 +652,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                     <TextInput
                       value={newCategory}
                       onChangeText={setNewCategory}
-                      placeholder="Nuova categoria (es. Casa)"
+                      placeholder={t("expenseForm.newCategoryPlaceholder")}
                       placeholderTextColor={colors.white45}
                       style={styles.addCategoryInput}
                       maxLength={24}
@@ -692,7 +694,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
                       }}
                       style={[styles.catCell, !inputs.category && styles.cellActive]}
                     >
-                      <Text style={styles.catText}>Nessuna</Text>
+                      <Text style={styles.catText}>{t("common.none")}</Text>
                     </Pressable>
                   </View>
                 </>
@@ -718,7 +720,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
             </ScrollView>
 
             <Pressable style={styles.modalClose} onPress={() => setIconModalOpen(false)}>
-              <Text style={styles.modalCloseText}>Chiudi</Text>
+              <Text style={styles.modalCloseText}>{t("common.close")}</Text>
             </Pressable>
           </View>
         </View>

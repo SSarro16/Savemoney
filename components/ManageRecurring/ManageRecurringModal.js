@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
 import RecurringForm from "./RecurringForm";
 
@@ -24,7 +25,7 @@ export default function ManageRecurringModal({
   const styles = makeStyles(colors);
   const translateY = useRef(new Animated.Value(420)).current;
 
-  const [kbOpen, setKbOpen] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
     const showEvt =
@@ -32,8 +33,8 @@ export default function ManageRecurringModal({
     const hideEvt =
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
-    const subShow = Keyboard.addListener(showEvt, () => setKbOpen(true));
-    const subHide = Keyboard.addListener(hideEvt, () => setKbOpen(false));
+    const subShow = Keyboard.addListener(showEvt, () => setKeyboardOpen(true));
+    const subHide = Keyboard.addListener(hideEvt, () => setKeyboardOpen(false));
 
     return () => {
       subShow.remove();
@@ -78,7 +79,6 @@ export default function ManageRecurringModal({
           <Animated.View
             style={[styles.sheet, { transform: [{ translateY }] }]}
           >
-            {/* FORM SCROLLABILE */}
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -91,12 +91,11 @@ export default function ManageRecurringModal({
               />
             </ScrollView>
 
-            {/* ✅ Bottone “Chiudi tastiera” quando serve */}
-            {kbOpen && (
+            {keyboardOpen && (
               <Pressable
                 onPress={() => Keyboard.dismiss()}
                 style={({ pressed }) => [
-                  styles.kbBtn,
+                  styles.keyboardCloseBtn,
                   pressed && { opacity: 0.9 },
                 ]}
               >
@@ -113,39 +112,39 @@ export default function ManageRecurringModal({
 
 function makeStyles(colors) {
   return StyleSheet.create({
-  root: { flex: 1 },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay60,
-  },
-  wrap: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 12,
-  },
-  sheet: {
-    maxHeight: "88%",
-    backgroundColor: colors.primary800,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.white10,
-    padding: 12,
-    overflow: "hidden",
-  },
+    root: { flex: 1 },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.overlay60,
+    },
+    wrap: {
+      flex: 1,
+      justifyContent: "flex-end",
+      padding: 12,
+    },
+    sheet: {
+      maxHeight: "88%",
+      backgroundColor: colors.primary800,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      padding: 12,
+      overflow: "hidden",
+    },
 
-  kbBtn: {
-    position: "absolute",
-    right: 14,
-    bottom: 14,
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: colors.white12,
-    borderWidth: 1,
-    borderColor: colors.white14,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-  },
+    keyboardCloseBtn: {
+      position: "absolute",
+      right: 14,
+      bottom: 14,
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      backgroundColor: colors.white12,
+      borderWidth: 1,
+      borderColor: colors.white14,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 2,
+    },
   });
 }

@@ -1,6 +1,10 @@
 import axios from "axios";
 import { FIREBASE_WEB_API_KEY } from "./env";
 import { logger } from "./logger";
+import {
+  getCurrentLanguage,
+  translateWithLanguage,
+} from "../store/language-context";
 
 const AUTH_TIMEOUT_MS = 15000;
 
@@ -9,32 +13,36 @@ const LOGIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWith
 const LEGACY_SIGNUP_URL = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=${FIREBASE_WEB_API_KEY}`;
 const LEGACY_LOGIN_URL = `https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${FIREBASE_WEB_API_KEY}`;
 
+function tt(key, params) {
+  return translateWithLanguage(getCurrentLanguage(), key, params);
+}
+
 function mapFirebaseAuthError(code) {
-  if (code === "EMAIL_NOT_FOUND") return "Email non trovata.";
-  if (code === "INVALID_PASSWORD") return "Password errata.";
-  if (code === "USER_DISABLED") return "Utente disabilitato.";
-  if (code === "EMAIL_EXISTS") return "Email gia registrata.";
-  if (code === "OPERATION_NOT_ALLOWED") return "Operazione non consentita.";
+  if (code === "EMAIL_NOT_FOUND") return tt("authErrors.emailNotFound");
+  if (code === "INVALID_PASSWORD") return tt("authErrors.invalidPassword");
+  if (code === "USER_DISABLED") return tt("authErrors.userDisabled");
+  if (code === "EMAIL_EXISTS") return tt("authErrors.emailExists");
+  if (code === "OPERATION_NOT_ALLOWED") return tt("authErrors.operationNotAllowed");
   if (code === "API_KEY_INVALID" || code === "INVALID_API_KEY") {
-    return "Chiave API Firebase non valida.";
+    return tt("authErrors.invalidApiKey");
   }
   if (code === "PROJECT_NUMBER_MISMATCH") {
-    return "Configurazione Firebase non coerente con il progetto.";
+    return tt("authErrors.projectMismatch");
   }
   if (code === "CONFIGURATION_NOT_FOUND") {
-    return "Configurazione Firebase Auth non trovata.";
+    return tt("authErrors.configurationNotFound");
   }
   if (code === "TOO_MANY_ATTEMPTS_TRY_LATER") {
-    return "Troppi tentativi. Riprova piu tardi.";
+    return tt("authErrors.tooManyAttempts");
   }
-  if (code === "INVALID_EMAIL") return "Email non valida.";
+  if (code === "INVALID_EMAIL") return tt("authErrors.invalidEmail");
   if (code?.startsWith("WEAK_PASSWORD")) {
-    return "Password troppo debole (minimo 6 caratteri).";
+    return tt("authErrors.weakPassword");
   }
-  if (code === "MISSING_EMAIL") return "Email mancante.";
-  if (code === "MISSING_PASSWORD") return "Password mancante.";
-  if (code === "INVALID_LOGIN_CREDENTIALS") return "Credenziali non valide.";
-  return "Autenticazione fallita. Riprova.";
+  if (code === "MISSING_EMAIL") return tt("authErrors.missingEmail");
+  if (code === "MISSING_PASSWORD") return tt("authErrors.missingPassword");
+  if (code === "INVALID_LOGIN_CREDENTIALS") return tt("authErrors.invalidCredentials");
+  return tt("authErrors.authFailed");
 }
 
 function shouldTryLegacyAuth(status, code) {
@@ -62,7 +70,7 @@ function mapAuthResponse(data) {
 
 async function authenticate(url, fallbackUrl, email, password) {
   if (!FIREBASE_WEB_API_KEY) {
-    throw new Error("API key Firebase mancante. Imposta EXPO_PUBLIC_FIREBASE_WEB_API_KEY.");
+    throw new Error(tt("authErrors.missingFirebaseApiKey"));
   }
 
   try {
@@ -85,9 +93,7 @@ async function authenticate(url, fallbackUrl, email, password) {
       }
     }
     if (!code && (status === 401 || status === 403)) {
-      throw new Error(
-        "Richiesta Auth non autorizzata. Controlla configurazione Firebase.",
-      );
+      throw new Error(tt("authErrors.unauthorizedAuthRequest"));
     }
     logger.warn("AUTH ERROR", code || err.message);
     throw new Error(mapFirebaseAuthError(code));
@@ -104,7 +110,7 @@ export function login(email, password) {
 
 export async function refreshIdToken(refreshToken) {
   if (!FIREBASE_WEB_API_KEY) {
-    throw new Error("API key Firebase mancante. Imposta EXPO_PUBLIC_FIREBASE_WEB_API_KEY.");
+    throw new Error(tt("authErrors.missingFirebaseApiKey"));
   }
 
   const res = await axios.post(

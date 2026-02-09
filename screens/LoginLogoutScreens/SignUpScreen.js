@@ -15,10 +15,12 @@ import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { AuthContext } from "../../store/auth-context";
 import { GlobalStyles } from "../../constants/styles";
 import { logger } from "../../util/logger";
+import { useTranslation } from "../../store/language-context";
 
 function SignupScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const authCtx = useContext(AuthContext);
+  const { t } = useTranslation();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 
@@ -61,14 +63,17 @@ function SignupScreen() {
         logger.warn("saveUserProfile signup warning", profileError);
       }
     } catch (error) {
-      Alert.alert("Registrazione fallita", error?.message || "Riprova piu tardi.");
+      Alert.alert(
+        t("auth.signupFailedTitle"),
+        error?.message || t("auth.tryLater"),
+      );
     } finally {
       setIsAuthenticating(false);
     }
   }
 
   if (isAuthenticating) {
-    return <LoadingOverlay message="Creazione account..." />;
+    return <LoadingOverlay message={t("auth.creatingAccount")} />;
   }
 
   return (

@@ -18,6 +18,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { ExpensesContext } from "../../store/expenses-context";
 import { AuthContext } from "../../store/auth-context";
 import { CustomizationContext } from "../../store/customization-context";
+import { useTranslation } from "../../store/language-context";
 
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
@@ -132,6 +133,7 @@ function SwipeTemplateRow({
   styles,
 }) {
   const swipeRef = useRef(null);
+  const { t } = useTranslation();
 
   return (
     <Swipeable
@@ -150,14 +152,14 @@ function SwipeTemplateRow({
           ]}
         >
           <Ionicons name="trash-outline" size={18} color={colors.textTitle} />
-          <Text style={styles.deleteSwipeText}>Elimina</Text>
+          <Text style={styles.deleteSwipeText}>{t("common.delete")}</Text>
         </Pressable>
       )}
     >
       <View style={styles.swipeRowClip}>
         <Row
-          title={item.title || item.description || "Modello"}
-          subtitle={`${Number(item.amount || 0).toFixed(2)} €`}
+          title={item.title || item.description || t("quickAdd.templateFallback")}
+          subtitle={`${Number(item.amount || 0).toFixed(2)} ${t("common.currencyCode")}`}
           icon={normalizeIcon(item.icon)}
           onPress={onAdd}
           compact={compact}
@@ -248,6 +250,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
   } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
 
   const userId = authCtx.userId;
   const token = authCtx.token;
@@ -293,7 +296,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
           ? withTimeout(
               withAuthRetry((t) => getRecurringItems(userId, t)),
               QUICK_RECURRING_TIMEOUT_MS,
-              "Timeout caricamento ricorrenze.",
+              t("quickAdd.recurringLoadTimeout"),
             )
           : Promise.resolve([]);
 
@@ -318,14 +321,14 @@ export default function QuickAddExpenseScreen({ navigation }) {
         templatesResult.status === "rejected" &&
         recurringResult.status === "rejected"
       ) {
-        throw templatesResult.reason || recurringResult.reason || new Error("Caricamento fallito");
+        throw templatesResult.reason || recurringResult.reason || new Error(t("quickAdd.loadFailed"));
       }
     } catch {
-      setError("Impossibile caricare Aggiunta Rapida.");
+      setError(t("quickAdd.loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [userId, token, withAuthRetry]);
+  }, [userId, token, withAuthRetry, t]);
 
   useEffect(() => {
     loadAll();
@@ -407,13 +410,13 @@ export default function QuickAddExpenseScreen({ navigation }) {
 
   const deleteTemplate = (template) => {
     const id = String(template?.id || "").trim();
-    const label = String(template?.title || template?.description || "modello");
+    const label = String(template?.title || template?.description || t("quickAdd.templateFallback"));
     if (!id) return;
 
-    Alert.alert("Elimina modello", `Vuoi eliminare "${label}"?`, [
-      { text: "Annulla", style: "cancel" },
+    Alert.alert(t("quickAdd.deleteTemplateTitle"), t("quickAdd.deleteTemplateMessage", { name: label }), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Elimina",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           try {
@@ -421,7 +424,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
             setTemplates(Array.isArray(next) ? next : []);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           } catch {
-            Alert.alert("Errore", "Impossibile eliminare il modello.");
+            Alert.alert(t("common.error"), t("quickAdd.deleteTemplateFailed"));
           }
         },
       },
@@ -430,7 +433,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
 
   const updateRecurringWithRetry = async (patch) => {
     if (!userId || !token) {
-      throw new Error("Auth non disponibile.");
+      throw new Error(t("quickAdd.authUnavailable"));
     }
 
     let lastError = null;
@@ -444,22 +447,22 @@ export default function QuickAddExpenseScreen({ navigation }) {
         lastError = e;
       }
     }
-    throw lastError || new Error("Aggiornamento ricorrenza non riuscito.");
+    throw lastError || new Error(t("quickAdd.updateRecurringFailed"));
   };
 
   const handleRecurringFailure = (patch, message) => {
-    Alert.alert("Completato parzialmente", message, [
-      { text: "Chiudi", style: "cancel" },
+    Alert.alert(t("quickAdd.partialCompletedTitle"), message, [
+      { text: t("common.close"), style: "cancel" },
       {
-        text: "Riprova aggiornamento",
+        text: t("quickAdd.retryUpdate"),
         onPress: async () => {
           try {
             await updateRecurringWithRetry(patch);
-            Alert.alert("Operazione completata", "Ricorrenza aggiornata.");
+            Alert.alert(t("quickAdd.operationCompletedTitle"), t("quickAdd.recurringUpdated"));
           } catch {
             Alert.alert(
-              "Errore",
-              "Aggiornamento ricorrenza ancora non riuscito. Riprova dalla schermata Abbonamenti/Abitudinali.",
+              t("common.error"),
+              t("quickAdd.updateRecurringStillFailed"),
             );
           }
         },
@@ -487,7 +490,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
       } catch {
         handleRecurringFailure(
           patch,
-          "Pagamento registrato, ma non è stato possibile aggiornare la ricorrenza.",
+          t("quickAdd.paymentAddedRecurringNotUpdated"),
         );
         return;
       }
@@ -497,7 +500,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
       );
       close();
     } catch {
-      setError("Impossibile aggiungere la spesa.");
+      setError(t("quickAdd.addExpenseFailed"));
     }
   };
 
@@ -521,7 +524,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
       } catch {
         handleRecurringFailure(
           patch,
-          "Spesa aggiunta, ma non è stato possibile aggiornare la ricorrenza.",
+          t("quickAdd.expenseAddedRecurringNotUpdated"),
         );
         return;
       }
@@ -531,7 +534,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
       );
       close();
     } catch {
-      setError("Impossibile aggiungere la spesa.");
+      setError(t("quickAdd.addExpenseFailed"));
     }
   };
 
@@ -539,12 +542,12 @@ export default function QuickAddExpenseScreen({ navigation }) {
     if (!dueSubs.length) return;
 
     Alert.alert(
-      "Aggiungere tutto?",
-      `Vuoi registrare ${dueSubs.length} pagamento/i in scadenza?`,
+      t("quickAdd.addAllDueTitle"),
+      t("quickAdd.addAllDueMessage", { count: dueSubs.length }),
       [
-        { text: "Annulla", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Aggiungi tutto",
+          text: t("quickAdd.addAllDueAction"),
           onPress: async () => {
             const failedUpdates = [];
             try {
@@ -571,22 +574,22 @@ export default function QuickAddExpenseScreen({ navigation }) {
 
               if (failedUpdates.length) {
                 Alert.alert(
-                  "Completato parzialmente",
-                  `${failedUpdates.length} ricorrenza/e non aggiornate.`,
+                  t("quickAdd.partialCompletedTitle"),
+                  t("quickAdd.partialNotUpdatedMessage", { count: failedUpdates.length }),
                   [
-                    { text: "Chiudi", style: "cancel" },
+                    { text: t("common.close"), style: "cancel" },
                     {
-                      text: "Riprova aggiornamento",
+                      text: t("quickAdd.retryUpdate"),
                       onPress: async () => {
                         try {
                           for (const patch of failedUpdates) {
                             await updateRecurringWithRetry(patch);
                           }
-                          Alert.alert("Operazione completata", "Ricorrenze aggiornate.");
+                          Alert.alert(t("quickAdd.operationCompletedTitle"), t("quickAdd.recurringsUpdated"));
                         } catch {
                           Alert.alert(
-                            "Errore",
-                            "Alcune ricorrenze non sono state aggiornate.",
+                            t("common.error"),
+                            t("quickAdd.someRecurringNotUpdated"),
                           );
                         }
                       },
@@ -600,7 +603,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                 close();
               }
             } catch {
-              setError("Impossibile aggiungere tutte le scadenze.");
+              setError(t("quickAdd.addAllDueFailed"));
             }
           },
         },
@@ -608,9 +611,9 @@ export default function QuickAddExpenseScreen({ navigation }) {
     );
   };
 
-  if (isLoading) return <LoadingOverlay message="Caricamento..." />;
+  if (isLoading) return <LoadingOverlay message={t("common.loading")} />;
   if (error) {
-    return <ErrorOverlay message={error} onRetry={loadAll} retryLabel="Riprova" />;
+    return <ErrorOverlay message={error} onRetry={loadAll} retryLabel={t("common.retry")} />;
   }
 
   return (
@@ -632,10 +635,10 @@ export default function QuickAddExpenseScreen({ navigation }) {
         <View style={styles.header}>
           <View>
             <Text style={[styles.title, { color: colors.textTitle }]}>
-              Aggiunta Rapida
+              {t("quickAdd.title")}
             </Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              Azioni veloci da modelli e ricorrenze
+              {t("quickAdd.subtitle")}
             </Text>
           </View>
           <Pressable
@@ -662,19 +665,19 @@ export default function QuickAddExpenseScreen({ navigation }) {
         >
           <View style={styles.statsRow}>
             <StatPill
-              label="Scadenze"
+              label={t("quickAdd.due")}
               value={String(dueSubs.length)}
               colors={colors}
               styles={styles}
             />
             <StatPill
-              label="Abitudini"
+              label={t("quickAdd.habits")}
               value={String(habits.length)}
               colors={colors}
               styles={styles}
             />
             <StatPill
-              label="Modelli"
+              label={t("quickAdd.templates")}
               value={String((templates || []).length)}
               colors={colors}
               styles={styles}
@@ -684,7 +687,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
           {noRecurring ? (
             <View style={styles.sectionCard}>
               <ActionButton
-                label="Non sono presenti abitudini/abbonamenti, aggiungile ora!"
+                label={t("quickAdd.noRecurringAction")}
                 icon="sparkles-outline"
                 onPress={goToRecurring}
                 variant="accent"
@@ -698,11 +701,11 @@ export default function QuickAddExpenseScreen({ navigation }) {
           {!!dueSubs.length && (
             <View style={[styles.section, styles.sectionCard]}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                Pagamenti in scadenza
+                {t("quickAdd.duePayments")}
               </Text>
 
               <ActionButton
-                label={`Aggiungi tutte le scadenze (${dueSubs.length})`}
+                label={t("quickAdd.addAllDueButton", { count: dueSubs.length })}
                 icon="checkmark-done-outline"
                 onPress={addAllDue}
                 variant="accent"
@@ -715,7 +718,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                 <Row
                   key={item.id}
                   title={item.title}
-                  subtitle={`${Number(item.amount || 0).toFixed(2)} €`}
+                  subtitle={`${Number(item.amount || 0).toFixed(2)} ${t("common.currencyCode")}`}
                   icon={normalizeIcon(item.icon)}
                   highlight
                   onPress={() => quickPaySubscription(item)}
@@ -728,7 +731,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
 
               <Pressable onPress={goToRecurring} style={styles.smallLink}>
                 <Text style={[styles.smallLinkText, { color: colors.accent500 }]}>
-                  Vedi tutto in Abbonamenti/Abitudinali
+                  {t("quickAdd.viewAllRecurring")}
                 </Text>
               </Pressable>
             </View>
@@ -737,13 +740,13 @@ export default function QuickAddExpenseScreen({ navigation }) {
           {!!habits.length && (
             <View style={[styles.section, styles.sectionCard]}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                Abitudini
+                {t("quickAdd.habits")}
               </Text>
               {habits.slice(0, 6).map((item) => (
                 <Row
                   key={item.id}
                   title={item.title}
-                  subtitle={`${Number(item.amount || 0).toFixed(2)} €`}
+                  subtitle={`${Number(item.amount || 0).toFixed(2)} ${t("common.currencyCode")}`}
                   icon={normalizeIcon(item.icon)}
                   onPress={() => quickAddHabit(item)}
                   compact={compactMode}
@@ -754,7 +757,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
               ))}
               <Pressable onPress={goToRecurring} style={styles.smallLink}>
                 <Text style={[styles.smallLinkText, { color: colors.accent500 }]}>
-                  Gestisci abitudini
+                  {t("quickAdd.manageHabits")}
                 </Text>
               </Pressable>
             </View>
@@ -764,13 +767,13 @@ export default function QuickAddExpenseScreen({ navigation }) {
 
           <View style={[styles.section, styles.sectionCard, styles.modelsSection]}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-                Modelli
+                {t("quickAdd.templates")}
               </Text>
 
             {!(templates || []).length ? (
               <View style={styles.templateHint}>
                 <Text style={[styles.rowSub, { color: colors.textMuted }]}> 
-                  Nessun modello salvato.
+                  {t("quickAdd.noTemplates")}
                 </Text>
               </View>
             ) : (
@@ -798,7 +801,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                       ).catch(() => {});
                       close();
                     } catch {
-                      setError("Impossibile aggiungere la spesa.");
+                      setError(t("quickAdd.addExpenseFailed"));
                     }
                   }}
                   compact={compactMode}
@@ -952,5 +955,8 @@ function makeStyles(colors) {
     actionText: { color: colors.textTitle, fontWeight: "900", flex: 1 },
   });
 }
+
+
+
 
 

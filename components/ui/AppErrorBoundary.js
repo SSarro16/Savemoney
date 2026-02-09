@@ -1,8 +1,11 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { captureException } from "../../util/monitoring";
+import { LanguageContext } from "../../store/language-context";
 
 export default class AppErrorBoundary extends React.Component {
+  static contextType = LanguageContext;
+
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -26,16 +29,17 @@ export default class AppErrorBoundary extends React.Component {
     if (!this.state.hasError) {
       return this.props.children;
     }
+    const t = this.context?.t || ((key) => key);
 
     return (
       <View style={styles.screen}>
         <View style={styles.card}>
-          <Text style={styles.title}>Errore imprevisto</Text>
+          <Text style={styles.title}>{t("errors.unexpectedTitle")}</Text>
           <Text style={styles.subtitle}>
-            Qualcosa e andato storto. Puoi provare a ricaricare la schermata.
+            {t("errors.unexpectedSubtitle")}
           </Text>
           <Pressable onPress={this.retry} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-            <Text style={styles.btnText}>Riprova</Text>
+            <Text style={styles.btnText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       </View>

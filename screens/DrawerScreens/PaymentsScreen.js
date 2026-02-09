@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import { PaymentContext } from "../../store/payment-context";
 import { ExpensesContext } from "../../store/expenses-context";
+import { useTranslation } from "../../store/language-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { formatDateIT } from "../../util/date";
 
@@ -28,15 +29,15 @@ function emptyCashDraft() {
   return { id: "", name: "", balance: "" };
 }
 
-function parseAmount(v) {
-  const cleaned = String(v || "")
+function parseAmount(value) {
+  const cleaned = String(value || "")
     .replace(",", ".")
     .replace(/[^\d.-]/g, "");
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
 }
 
-function toUiErrorMessage(error, fallback) {
+function toUiErrorMessage(error, fallback, t) {
   const status = Number(error?.response?.status || 0);
   const rawError = error?.response?.data?.error;
   const raw =
@@ -45,7 +46,7 @@ function toUiErrorMessage(error, fallback) {
       : String(rawError?.message || "").toLowerCase();
 
   if (raw.includes("permission_denied") || raw.includes("permission denied")) {
-    return "Accesso negato dal database. Verifica regole Firebase o endpoint.";
+    return t("payments.permissionDenied");
   }
 
   if (
@@ -54,11 +55,11 @@ function toUiErrorMessage(error, fallback) {
     raw.includes("invalid id token") ||
     raw.includes("invalid token")
   ) {
-    return "Sessione scaduta. Effettua di nuovo l'accesso.";
+    return t("payments.sessionExpired");
   }
 
   if (status === 401 || status === 403) {
-    return "Richiesta non autorizzata. Riprova tra qualche secondo.";
+    return t("payments.unauthorized");
   }
 
   return error?.message || fallback;
@@ -92,6 +93,7 @@ export default function PaymentsScreen({ navigation }) {
   const styles = makeStyles(colors);
   const paymentCtx = useContext(PaymentContext);
   const expensesCtx = useContext(ExpensesContext);
+  const { t } = useTranslation();
 
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [cardDraft, setCardDraft] = useState(emptyCardDraft());
@@ -183,7 +185,7 @@ export default function PaymentsScreen({ navigation }) {
     const balance = parseAmount(cardDraft.balance);
 
     if (!name) {
-      Alert.alert("Nome mancante", "Inserisci un nome carta.");
+      Alert.alert(t("payments.missingCardNameTitle"), t("payments.missingCardNameMessage"));
       return;
     }
 
@@ -207,30 +209,34 @@ export default function PaymentsScreen({ navigation }) {
       setCardModalOpen(false);
       Keyboard.dismiss();
     } catch (error) {
-      Alert.alert("Errore", toUiErrorMessage(error, "Impossibile salvare la carta."));
+      Alert.alert(t("common.error"), toUiErrorMessage(error, t("payments.saveCardFailed"), t));
     } finally {
       setSaving(false);
     }
   };
 
   const removeCard = (card) => {
-    Alert.alert("Elimina carta", `Eliminare \"${card?.name || "Carta"}\"?`, [
-      { text: "Annulla", style: "cancel" },
-      {
-        text: "Elimina",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await paymentCtx.deleteCard(card.id);
-          } catch (error) {
-            Alert.alert(
-              "Errore",
-              toUiErrorMessage(error, "Impossibile eliminare la carta."),
-            );
-          }
+    Alert.alert(
+      t("payments.deleteCardTitle"),
+      t("payments.deleteCardMessage", { name: card?.name || t("payments.cardFallback") }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await paymentCtx.deleteCard(card.id);
+            } catch (error) {
+              Alert.alert(
+                t("common.error"),
+                toUiErrorMessage(error, t("payments.deleteCardFailed"), t),
+              );
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const openCreateCash = () => {
@@ -250,7 +256,7 @@ export default function PaymentsScreen({ navigation }) {
   const saveCashWallet = async () => {
     const name = String(cashDraft.name || "").trim();
     if (!name) {
-      Alert.alert("Nome mancante", "Inserisci il nome del wallet contanti.");
+      Alert.alert(t("payments.missingWalletNameTitle"), t("payments.missingWalletNameMessage"));
       return;
     }
     const balance = parseAmount(cashDraft.balance);
@@ -266,30 +272,34 @@ export default function PaymentsScreen({ navigation }) {
       setCashModalOpen(false);
       Keyboard.dismiss();
     } catch (error) {
-      Alert.alert("Errore", toUiErrorMessage(error, "Impossibile salvare il wallet."));
+      Alert.alert(t("common.error"), toUiErrorMessage(error, t("payments.saveWalletFailed"), t));
     } finally {
       setSaving(false);
     }
   };
 
   const removeCashWallet = (wallet) => {
-    Alert.alert("Elimina wallet", `Eliminare \"${wallet?.name || "Contanti"}\"?`, [
-      { text: "Annulla", style: "cancel" },
-      {
-        text: "Elimina",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await paymentCtx.deleteCashWallet(wallet.id);
-          } catch (error) {
-            Alert.alert(
-              "Errore",
-              toUiErrorMessage(error, "Impossibile eliminare il wallet."),
-            );
-          }
+    Alert.alert(
+      t("payments.deleteWalletTitle"),
+      t("payments.deleteWalletMessage", { name: wallet?.name || t("payments.cashFallback") }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await paymentCtx.deleteCashWallet(wallet.id);
+            } catch (error) {
+              Alert.alert(
+                t("common.error"),
+                toUiErrorMessage(error, t("payments.deleteWalletFailed"), t),
+              );
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (
@@ -298,7 +308,7 @@ export default function PaymentsScreen({ navigation }) {
     !paymentCtx.cards.length &&
     !paymentCtx.cashWallets.length
   ) {
-    return <LoadingOverlay message="Caricamento metodi di pagamento..." />;
+    return <LoadingOverlay message={t("payments.loadingMethods")} />;
   }
 
   return (
@@ -310,24 +320,24 @@ export default function PaymentsScreen({ navigation }) {
           <Ionicons name="wallet-outline" size={18} color={colors.textTitle} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroTitle}>Carte e Contanti</Text>
+          <Text style={styles.heroTitle}>{t("payments.heroTitle")}</Text>
           <Text style={styles.heroSub}>
-            Gestisci tutti i metodi di pagamento in un unico posto.
+            {t("payments.heroSubtitle")}
           </Text>
         </View>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Carte</Text>
+          <Text style={styles.statLabel}>{t("payments.cardsLabel")}</Text>
           <Text style={styles.statValue}>
-            {(paymentCtx.cards || []).length} - {totalCardBalance.toFixed(2)} EUR
+            {(paymentCtx.cards || []).length} - {totalCardBalance.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Contanti</Text>
+          <Text style={styles.statLabel}>{t("payments.cashLabel")}</Text>
           <Text style={styles.statValue}>
-            {(paymentCtx.cashWallets || []).length} - {totalCashBalance.toFixed(2)} EUR
+            {(paymentCtx.cashWallets || []).length} - {totalCashBalance.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
       </View>
@@ -340,8 +350,8 @@ export default function PaymentsScreen({ navigation }) {
         <View style={styles.section}>
           <SectionHeader
             icon="card-outline"
-            title="Carte"
-            subtitle="Associane una alle spese pagate con carta"
+            title={t("payments.cardsSectionTitle")}
+            subtitle={t("payments.cardsSectionSub")}
             onAdd={openCreateCard}
             colors={colors}
             styles={styles}
@@ -350,7 +360,7 @@ export default function PaymentsScreen({ navigation }) {
           {!paymentCtx.cards.length ? (
             <View style={styles.empty}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
-              <Text style={styles.emptyText}>Nessuna carta salvata.</Text>
+              <Text style={styles.emptyText}>{t("payments.noCards")}</Text>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
@@ -361,7 +371,7 @@ export default function PaymentsScreen({ navigation }) {
                   style={({ pressed }) => [styles.cardRow, pressed && { opacity: 0.92 }]}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{card.name || "Carta"}</Text>
+                    <Text style={styles.cardTitle}>{card.name || t("payments.cardFallback")}</Text>
                     {!!(card.brand || card.last4) && (
                       <Text style={styles.cardSub}>
                         {card.brand ? `${card.brand}${card.last4 ? " - " : ""}` : ""}
@@ -369,19 +379,19 @@ export default function PaymentsScreen({ navigation }) {
                       </Text>
                     )}
                     <Text style={styles.cardSub}>
-                      Saldo corrente: {Number(card.balance || 0).toFixed(2)} EUR
+                      {t("payments.currentBalance")}: {Number(card.balance || 0).toFixed(2)} {t("common.currencyCode")}
                     </Text>
                     <Text style={styles.cardSub}>
-                      Spese registrate: {Number(spentByCard.get(String(card.id)) || 0).toFixed(2)} EUR
+                      {t("payments.recordedExpenses")}: {Number(spentByCard.get(String(card.id)) || 0).toFixed(2)} {t("common.currencyCode")}
                     </Text>
                     <Text style={styles.cardSubStrong}>
-                      Metodo: Carta
+                      {t("payments.methodLabel")}: {t("expensesOutput.card")}
                     </Text>
                   </View>
 
                   <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation?.();
+                    onPress={(event) => {
+                      event.stopPropagation?.();
                       openEditCard(card);
                     }}
                     style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.85 }]}
@@ -390,8 +400,8 @@ export default function PaymentsScreen({ navigation }) {
                   </Pressable>
 
                   <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation?.();
+                    onPress={(event) => {
+                      event.stopPropagation?.();
                       removeCard(card);
                     }}
                     style={({ pressed }) => [styles.iconBtnDanger, pressed && { opacity: 0.85 }]}
@@ -409,8 +419,8 @@ export default function PaymentsScreen({ navigation }) {
         <View style={styles.section}>
           <SectionHeader
             icon="cash-outline"
-            title="Contanti"
-            subtitle="Crea wallet e imposta quello predefinito"
+            title={t("payments.cashSectionTitle")}
+            subtitle={t("payments.cashSectionSub")}
             onAdd={openCreateCash}
             colors={colors}
             styles={styles}
@@ -419,7 +429,7 @@ export default function PaymentsScreen({ navigation }) {
           {!paymentCtx.cashWallets.length ? (
             <View style={styles.empty}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
-              <Text style={styles.emptyText}>Nessun wallet contanti salvato.</Text>
+              <Text style={styles.emptyText}>{t("payments.noWallets")}</Text>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
@@ -431,24 +441,24 @@ export default function PaymentsScreen({ navigation }) {
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>
-                      {wallet.name || "Contanti"}
-                      {wallet.isDefault ? " - Predefinito" : ""}
+                      {wallet.name || t("payments.cashFallback")}
+                      {wallet.isDefault ? ` - ${t("payments.defaultLabel")}` : ""}
                     </Text>
                     <Text style={styles.cardSub}>
-                      Saldo corrente: {Number(wallet.balance || 0).toFixed(2)} EUR
+                      {t("payments.currentBalance")}: {Number(wallet.balance || 0).toFixed(2)} {t("common.currencyCode")}
                     </Text>
                     <Text style={styles.cardSub}>
-                      Spese registrate: {Number(spentByCashWallet.get(String(wallet.id)) || 0).toFixed(2)} EUR
+                      {t("payments.recordedExpenses")}: {Number(spentByCashWallet.get(String(wallet.id)) || 0).toFixed(2)} {t("common.currencyCode")}
                     </Text>
                     <Text style={styles.cardSubStrong}>
-                      Metodo: Contanti
+                      {t("payments.methodLabel")}: {t("expensesOutput.cash")}
                     </Text>
                   </View>
 
                   {!wallet.isDefault ? (
                     <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation?.();
+                      onPress={(event) => {
+                        event.stopPropagation?.();
                         paymentCtx.setDefaultCashWallet(wallet.id);
                       }}
                       style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.85 }]}
@@ -458,8 +468,8 @@ export default function PaymentsScreen({ navigation }) {
                   ) : null}
 
                   <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation?.();
+                    onPress={(event) => {
+                      event.stopPropagation?.();
                       openEditCash(wallet);
                     }}
                     style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.85 }]}
@@ -468,8 +478,8 @@ export default function PaymentsScreen({ navigation }) {
                   </Pressable>
 
                   <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation?.();
+                    onPress={(event) => {
+                      event.stopPropagation?.();
                       removeCashWallet(wallet);
                     }}
                     style={({ pressed }) => [styles.iconBtnDanger, pressed && { opacity: 0.85 }]}
@@ -491,8 +501,8 @@ export default function PaymentsScreen({ navigation }) {
                 <Ionicons name="receipt-outline" size={18} color={colors.textTitle} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Ultimi pagamenti</Text>
-                <Text style={styles.sectionSub}>Movimenti registrati nelle Spese</Text>
+                <Text style={styles.sectionTitle}>{t("payments.recentPaymentsTitle")}</Text>
+                <Text style={styles.sectionSub}>{t("payments.recentPaymentsSub")}</Text>
               </View>
             </View>
           </View>
@@ -500,24 +510,24 @@ export default function PaymentsScreen({ navigation }) {
           {!recentPayments.length ? (
             <View style={styles.empty}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
-              <Text style={styles.emptyText}>Nessun pagamento registrato.</Text>
+              <Text style={styles.emptyText}>{t("payments.noRecentPayments")}</Text>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              {recentPayments.map((e) => {
-                const methodLabel = paymentCtx.resolveMethodLabel?.(e) || "Contanti";
+              {recentPayments.map((expense) => {
+                const methodLabel = paymentCtx.resolveMethodLabel?.(expense) || t("expensesOutput.cash");
                 return (
-                  <View key={e.id} style={styles.paymentRow}>
+                  <View key={expense.id} style={styles.paymentRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardTitle} numberOfLines={1}>
-                        {String(e?.description || "Spesa")}
+                        {String(expense?.description || t("payments.expenseFallback"))}
                       </Text>
                       <Text style={styles.cardSub} numberOfLines={1}>
-                        {methodLabel} - {formatDateIT(e?.date)}
+                        {methodLabel} - {formatDateIT(expense?.date)}
                       </Text>
                     </View>
                     <Text style={styles.paymentAmount}>
-                      -{Number(e?.amount || 0).toFixed(2)} EUR
+                      -{Number(expense?.amount || 0).toFixed(2)} {t("common.currencyCode")}
                     </Text>
                   </View>
                 );
@@ -548,37 +558,37 @@ export default function PaymentsScreen({ navigation }) {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>{cardDraft.id ? "Modifica carta" : "Nuova carta"}</Text>
+                <Text style={styles.modalTitle}>{cardDraft.id ? t("payments.editCardTitle") : t("payments.newCardTitle")}</Text>
 
-                <Text style={styles.label}>Nome</Text>
+                <Text style={styles.label}>{t("payments.nameLabel")}</Text>
                 <TextInput
                   value={cardDraft.name}
-                  onChangeText={(v) => setCardDraft((p) => ({ ...p, name: v }))}
-                  placeholder="Es. N26"
+                  onChangeText={(value) => setCardDraft((prev) => ({ ...prev, name: value }))}
+                  placeholder={t("payments.cardNamePlaceholder")}
                   placeholderTextColor={colors.white45}
                   style={styles.input}
                   returnKeyType="next"
                   blurOnSubmit={false}
                 />
 
-                <Text style={styles.label}>Brand (opzionale)</Text>
+                <Text style={styles.label}>{t("payments.brandLabel")}</Text>
                 <TextInput
                   value={cardDraft.brand}
-                  onChangeText={(v) => setCardDraft((p) => ({ ...p, brand: v }))}
-                  placeholder="Es. Visa"
+                  onChangeText={(value) => setCardDraft((prev) => ({ ...prev, brand: value }))}
+                  placeholder={t("payments.brandPlaceholder")}
                   placeholderTextColor={colors.white45}
                   style={styles.input}
                   returnKeyType="next"
                   blurOnSubmit={false}
                 />
 
-                <Text style={styles.label}>Ultime 4 cifre (opzionale)</Text>
+                <Text style={styles.label}>{t("payments.last4Label")}</Text>
                 <TextInput
                   value={cardDraft.last4}
-                  onChangeText={(v) =>
-                    setCardDraft((p) => ({
-                      ...p,
-                      last4: String(v || "")
+                  onChangeText={(value) =>
+                    setCardDraft((prev) => ({
+                      ...prev,
+                      last4: String(value || "")
                         .replace(/[^\d]/g, "")
                         .slice(0, 4),
                     }))
@@ -592,10 +602,10 @@ export default function PaymentsScreen({ navigation }) {
                   onSubmitEditing={Keyboard.dismiss}
                 />
 
-                <Text style={styles.label}>Saldo iniziale</Text>
+                <Text style={styles.label}>{t("payments.startBalanceLabel")}</Text>
                 <TextInput
                   value={cardDraft.balance}
-                  onChangeText={(v) => setCardDraft((p) => ({ ...p, balance: v }))}
+                  onChangeText={(value) => setCardDraft((prev) => ({ ...prev, balance: value }))}
                   keyboardType="decimal-pad"
                   placeholder="0"
                   placeholderTextColor={colors.white45}
@@ -609,7 +619,7 @@ export default function PaymentsScreen({ navigation }) {
                     onPress={() => !saving && setCardModalOpen(false)}
                     style={({ pressed }) => [styles.btnGhost, pressed && { opacity: 0.86 }]}
                   >
-                    <Text style={styles.btnGhostText}>Annulla</Text>
+                    <Text style={styles.btnGhostText}>{t("common.cancel")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -617,7 +627,7 @@ export default function PaymentsScreen({ navigation }) {
                     style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.86 }]}
                     disabled={saving}
                   >
-                    <Text style={styles.btnPrimaryText}>{saving ? "Salvataggio..." : "Salva"}</Text>
+                    <Text style={styles.btnPrimaryText}>{saving ? t("profile.saving") : t("common.save")}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -647,23 +657,23 @@ export default function PaymentsScreen({ navigation }) {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>{cashDraft.id ? "Modifica wallet" : "Nuovo wallet"}</Text>
+                <Text style={styles.modalTitle}>{cashDraft.id ? t("payments.editWalletTitle") : t("payments.newWalletTitle")}</Text>
 
-                <Text style={styles.label}>Nome</Text>
+                <Text style={styles.label}>{t("payments.nameLabel")}</Text>
                 <TextInput
                   value={cashDraft.name}
-                  onChangeText={(v) => setCashDraft((p) => ({ ...p, name: v }))}
-                  placeholder="Es. Portafoglio"
+                  onChangeText={(value) => setCashDraft((prev) => ({ ...prev, name: value }))}
+                  placeholder={t("payments.walletNamePlaceholder")}
                   placeholderTextColor={colors.white45}
                   style={styles.input}
                   returnKeyType="next"
                   blurOnSubmit={false}
                 />
 
-                <Text style={styles.label}>Saldo iniziale</Text>
+                <Text style={styles.label}>{t("payments.startBalanceLabel")}</Text>
                 <TextInput
                   value={cashDraft.balance}
-                  onChangeText={(v) => setCashDraft((p) => ({ ...p, balance: v }))}
+                  onChangeText={(value) => setCashDraft((prev) => ({ ...prev, balance: value }))}
                   keyboardType="decimal-pad"
                   placeholder="0"
                   placeholderTextColor={colors.white45}
@@ -677,7 +687,7 @@ export default function PaymentsScreen({ navigation }) {
                     onPress={() => !saving && setCashModalOpen(false)}
                     style={({ pressed }) => [styles.btnGhost, pressed && { opacity: 0.86 }]}
                   >
-                    <Text style={styles.btnGhostText}>Annulla</Text>
+                    <Text style={styles.btnGhostText}>{t("common.cancel")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -685,7 +695,7 @@ export default function PaymentsScreen({ navigation }) {
                     style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.86 }]}
                     disabled={saving}
                   >
-                    <Text style={styles.btnPrimaryText}>{saving ? "Salvataggio..." : "Salva"}</Text>
+                    <Text style={styles.btnPrimaryText}>{saving ? t("profile.saving") : t("common.save")}</Text>
                   </Pressable>
                 </View>
               </View>

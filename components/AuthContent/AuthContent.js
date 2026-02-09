@@ -7,9 +7,11 @@ import FlatButton from "../ui/FlatButton";
 import AuthForm from "./AuthForm";
 import { GlobalStyles } from "../../constants/styles";
 import AppLogo from "../ui/AppLogo";
+import { useTranslation } from "../../store/language-context";
 
 function AuthContent({ isLogin, onAuthenticate }) {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 
@@ -23,8 +25,8 @@ function AuthContent({ isLogin, onAuthenticate }) {
   });
 
   function switchAuthModeHandler() {
-    if (isLogin) navigation.replace("Registrazione");
-    else navigation.replace("Accedi");
+    if (isLogin) navigation.replace("Signup");
+    else navigation.replace("Login");
   }
 
   function submitHandler(credentials) {
@@ -119,9 +121,9 @@ function AuthContent({ isLogin, onAuthenticate }) {
         <View style={{ flex: 1 }}>
           <Text style={styles.identityEyebrow}>Savemoney</Text>
           <Text style={styles.identityTitle}>
-            {isLogin ? "Area Privata" : "Nuovo Account"}
+            {isLogin ? t("auth.privateArea") : t("auth.newAccount")}
           </Text>
-          <Text style={styles.identitySub}>Controllo spese con stile premium</Text>
+          <Text style={styles.identitySub}>{t("auth.premiumControl")}</Text>
         </View>
         <View style={styles.identityBadge}>
           <Ionicons
@@ -130,18 +132,18 @@ function AuthContent({ isLogin, onAuthenticate }) {
             color={colors.textOnAccentStrong}
           />
           <Text style={styles.identityBadgeText}>
-            {isLogin ? "LOGIN" : "SIGNUP"}
+            {isLogin ? t("auth.loginBadge") : t("auth.signupBadge")}
           </Text>
         </View>
       </View>
 
       <Text style={styles.title}>
-        {isLogin ? "Bentornato." : "Crea il tuo spazio."}
+        {isLogin ? t("auth.welcomeBack") : t("auth.createYourSpace")}
       </Text>
       <Text style={styles.subtitle}>
         {isLogin
-          ? "Accedi e continua a monitorare entrate e uscite."
-          : "Registrati e inizia a tracciare spese, budget e obiettivi."}
+          ? t("auth.loginSubtitle")
+          : t("auth.signupSubtitle")}
       </Text>
 
       <View style={styles.card}>
@@ -154,7 +156,7 @@ function AuthContent({ isLogin, onAuthenticate }) {
             <Ionicons name="shield-checkmark-outline" size={14} color={colors.textTitle} />
           </View>
           <Text style={styles.formHeaderText}>
-            {isLogin ? "Accesso sicuro" : "Onboarding protetto"}
+            {isLogin ? t("auth.secureAccess") : t("auth.secureOnboarding")}
           </Text>
         </View>
         <AuthForm
@@ -166,7 +168,9 @@ function AuthContent({ isLogin, onAuthenticate }) {
 
         <View style={styles.footer}>
           <FlatButton mode="primary" onPress={switchAuthModeHandler}>
-            {isLogin ? "Crea un nuovo account" : "Hai gia un account? Accedi"}
+            {isLogin
+              ? t("auth.createNewAccount")
+              : t("auth.alreadyHaveAccount")}
           </FlatButton>
         </View>
       </View>

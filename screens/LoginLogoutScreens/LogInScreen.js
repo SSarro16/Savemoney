@@ -14,10 +14,12 @@ import { fetchUserProfile } from "../../util/profile-http";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { AuthContext } from "../../store/auth-context";
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
 function LoginScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const authCtx = useContext(AuthContext);
+  const { t } = useTranslation();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
 
@@ -41,14 +43,17 @@ function LoginScreen() {
         },
       });
     } catch (error) {
-      Alert.alert("Accesso fallito", error?.message || "Riprova piu tardi.");
+      Alert.alert(
+        t("auth.loginFailedTitle"),
+        error?.message || t("auth.tryLater"),
+      );
     } finally {
       setIsAuthenticating(false);
     }
   }
 
   if (isAuthenticating) {
-    return <LoadingOverlay message="Accesso in corso..." />;
+    return <LoadingOverlay message={t("auth.loggingIn")} />;
   }
 
   return (

@@ -12,10 +12,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
 import { ExpenseCategoriesContext } from "../../store/expense-categories-context";
+import { useTranslation } from "../../store/language-context";
 
 export default function CategoriesManagerScreen() {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
   const categoriesCtx = useContext(ExpenseCategoriesContext);
 
   const [newCategory, setNewCategory] = useState("");
@@ -30,7 +32,10 @@ export default function CategoriesManagerScreen() {
   const addCategory = async () => {
     const added = await categoriesCtx.addCategory?.(newCategory);
     if (!added) {
-      Alert.alert("Categoria non valida", "Inserisci un nome categoria valido.");
+      Alert.alert(
+        t("categories.invalidTitle"),
+        t("categories.invalidMessage"),
+      );
       return;
     }
     setNewCategory("");
@@ -50,8 +55,8 @@ export default function CategoriesManagerScreen() {
     const ok = await categoriesCtx.updateCategory?.(editingName, editingValue);
     if (!ok) {
       Alert.alert(
-        "Modifica non riuscita",
-        "Controlla che il nuovo nome sia valido e non duplicato.",
+        t("categories.editFailedTitle"),
+        t("categories.editFailedMessage"),
       );
       return;
     }
@@ -59,17 +64,17 @@ export default function CategoriesManagerScreen() {
   };
 
   const removeCategory = (name) => {
-    Alert.alert("Elimina categoria", `Vuoi eliminare "${name}"?`, [
-      { text: "Annulla", style: "cancel" },
+    Alert.alert(t("categories.deleteTitle"), t("categories.deleteMessage", { name }), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Elimina",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           const ok = await categoriesCtx.removeCategory?.(name);
           if (!ok) {
             Alert.alert(
-              "Eliminazione non disponibile",
-              "Devi mantenere almeno una categoria.",
+              t("categories.deleteUnavailableTitle"),
+              t("categories.deleteUnavailableMessage"),
             );
           }
         },
@@ -86,26 +91,28 @@ export default function CategoriesManagerScreen() {
           <Ionicons name="pricetags-outline" size={18} color={colors.textTitle} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroTitle}>Categorie Spese</Text>
+          <Text style={styles.heroTitle}>{t("categories.heroTitle")}</Text>
           <Text style={styles.heroSub}>
-            Personalizza le categorie usate in Spese e Ricorrenze.
+            {t("categories.heroSubtitle")}
           </Text>
         </View>
         <View style={styles.heroPill}>
-          <Text style={styles.heroPillText}>{categories.length} categorie</Text>
+          <Text style={styles.heroPillText}>
+            {t("categories.count", { count: categories.length })}
+          </Text>
         </View>
       </View>
 
       <View style={styles.editorCard}>
         <View style={[styles.editorBlob, styles.editorBlobTop]} />
         <View style={[styles.editorBlob, styles.editorBlobBottom]} />
-        <Text style={styles.label}>Nuova categoria</Text>
+        <Text style={styles.label}>{t("categories.newCategory")}</Text>
         <View style={styles.fieldRow}>
           <TextInput
             style={styles.input}
             value={newCategory}
             onChangeText={setNewCategory}
-            placeholder="Es. Casa, Lavoro, Auto"
+            placeholder={t("categories.placeholder")}
             placeholderTextColor={colors.white45}
             returnKeyType="done"
             onSubmitEditing={addCategory}
@@ -154,12 +161,12 @@ export default function CategoriesManagerScreen() {
                 </>
               ) : (
                 <View style={{ flex: 1, gap: 10 }}>
-                  <Text style={styles.label}>Modifica categoria</Text>
+                  <Text style={styles.label}>{t("categories.editCategory")}</Text>
                   <TextInput
                     style={styles.input}
                     value={editingValue}
                     onChangeText={setEditingValue}
-                    placeholder="Nuovo nome"
+                    placeholder={t("categories.newName")}
                     placeholderTextColor={colors.white45}
                     maxLength={24}
                     returnKeyType="done"
@@ -173,7 +180,7 @@ export default function CategoriesManagerScreen() {
                         pressed && { opacity: 0.88 },
                       ]}
                     >
-                      <Text style={styles.btnGhostText}>Annulla</Text>
+                      <Text style={styles.btnGhostText}>{t("common.cancel")}</Text>
                     </Pressable>
                     <Pressable
                       onPress={saveEdit}
@@ -182,7 +189,7 @@ export default function CategoriesManagerScreen() {
                         pressed && { opacity: 0.88 },
                       ]}
                     >
-                      <Text style={styles.btnPrimaryText}>Salva</Text>
+                      <Text style={styles.btnPrimaryText}>{t("common.save")}</Text>
                     </Pressable>
                   </View>
                 </View>

@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { ThemeContext } from "../../store/theme-context";
 import { THEMES, GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../store/language-context";
 
 function ThemeButton({ label, icon, active, onPress, colors, styles }) {
   const pressAnim = useRef(new Animated.Value(0)).current;
@@ -58,7 +59,7 @@ function ThemeButton({ label, icon, active, onPress, colors, styles }) {
 
 const THEME_GROUPS = [
   {
-    title: "Temi base",
+    titleKey: "customize.baseThemes",
     options: [
       { key: "DARK", icon: "moon-outline" },
       { key: "OBSIDIAN", icon: "contrast-outline" },
@@ -72,7 +73,7 @@ const THEME_GROUPS = [
     ],
   },
   {
-    title: "Temi creativi",
+    titleKey: "customize.creativeThemes",
     options: [
       { key: "PURPLE_GOLD", icon: "sparkles-outline" },
       { key: "OCEAN", icon: "planet-outline" },
@@ -94,6 +95,7 @@ export default function CustomizeScreen() {
   const { themeKey, setThemeKey } = useContext(ThemeContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
   const [toast, setToast] = useState({ visible: false, message: "" });
   const toastAnim = useRef(new Animated.Value(0)).current;
   const toastTranslateY = toastAnim.interpolate({
@@ -124,12 +126,12 @@ export default function CustomizeScreen() {
   const handleThemeSelect = (key) => {
     const label = THEMES[key]?.label || key;
     if (themeKey === key) {
-      showToast(`Tema ${label} gia attivo`);
+      showToast(t("customize.themeAlreadyActive", { name: label }));
       return;
     }
 
     void setThemeKey(key);
-    showToast(`Tema ${label} applicato`);
+    showToast(t("customize.themeApplied", { name: label }));
   };
 
   return (
@@ -149,9 +151,9 @@ export default function CustomizeScreen() {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Personalizza</Text>
+            <Text style={styles.title}>{t("customize.heroTitle")}</Text>
             <Text style={[styles.sub, { color: colors.textMuted }]}>
-              Temi persistenti per cambiare il look dell'app.
+              {t("customize.heroSubtitle")}
             </Text>
           </View>
         </View>
@@ -162,11 +164,13 @@ export default function CustomizeScreen() {
             { backgroundColor: colors.white06, borderColor: colors.white10 },
           ]}
         >
-          <Text style={[styles.section, { color: colors.textMuted }]}>Temi</Text>
+          <Text style={[styles.section, { color: colors.textMuted }]}>
+            {t("customize.themesSection")}
+          </Text>
 
           {THEME_GROUPS.map((group) => (
-            <View key={group.title} style={styles.groupBlock}>
-              <Text style={styles.groupTitle}>{group.title}</Text>
+            <View key={group.titleKey} style={styles.groupBlock}>
+              <Text style={styles.groupTitle}>{t(group.titleKey)}</Text>
               {group.options.map((opt) => (
                 <ThemeButton
                   key={opt.key}
@@ -188,7 +192,7 @@ export default function CustomizeScreen() {
             { backgroundColor: colors.white06, borderColor: colors.white10 },
           ]}
         >
-          <Text style={styles.previewTitle}>Anteprima</Text>
+          <Text style={styles.previewTitle}>{t("customize.preview")}</Text>
           <View style={styles.swatches}>
             <View style={[styles.dot, { backgroundColor: colors.primary800 }]} />
             <View style={[styles.dot, { backgroundColor: colors.primary500 }]} />
@@ -216,7 +220,7 @@ export default function CustomizeScreen() {
         >
           <Ionicons name="checkmark-circle" size={17} color={colors.textTitle} />
           <Text style={[styles.toastText, { color: colors.textTitle }]} numberOfLines={1}>
-            {toast.message || "Tema aggiornato"}
+            {toast.message || t("customize.themeUpdated")}
           </Text>
         </View>
       </Animated.View>

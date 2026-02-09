@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
+import { useTranslation } from "../../store/language-context";
 
 function ToggleRow({ title, subtitle, value, onChange, styles }) {
   return (
@@ -37,6 +38,7 @@ function SectionBlock({ icon, title, subtitle, children, styles, colors }) {
 export default function QuickSettingsScreen() {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
+  const { t } = useTranslation();
   const {
     compactMode,
     highContrast,
@@ -89,58 +91,58 @@ export default function QuickSettingsScreen() {
           <Ionicons name="flash-outline" size={18} color={colors.textTitle} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroTitle}>Quick Controls</Text>
+          <Text style={styles.heroTitle}>{t("quickSettings.heroTitle")}</Text>
           <Text style={styles.heroSub}>
-            Regola in pochi tap accessibilita, notifiche e comportamento UI.
+            {t("quickSettings.heroSubtitle")}
           </Text>
         </View>
       </View>
 
       <SectionBlock
         icon="phone-portrait-outline"
-        title="Interfaccia"
-        subtitle="Leggibilita e comportamento visivo"
+        title={t("quickSettings.interfaceTitle")}
+        subtitle={t("quickSettings.interfaceSubtitle")}
         styles={styles}
         colors={colors}
       >
         <ToggleRow
-          title="Modalita compatta"
-          subtitle="Riduce spazi e altezze dei componenti"
+          title={t("quickSettings.compactMode")}
+          subtitle={t("quickSettings.compactModeSub")}
           value={compactMode}
           onChange={setCompactMode}
           styles={styles}
         />
         <ToggleRow
-          title="Contrasto elevato"
-          subtitle="Bordi e separatori piu marcati"
+          title={t("quickSettings.highContrast")}
+          subtitle={t("quickSettings.highContrastSub")}
           value={highContrast}
           onChange={setHighContrast}
           styles={styles}
         />
         <ToggleRow
-          title="Testo piu grande"
-          subtitle="Aumenta la leggibilita globale"
+          title={t("quickSettings.largeText")}
+          subtitle={t("quickSettings.largeTextSub")}
           value={largeText}
           onChange={setLargeText}
           styles={styles}
         />
         <ToggleRow
-          title="Riduci animazioni"
-          subtitle="Transizioni piu discrete"
+          title={t("quickSettings.reduceMotion")}
+          subtitle={t("quickSettings.reduceMotionSub")}
           value={reduceMotion}
           onChange={setReduceMotion}
           styles={styles}
         />
         <ToggleRow
-          title="Tag categoria nelle spese"
-          subtitle="Mostra categoria su ogni movimento"
+          title={t("quickSettings.showCategoryTag")}
+          subtitle={t("quickSettings.showCategoryTagSub")}
           value={showCategoryTag}
           onChange={setShowCategoryTag}
           styles={styles}
         />
         <ToggleRow
-          title="Tag metodo pagamento"
-          subtitle="Mostra Carta/Contanti accanto alla spesa"
+          title={t("quickSettings.showPaymentTag")}
+          subtitle={t("quickSettings.showPaymentTagSub")}
           value={showPaymentTag}
           onChange={setShowPaymentTag}
           styles={styles}
@@ -149,14 +151,14 @@ export default function QuickSettingsScreen() {
 
       <SectionBlock
         icon="notifications-outline"
-        title="Notifiche"
-        subtitle="Reminder ricorrenze e soglie budget"
+        title={t("quickSettings.notificationsTitle")}
+        subtitle={t("quickSettings.notificationsSubtitle")}
         styles={styles}
         colors={colors}
       >
         <ToggleRow
-          title="Promemoria ricorrenze"
-          subtitle="Notifiche locali per abbonamenti e abitudini"
+          title={t("quickSettings.recurringReminders")}
+          subtitle={t("quickSettings.recurringRemindersSub")}
           value={recurringRemindersEnabled}
           onChange={setRecurringRemindersEnabled}
           styles={styles}
@@ -165,9 +167,11 @@ export default function QuickSettingsScreen() {
         {recurringRemindersEnabled ? (
           <View style={styles.hourCard}>
             <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={styles.toggleTitle}>Ora promemoria</Text>
+              <Text style={styles.toggleTitle}>{t("quickSettings.reminderHour")}</Text>
               <Text style={styles.toggleSub}>
-                Invio previsto alle {String(recurringReminderHour).padStart(2, "0")}:00
+                {t("quickSettings.reminderHourSub", {
+                  hour: String(recurringReminderHour).padStart(2, "0"),
+                })}
               </Text>
             </View>
             <View style={styles.hourControls}>
@@ -191,8 +195,8 @@ export default function QuickSettingsScreen() {
         ) : null}
 
         <ToggleRow
-          title="Allerte budget"
-          subtitle="Avvisi quando il budget viene raggiunto"
+          title={t("quickSettings.budgetAlerts")}
+          subtitle={t("quickSettings.budgetAlertsSub")}
           value={budgetAlertsEnabled}
           onChange={setBudgetAlertsEnabled}
           styles={styles}
@@ -201,15 +205,15 @@ export default function QuickSettingsScreen() {
         {budgetAlertsEnabled ? (
           <>
             <ToggleRow
-              title="Soglia 80%"
-              subtitle="Notifica quando superi l'80%"
+              title={t("quickSettings.budget80")}
+              subtitle={t("quickSettings.budget80Sub")}
               value={budgetAlertAt80}
               onChange={setBudgetAlertAt80}
               styles={styles}
             />
             <ToggleRow
-              title="Soglia 100%"
-              subtitle="Notifica al raggiungimento del limite"
+              title={t("quickSettings.budget100")}
+              subtitle={t("quickSettings.budget100Sub")}
               value={budgetAlertAt100}
               onChange={setBudgetAlertAt100}
               styles={styles}
@@ -223,7 +227,7 @@ export default function QuickSettingsScreen() {
         style={({ pressed }) => [styles.resetBtn, pressed && { opacity: 0.88 }]}
       >
         <Ionicons name="refresh-outline" size={18} color={colors.textTitle} />
-        <Text style={styles.resetText}>Ripristina impostazioni rapide</Text>
+        <Text style={styles.resetText}>{t("quickSettings.resetQuickSettings")}</Text>
       </Pressable>
     </ScrollView>
   );

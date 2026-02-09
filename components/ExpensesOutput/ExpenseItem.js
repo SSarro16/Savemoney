@@ -6,14 +6,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
 import { PaymentContext } from "../../store/payment-context";
+import { useTranslation } from "../../store/language-context";
 import { formatDateIT } from "../../util/date";
-
-// ✅ nuovi preset
 import { PAYMENT_METHOD } from "../../util/expenses/expense-presets";
 
 function isEmoji(value) {
   return typeof value === "string" && !value.includes("-");
 }
+
 function safeDate(dateLike) {
   const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
   if (!d || isNaN(d.getTime())) return null;
@@ -27,8 +27,6 @@ function ExpenseItem({
   date,
   icon,
   category,
-
-  // ✅ NUOVI CAMPI (arrivano dalle spese salvate)
   payMethod,
   methodId,
   cardId,
@@ -39,6 +37,7 @@ function ExpenseItem({
     useContext(CustomizationContext);
   const paymentCtx = useContext(PaymentContext);
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
 
   const d = safeDate(date);
   const safeIcon = icon || "pricetag-outline";
@@ -58,10 +57,10 @@ function ExpenseItem({
       cashId,
     });
     if (resolved) return String(resolved);
-    if (payMethod === PAYMENT_METHOD.CARD) return "Carta";
-    if (payMethod === PAYMENT_METHOD.CASH) return "Contanti";
-    return ""; // se non presente, non mostriamo nulla
-  }, [payMethod, methodId, cardId, cashId, paymentCtx]);
+    if (payMethod === PAYMENT_METHOD.CARD) return t("expensesOutput.card");
+    if (payMethod === PAYMENT_METHOD.CASH) return t("expensesOutput.cash");
+    return "";
+  }, [payMethod, methodId, cardId, cashId, paymentCtx, t]);
 
   function expensePressHandler() {
     navigation.navigate("ManageExpenses", { expenseId: id });
@@ -103,7 +102,7 @@ function ExpenseItem({
             style={[styles.description, { color: colors.textTitle }]}
             numberOfLines={1}
           >
-            {description}
+            {description || t("expensesOutput.expenseFallbackTitle")}
           </Text>
 
           {showCategoryTag && !!safeCategory && (
@@ -168,7 +167,7 @@ function ExpenseItem({
 
       <View style={styles.right}>
         <Text style={[styles.amount, { color: colors.accent500 }]}>
-          {Number(amount || 0).toFixed(2)} €
+          {Number(amount || 0).toFixed(2)} {t("common.currencyCode")}
         </Text>
 
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -230,7 +229,6 @@ const styles = StyleSheet.create({
   },
   catText: { fontWeight: "900", fontSize: 10 },
 
-  // ✅ pill pagamento
   payPill: {
     paddingVertical: 3,
     paddingHorizontal: 7,

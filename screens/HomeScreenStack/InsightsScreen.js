@@ -7,6 +7,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../store/customization-context";
 import { exportCurrentMonthCsv } from "../../util/reports/monthly-csv-export";
 import { logger } from "../../util/logger";
+import { useTranslation } from "../../store/language-context";
 
 const PRESETS = {
   DAYS_7: "DAYS_7",
@@ -110,6 +111,7 @@ export default function InsightsScreen() {
   const { compactMode } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors, compactMode);
+  const { t } = useTranslation();
 
   const [preset, setPreset] = useState(PRESETS.DAYS_7);
   const [exporting, setExporting] = useState(false);
@@ -134,7 +136,9 @@ export default function InsightsScreen() {
   const byCategory = useMemo(() => {
     const map = new Map();
     for (const e of filtered) {
-      const c = String(e.category || "Senza categoria").trim() || "Senza categoria";
+      const c =
+        String(e.category || t("expenses.uncategorized")).trim() ||
+        t("expenses.uncategorized");
       map.set(c, (map.get(c) || 0) + Number(e.amount || 0));
     }
     return Array.from(map.entries())
@@ -150,10 +154,10 @@ export default function InsightsScreen() {
       map.set(type, (map.get(type) || 0) + Number(e.amount || 0));
     }
     return [
-      { key: "CARD", label: "Carta", amount: map.get("CARD") || 0 },
-      { key: "CASH", label: "Contanti", amount: map.get("CASH") || 0 },
+      { key: "CARD", label: t("expensesOutput.card"), amount: map.get("CARD") || 0 },
+      { key: "CASH", label: t("expensesOutput.cash"), amount: map.get("CASH") || 0 },
     ];
-  }, [filtered]);
+  }, [filtered, t]);
 
   const topDescriptions = useMemo(() => {
     const map = new Map();
@@ -183,12 +187,12 @@ export default function InsightsScreen() {
     try {
       const result = await exportCurrentMonthCsv(expensesCtx.expenses || []);
       Alert.alert(
-        "Report creato",
-        `${result.count} righe esportate.\nTotale mese: ${euro(result.total)}`,
+        t("insights.reportCreatedTitle"),
+        t("insights.reportCreatedMessage", { count: result.count, total: euro(result.total) }),
       );
     } catch (error) {
       logger.warn("Monthly CSV export failed", error);
-      Alert.alert("Errore", "Impossibile esportare il report mensile.");
+      Alert.alert(t("common.error"), t("insights.reportFailedMessage"));
     } finally {
       setExporting(false);
     }
@@ -208,8 +212,8 @@ export default function InsightsScreen() {
             <Ionicons name="trending-up-outline" size={17} color={colors.textTitle} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>Insights</Text>
-            <Text style={styles.heroSub}>Pattern reali, non solo numeri.</Text>
+            <Text style={styles.heroTitle}>{t("insights.heroTitle")}</Text>
+            <Text style={styles.heroSub}>{t("insights.heroSub")}</Text>
           </View>
           <Pressable
             onPress={handleExportMonthlyCsv}
@@ -217,28 +221,28 @@ export default function InsightsScreen() {
           >
             <Ionicons name="download-outline" size={14} color={colors.textTitle} />
             <Text style={styles.exportBtnText}>
-              {exporting ? "Export..." : "CSV mese"}
+              {exporting ? t("insights.exporting") : t("insights.exportMonth")}
             </Text>
           </Pressable>
         </View>
 
         <View style={styles.presetRow}>
           <PresetPill
-            label="7 giorni"
+            label={t("insights.preset7Days")}
             active={preset === PRESETS.DAYS_7}
             onPress={() => setPreset(PRESETS.DAYS_7)}
             styles={styles}
             colors={colors}
           />
           <PresetPill
-            label="1 mese"
+            label={t("insights.preset1Month")}
             active={preset === PRESETS.MONTH_1}
             onPress={() => setPreset(PRESETS.MONTH_1)}
             styles={styles}
             colors={colors}
           />
           <PresetPill
-            label="1 anno"
+            label={t("insights.preset1Year")}
             active={preset === PRESETS.YEAR_1}
             onPress={() => setPreset(PRESETS.YEAR_1)}
             styles={styles}
@@ -250,33 +254,33 @@ export default function InsightsScreen() {
       <View style={styles.metricsGrid}>
         <MetricTile
           icon="wallet-outline"
-          label="Totale periodo"
+          label={t("insights.totalPeriod")}
           value={euro(total)}
-          sub={`${filtered.length} movimenti`}
+          sub={t("insights.movementsCount", { count: filtered.length })}
           styles={styles}
           colors={colors}
         />
         <MetricTile
           icon="stats-chart-outline"
-          label="Scontrino medio"
+          label={t("insights.averageTicket")}
           value={euro(averageSpend)}
-          sub={filtered.length ? "Per movimento" : "Nessun dato"}
+          sub={filtered.length ? t("insights.perMovement") : t("insights.noData")}
           styles={styles}
           colors={colors}
         />
         <MetricTile
           icon="ribbon-outline"
-          label="Top categoria"
-          value={topCategory?.category || "Nessuna"}
+          label={t("insights.topCategory")}
+          value={topCategory?.category || t("common.none")}
           sub={topCategory ? euro(topCategory.amount) : ""}
           styles={styles}
           colors={colors}
         />
       </View>
 
-      <SectionCard title="Distribuzione categorie" icon="pricetags-outline" styles={styles} colors={colors}>
+      <SectionCard title={t("insights.categoryDistribution")} icon="pricetags-outline" styles={styles} colors={colors}>
         {!byCategory.length ? (
-          <Text style={styles.emptyText}>Nessuna categoria nel periodo selezionato.</Text>
+          <Text style={styles.emptyText}>{t("insights.noCategoriesInPeriod")}</Text>
         ) : (
           <View style={styles.rankWrap}>
             {byCategory.slice(0, 6).map((item, index) => {
@@ -296,7 +300,7 @@ export default function InsightsScreen() {
                   <View style={styles.rankTrack}>
                     <View style={[styles.rankFill, { width: `${relative}%` }]} />
                   </View>
-                  <Text style={styles.rankShare}>{share}% del totale</Text>
+                  <Text style={styles.rankShare}>{t("insights.percentOfTotal", { percent: share })}</Text>
                 </View>
               );
             })}
@@ -304,24 +308,24 @@ export default function InsightsScreen() {
         )}
       </SectionCard>
 
-      <SectionCard title="Metodi di pagamento" icon="card-outline" styles={styles} colors={colors}>
+      <SectionCard title={t("insights.paymentMethods")} icon="card-outline" styles={styles} colors={colors}>
         <View style={styles.methodGrid}>
           <View style={styles.methodCard}>
-            <Text style={styles.methodLabel}>Carta</Text>
+            <Text style={styles.methodLabel}>{t("expensesOutput.card")}</Text>
             <Text style={styles.methodValue}>{euro(cardAmount)}</Text>
-            <Text style={styles.methodSub}>{cardPct}% del totale</Text>
+            <Text style={styles.methodSub}>{t("insights.percentOfTotal", { percent: cardPct })}</Text>
           </View>
           <View style={styles.methodCard}>
-            <Text style={styles.methodLabel}>Contanti</Text>
+            <Text style={styles.methodLabel}>{t("expensesOutput.cash")}</Text>
             <Text style={styles.methodValue}>{euro(cashAmount)}</Text>
-            <Text style={styles.methodSub}>{cashPct}% del totale</Text>
+            <Text style={styles.methodSub}>{t("insights.percentOfTotal", { percent: cashPct })}</Text>
           </View>
         </View>
       </SectionCard>
 
-      <SectionCard title="Voci piu impattanti" icon="trophy-outline" styles={styles} colors={colors}>
+      <SectionCard title={t("insights.topEntries")} icon="trophy-outline" styles={styles} colors={colors}>
         {!topDescriptions.length ? (
-          <Text style={styles.emptyText}>Nessuna descrizione disponibile in questo range.</Text>
+          <Text style={styles.emptyText}>{t("insights.noDescriptionsInPeriod")}</Text>
         ) : (
           <View style={styles.topList}>
             {topDescriptions.map((item, index) => (
