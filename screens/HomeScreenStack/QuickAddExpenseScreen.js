@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Swipeable } from "react-native-gesture-handler";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useThemeRefresh } from "../../store/theme-context";
 import { ExpensesContext } from "../../store/expenses-context";
 import { AuthContext } from "../../store/auth-context";
 import { CustomizationContext } from "../../store/customization-context";
@@ -248,6 +249,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
     highContrast,
     reduceMotion = false,
   } = useContext(CustomizationContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t } = useTranslation();

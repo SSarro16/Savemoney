@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { useThemeRefresh } from "../../store/theme-context";
 import {
   Animated,
   View,
@@ -93,6 +94,7 @@ const THEME_GROUPS = [
 
 export default function CustomizeScreen() {
   const { themeKey, setThemeKey } = useContext(ThemeContext);
+  useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const { t } = useTranslation();

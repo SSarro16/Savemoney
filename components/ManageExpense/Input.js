@@ -1,10 +1,10 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { GlobalStyles } from "../../constants/styles";
-
-const colors = GlobalStyles.colors;
+import { useThemeColors } from "../../store/theme-context";
 
 
 function Input({ label, style, textInputConfig, invalid }) {
+  const colors = useThemeColors();
+  const styles = makeStyles(colors);
   let inputStyles = [styles.input];
 
   if (textInputConfig && textInputConfig.multiline) {
@@ -27,31 +27,33 @@ function Input({ label, style, textInputConfig, invalid }) {
 
 export default Input;
 
-const styles = StyleSheet.create({
-  inputContainer: {
-    marginHorizontal: 4,
-    marginVertical: 8,
-  },
-  label: {
-    fontSize: 12,
-    color: colors.primary100,
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: colors.primary100,
-    color: colors.primary700,
-    padding: 6,
-    borderRadius: 6,
-    fontSize: 18,
-  },
-  inputMultiline: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  invalidLabel: {
-    color: colors.error500,
-  },
-  invalidInput: {
-    backgroundColor: colors.error50,
-  },
-});
+function makeStyles(colors) {
+  return StyleSheet.create({
+    inputContainer: {
+      marginHorizontal: 4,
+      marginVertical: 8,
+    },
+    label: {
+      fontSize: 12,
+      color: colors.primary100,
+      marginBottom: 4,
+    },
+    input: {
+      backgroundColor: colors.primary100,
+      color: colors.primary700,
+      padding: 6,
+      borderRadius: 6,
+      fontSize: 18,
+    },
+    inputMultiline: {
+      minHeight: 100,
+      textAlignVertical: "top",
+    },
+    invalidLabel: {
+      color: colors.error500,
+    },
+    invalidInput: {
+      backgroundColor: colors.error50,
+    },
+  });
+}
