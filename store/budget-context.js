@@ -18,6 +18,7 @@ import {
   createBudget,
   upsertBudget,
 } from "../util/budget/budget-storage";
+import { logger } from "../util/logger";
 
 const DEFAULT_CATEGORY_NAMES = ["Risparmio", "Spese", "Svago", "Altro"];
 
@@ -303,7 +304,7 @@ function BudgetContextProvider({ children }) {
       try {
         await loadBudget();
       } catch (err) {
-        if (isMounted) console.log("Errore fetch budget:", err?.message);
+        if (isMounted) logger.warn("Errore fetch budget", err);
       }
     })();
 

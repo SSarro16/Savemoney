@@ -9,6 +9,7 @@ import {
 } from "react";
 import LoadingOverlay from "../components/ui/LoadingOverlay";
 import { refreshIdToken } from "../util/auth";
+import { logger } from "../util/logger";
 
 export const AuthContext = createContext({
   token: null,
@@ -112,7 +113,7 @@ function AuthContextProvider({ children }) {
     async function bootstrap() {
       const safety = setTimeout(() => {
         if (!isActive) return;
-        console.log("AUTH bootstrap timeout -> continuing anyway");
+        logger.warn("AUTH bootstrap timeout -> continuing anyway");
         setIsBootstrapping(false);
       }, 2500);
 
@@ -130,7 +131,7 @@ function AuthContextProvider({ children }) {
           if (t && u) stored = { token: t, userId: u };
         }
 
-        console.log("BOOTSTRAP read:", {
+        logger.debug("BOOTSTRAP read", {
           hasToken: !!stored?.token,
           hasUserId: !!stored?.userId,
           hasRefreshToken: !!stored?.refreshToken,
@@ -159,7 +160,7 @@ function AuthContextProvider({ children }) {
           setAuthData(withProfile(stored));
         }
       } catch (e) {
-        console.log("Errore bootstrap auth:", e?.message || e);
+        logger.warn("Errore bootstrap auth", e);
       } finally {
         clearTimeout(safety);
         if (isActive) setIsBootstrapping(false);

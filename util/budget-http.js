@@ -1,4 +1,5 @@
 import { dbUrl, firebaseApi as api, safeId, requestConfig } from "./firebase-rest";
+import { logger } from "./logger";
 
 const DEFAULT_BUDGET = {
   total: 0,
@@ -49,7 +50,7 @@ export async function saveBudgetFirebase(userId, token, budgetData) {
 
     return response.data;
   } catch (err) {
-    console.log("saveBudgetFirebase error:", err.response?.data || err.message);
+    logger.warn("saveBudgetFirebase error", err?.response?.data || err?.message || err);
     throw new Error("Impossibile salvare il budget!");
   }
 }
@@ -68,7 +69,7 @@ export async function fetchBudgetFirebase(userId, token) {
 
     return sanitizeBudgetData(response.data || DEFAULT_BUDGET);
   } catch (err) {
-    console.log("fetchBudgetFirebase error:", err.response?.data || err.message);
+    logger.warn("fetchBudgetFirebase error", err?.response?.data || err?.message || err);
     throw new Error("Impossibile recuperare il budget!");
   }
 }

@@ -14,6 +14,7 @@ import { saveUserProfile } from "../../util/profile-http";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { AuthContext } from "../../store/auth-context";
 import { GlobalStyles } from "../../constants/styles";
+import { logger } from "../../util/logger";
 
 function SignupScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -39,7 +40,7 @@ function SignupScreen() {
           email,
         });
       } catch (profileError) {
-        console.log("saveUserProfile signup warning:", profileError?.message || profileError);
+        logger.warn("saveUserProfile signup warning", profileError);
       }
     } catch (error) {
       Alert.alert("Registrazione fallita", error?.message || "Riprova piu tardi.");
