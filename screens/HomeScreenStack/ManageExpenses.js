@@ -84,6 +84,7 @@ function ManageExpenses({ route, navigation }) {
   }, [expensesCtx.expenses, editedExpenseId]);
 
   const lastActionRef = useRef(null);
+  const submitLockRef = useRef(false);
 
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -165,6 +166,7 @@ function ManageExpenses({ route, navigation }) {
   useEffect(() => {
     setFavoriteSaved(false);
     setFavoriteTemplateId("");
+    submitLockRef.current = false;
   }, [editedExpenseId]);
 
   function confirmDelete() {
@@ -238,6 +240,7 @@ function ManageExpenses({ route, navigation }) {
     } catch {
       setError("Impossibile eliminare la spesa! Riprova più tardi.");
       setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   }
 
@@ -246,12 +249,13 @@ function ManageExpenses({ route, navigation }) {
   }
 
   async function confirmHandler(expenseData) {
-    if (isSubmitting) return;
+    if (isSubmitting || submitLockRef.current) return;
 
     lastActionRef.current = isEditing
       ? { type: "update", id: editedExpenseId, data: expenseData }
       : { type: "add", data: expenseData };
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -265,13 +269,15 @@ function ManageExpenses({ route, navigation }) {
     } catch {
       setError("Impossibile salvare la spesa! Riprova più tardi.");
       setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   }
 
   async function retryLastAction() {
     const last = lastActionRef.current;
-    if (!last || isSubmitting) return;
+    if (!last || isSubmitting || submitLockRef.current) return;
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -292,9 +298,11 @@ function ManageExpenses({ route, navigation }) {
         return;
       }
       setIsSubmitting(false);
+      submitLockRef.current = false;
     } catch {
       setError("Operazione non riuscita. Riprova più tardi.");
       setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   }
 
@@ -450,4 +458,6 @@ function makeStyles(colors) {
     },
   });
 }
+
+
 
