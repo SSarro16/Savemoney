@@ -72,7 +72,7 @@ const Drawer = createDrawerNavigator();
 
 initMonitoring();
 
-function useNavTheme(colors, themeVersion) {
+function useNavTheme(colors) {
   return useMemo(() => {
     return {
       ...DarkTheme,
@@ -86,7 +86,6 @@ function useNavTheme(colors, themeVersion) {
       },
     };
   }, [
-    themeVersion,
     colors.primary800,
     colors.textTitle,
     colors.white10,
@@ -1147,16 +1146,16 @@ function AuthenticatedStack() {
 
 function Navigation() {
   const authCtx = useContext(AuthContext);
-  const { colors, version, ready } = useContext(ThemeContext);
+  const { colors, ready } = useContext(ThemeContext);
   const { ready: prefsReady } = useContext(CustomizationContext);
-  const navTheme = useNavTheme(colors, version);
+  const navTheme = useNavTheme(colors);
 
   if (!ready || !prefsReady) return null;
 
   return (
     <>
       <StatusBar style={colors.textTitle === "#ffffff" ? "light" : "dark"} />
-      <NavigationContainer theme={navTheme} key={version}>
+      <NavigationContainer theme={navTheme}>
         {!authCtx.isAuthenticated ? <AuthStack /> : <AuthenticatedStack />}
       </NavigationContainer>
     </>
