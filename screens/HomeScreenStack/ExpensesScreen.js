@@ -142,6 +142,16 @@ function stripAccents(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function normalizeForSearch(value) {
+  return stripAccents(String(value || "").toLowerCase()).trim();
+}
+
+function paymentTypeLabel(expenseLike) {
+  return expenseLike?.methodType === "CARD" || expenseLike?.payMethod === "CARD"
+    ? "CARD"
+    : "CASH";
+}
+
 const LIKELY_MALE_ENDING_A = new Set([
   "andrea",
   "mattia",
@@ -180,6 +190,9 @@ function ExpensesScreen() {
   const [preset, setPreset] = useState(PRESETS.TODAY);
   const [rangeFrom, setRangeFrom] = useState(null);
   const [rangeTo, setRangeTo] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [selectedMethod, setSelectedMethod] = useState("ALL");
   const hasLoadedRef = useRef(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -216,21 +229,76 @@ function ExpensesScreen() {
     return getPresetRange(preset);
   }, [preset, rangeFrom, rangeTo]);
 
+  const categoryOptions = useMemo(() => {
+    const set = new Set();
+    for (const expense of expensesCtx.expenses || []) {
+      const category = String(expense?.category || "").trim();
+      if (!category) continue;
+      set.add(category);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [expensesCtx.expenses]);
+
+  const isAdvancedFilterActive = useMemo(() => {
+    return (
+      !!searchQuery.trim() ||
+      selectedCategory !== "ALL" ||
+      selectedMethod !== "ALL"
+    );
+  }, [searchQuery, selectedCategory, selectedMethod]);
+
   const filteredExpenses = useMemo(() => {
     const all = expensesCtx.expenses || [];
+    const normalizedQuery = normalizeForSearch(searchQuery);
 
-    if (preset === PRESETS.TOTAL) return all;
+    const byRange = preset === PRESETS.TOTAL
+      ? all
+      : all.filter((expense) => {
+        const d = safeDate(expense.date);
+        if (!d) return false;
+        const { from, to } = effectiveRange;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+        return true;
+      });
 
-    const { from, to } = effectiveRange;
+    return byRange.filter((expense) => {
+      if (selectedCategory !== "ALL") {
+        const category = String(expense?.category || "").trim() || "Altro";
+        if (category !== selectedCategory) return false;
+      }
 
-    return all.filter((expense) => {
-      const d = safeDate(expense.date);
-      if (!d) return false;
-      if (from && d < from) return false;
-      if (to && d > to) return false;
+      if (selectedMethod !== "ALL") {
+        if (paymentTypeLabel(expense) !== selectedMethod) return false;
+      }
+
+      if (normalizedQuery) {
+        const description = normalizeForSearch(expense?.description);
+        const category = normalizeForSearch(expense?.category || "Altro");
+        const method =
+          paymentTypeLabel(expense) === "CARD"
+            ? "carta card"
+            : "contanti cash";
+
+        if (
+          !description.includes(normalizedQuery) &&
+          !category.includes(normalizedQuery) &&
+          !method.includes(normalizedQuery)
+        ) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [expensesCtx.expenses, preset, effectiveRange]);
+  }, [
+    expensesCtx.expenses,
+    preset,
+    effectiveRange,
+    selectedCategory,
+    selectedMethod,
+    searchQuery,
+  ]);
 
   const periodLabel = useMemo(() => {
     if (preset === PRESETS.TODAY) return "Oggi";
@@ -248,6 +316,9 @@ function ExpensesScreen() {
   }, [preset, effectiveRange]);
 
   const emptyStateText = useMemo(() => {
+    if (isAdvancedFilterActive) {
+      return "Nessun risultato con i filtri selezionati.";
+    }
     if (preset === PRESETS.TODAY) return "Nessuna spesa oggi";
     if (preset === PRESETS.YESTERDAY) return "Nessuna spesa ieri";
     if (preset === PRESETS.DAYS_7) {
@@ -272,7 +343,7 @@ function ExpensesScreen() {
       return `Nessuna spesa effettuata fino al ${formatDateShort(to)}`;
     }
     return "Nessuna spesa nel periodo selezionato.";
-  }, [preset, effectiveRange]);
+  }, [preset, effectiveRange, isAdvancedFilterActive]);
 
   const handleSelectPreset = (p) => {
     setPreset(p);
@@ -409,6 +480,19 @@ function ExpensesScreen() {
           onSelectPreset={handleSelectPreset}
           activePreset={preset}
           presets={PRESETS}
+          searchQuery={searchQuery}
+          onChangeSearchQuery={setSearchQuery}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          categoryOptions={categoryOptions}
+          selectedMethod={selectedMethod}
+          onSelectMethod={setSelectedMethod}
+          isAdvancedFilterActive={isAdvancedFilterActive}
+          onResetAdvancedFilters={() => {
+            setSearchQuery("");
+            setSelectedCategory("ALL");
+            setSelectedMethod("ALL");
+          }}
         />
       </View>
 

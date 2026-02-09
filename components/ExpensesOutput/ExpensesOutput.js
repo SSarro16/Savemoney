@@ -6,6 +6,8 @@ import {
   Pressable,
   Modal,
   Platform,
+  ScrollView,
+  TextInput,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -77,6 +79,15 @@ function ExpensesOutput({
   onSelectPreset,
   activePreset,
   presets,
+  searchQuery,
+  onChangeSearchQuery,
+  selectedCategory,
+  onSelectCategory,
+  categoryOptions,
+  selectedMethod,
+  onSelectMethod,
+  isAdvancedFilterActive,
+  onResetAdvancedFilters,
 }) {
   const colors = GlobalStyles.colors;
   const { compactMode, highContrast } = useContext(CustomizationContext);
@@ -236,6 +247,89 @@ function ExpensesOutput({
         expenses={expenses}
         periodName={expensesPeriod ?? rangeLabel}
       />
+
+      <View
+        style={[
+          styles.filtersCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: highContrast ? colors.borderStrong : colors.border,
+          },
+        ]}
+      >
+        <View style={styles.filtersTopRow}>
+          <Text style={[styles.filtersTitle, { color: colors.textMuted }]}>
+            Ricerca e filtri
+          </Text>
+          {isAdvancedFilterActive ? (
+            <Pressable
+              onPress={onResetAdvancedFilters}
+              style={({ pressed }) => [
+                styles.clearFiltersBtn,
+                { borderColor: colors.border, backgroundColor: colors.surface2 },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.clearFiltersText, { color: colors.textBody }]}>
+                Reset
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <TextInput
+          value={searchQuery}
+          onChangeText={onChangeSearchQuery}
+          placeholder="Cerca descrizione o categoria"
+          placeholderTextColor={colors.textFaint}
+          style={[
+            styles.searchInput,
+            {
+              borderColor: highContrast ? colors.borderStrong : colors.border,
+              backgroundColor: colors.surface2,
+              color: colors.textTitle,
+            },
+          ]}
+        />
+
+        <View style={styles.methodRow}>
+          <Chip
+            label="Tutti"
+            active={selectedMethod === "ALL"}
+            onPress={() => onSelectMethod?.("ALL")}
+          />
+          <Chip
+            label="Contanti"
+            active={selectedMethod === "CASH"}
+            onPress={() => onSelectMethod?.("CASH")}
+          />
+          <Chip
+            label="Carta"
+            active={selectedMethod === "CARD"}
+            onPress={() => onSelectMethod?.("CARD")}
+          />
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesRow}
+        >
+          <Chip
+            label="Tutte le categorie"
+            active={selectedCategory === "ALL"}
+            onPress={() => onSelectCategory?.("ALL")}
+          />
+          {(categoryOptions || []).map((category) => (
+            <Chip
+              key={category}
+              label={category}
+              active={selectedCategory === category}
+              onPress={() => onSelectCategory?.(category)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       <QuickAddLauncherCard />
 
@@ -517,6 +611,52 @@ const styles = StyleSheet.create({
   },
   toolbarBtnText: { fontWeight: "800", letterSpacing: 0.2 },
   iconBtn: { padding: 12, borderRadius: 14, borderWidth: 1 },
+
+  filtersCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 12,
+    gap: 8,
+  },
+  filtersTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  filtersTitle: {
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  clearFiltersBtn: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  clearFiltersText: {
+    fontWeight: "900",
+    fontSize: 11,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "ios" ? 10 : 9,
+    fontWeight: "700",
+  },
+  methodRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoriesRow: {
+    gap: 8,
+    paddingRight: 12,
+  },
 
   emptyWrap: {
     marginTop: 20,
