@@ -27,6 +27,7 @@ export default function QuickSettingsScreen() {
   const styles = makeStyles(colors);
   const {
     compactMode,
+    highContrast,
     largeText,
     reduceMotion,
     showCategoryTag,
@@ -37,6 +38,7 @@ export default function QuickSettingsScreen() {
     budgetAlertAt80,
     budgetAlertAt100,
     setCompactMode,
+    setHighContrast,
     setLargeText,
     setReduceMotion,
     setShowCategoryTag,
@@ -50,6 +52,7 @@ export default function QuickSettingsScreen() {
 
   const resetQuickPrefs = () => {
     setCompactMode(false);
+    setHighContrast(false);
     setLargeText(false);
     setReduceMotion(false);
     setShowCategoryTag(true);
@@ -86,6 +89,14 @@ export default function QuickSettingsScreen() {
         subtitle="Riduce spaziature e altezza dei componenti"
         value={compactMode}
         onChange={setCompactMode}
+        colors={colors}
+        styles={styles}
+      />
+      <ToggleRow
+        title="Contrasto elevato"
+        subtitle="Bordi e separatori piu evidenti"
+        value={highContrast}
+        onChange={setHighContrast}
         colors={colors}
         styles={styles}
       />
