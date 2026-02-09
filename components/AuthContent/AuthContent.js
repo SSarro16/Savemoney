@@ -18,8 +18,8 @@ function AuthContent({ isLogin, onAuthenticate }) {
     lastName: false,
     email: false,
     password: false,
-    confirmEmail: false,
     confirmPassword: false,
+    dateOfBirth: false,
   });
 
   function switchAuthModeHandler() {
@@ -32,41 +32,42 @@ function AuthContent({ isLogin, onAuthenticate }) {
       firstName,
       lastName,
       email,
-      confirmEmail,
       password,
       confirmPassword,
+      gender,
+      dateOfBirth,
     } = credentials;
 
     firstName = String(firstName || "").trim();
     lastName = String(lastName || "").trim();
     email = String(email || "").trim();
     password = String(password || "").trim();
-    confirmEmail = String(confirmEmail || "").trim();
     confirmPassword = String(confirmPassword || "").trim();
+    gender = String(gender || "").trim();
+    const parsedDateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+    const now = new Date();
+    const dateOfBirthIsValid =
+      !isLogin &&
+      parsedDateOfBirth instanceof Date &&
+      !Number.isNaN(parsedDateOfBirth.getTime()) &&
+      parsedDateOfBirth <= now;
 
-    const firstNameIsValid = firstName.length >= 2;
-    const lastNameIsValid = lastName.length >= 2;
     const emailIsValid = email.includes("@");
     const passwordIsValid = password.length >= 6;
-    const emailsAreEqual = email === confirmEmail;
     const passwordsAreEqual = password === confirmPassword;
 
     if (
       !emailIsValid ||
       !passwordIsValid ||
-      (!isLogin &&
-        (!firstNameIsValid ||
-          !lastNameIsValid ||
-          !emailsAreEqual ||
-          !passwordsAreEqual))
+      (!isLogin && (!passwordsAreEqual || !dateOfBirthIsValid))
     ) {
       setCredentialsInvalid({
-        firstName: !isLogin && !firstNameIsValid,
-        lastName: !isLogin && !lastNameIsValid,
+        firstName: false,
+        lastName: false,
         email: !emailIsValid,
-        confirmEmail: !isLogin && (!emailIsValid || !emailsAreEqual),
         password: !passwordIsValid,
         confirmPassword: !isLogin && (!passwordIsValid || !passwordsAreEqual),
+        dateOfBirth: !isLogin && !dateOfBirthIsValid,
       });
       return;
     }
@@ -76,8 +77,8 @@ function AuthContent({ isLogin, onAuthenticate }) {
       lastName: false,
       email: false,
       password: false,
-      confirmEmail: false,
       confirmPassword: false,
+      dateOfBirth: false,
     });
 
     onAuthenticate({
@@ -85,6 +86,8 @@ function AuthContent({ isLogin, onAuthenticate }) {
       password,
       firstName,
       lastName,
+      gender,
+      dateOfBirth: parsedDateOfBirth ? parsedDateOfBirth.toISOString() : "",
     });
   }
 
@@ -92,17 +95,17 @@ function AuthContent({ isLogin, onAuthenticate }) {
     setCredentialsInvalid((prev) => {
       if (field === "firstName" && !prev.firstName) return prev;
       if (field === "lastName" && !prev.lastName) return prev;
-      if (field === "email" && !prev.email && !prev.confirmEmail) return prev;
-      if (field === "confirmEmail" && !prev.confirmEmail) return prev;
+      if (field === "email" && !prev.email) return prev;
       if (field === "password" && !prev.password && !prev.confirmPassword) return prev;
       if (field === "confirmPassword" && !prev.confirmPassword) return prev;
+      if (field === "dateOfBirth" && !prev.dateOfBirth) return prev;
 
       if (field === "firstName") return { ...prev, firstName: false };
       if (field === "lastName") return { ...prev, lastName: false };
-      if (field === "email") return { ...prev, email: false, confirmEmail: false };
-      if (field === "confirmEmail") return { ...prev, confirmEmail: false };
+      if (field === "email") return { ...prev, email: false };
       if (field === "password") return { ...prev, password: false, confirmPassword: false };
       if (field === "confirmPassword") return { ...prev, confirmPassword: false };
+      if (field === "dateOfBirth") return { ...prev, dateOfBirth: false };
       return prev;
     });
   }
