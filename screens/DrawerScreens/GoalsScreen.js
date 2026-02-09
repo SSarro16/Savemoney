@@ -10,13 +10,14 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
 import { GoalsContext } from "../../store/goals-context";
 import { CustomizationContext } from "../../store/customization-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 
 function euro(value) {
-  return `${Number(value || 0).toFixed(2)} €`;
+  return `${Number(value || 0).toFixed(2)} EUR`;
 }
 
 function toPercent(goal) {
@@ -26,11 +27,23 @@ function toPercent(goal) {
   return Math.min(100, Math.max(0, Math.round((current / target) * 100)));
 }
 
+function StatTile({ icon, label, value, styles, colors }) {
+  return (
+    <View style={styles.statTile}>
+      <View style={styles.statIcon}>
+        <Ionicons name={icon} size={14} color={colors.textTitle} />
+      </View>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
+  );
+}
+
 export default function GoalsScreen() {
   const goalsCtx = useContext(GoalsContext);
-  const { compactMode, highContrast } = useContext(CustomizationContext);
+  const { compactMode } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
-  const styles = makeStyles(colors);
+  const styles = makeStyles(colors, compactMode);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,7 +60,13 @@ export default function GoalsScreen() {
     return Math.min(100, Math.round((goalsCtx.totalSaved / goalsCtx.totalTarget) * 100));
   }, [goalsCtx.totalSaved, goalsCtx.totalTarget]);
 
-  const borderColor = highContrast ? colors.borderStrong : colors.border;
+  const averageProgress = useMemo(() => {
+    if (!goalsCtx.goals?.length) return 0;
+    const total = (goalsCtx.goals || []).reduce((sum, goal) => sum + toPercent(goal), 0);
+    return Math.round(total / goalsCtx.goals.length);
+  }, [goalsCtx.goals]);
+
+  const remaining = Math.max(0, Number(goalsCtx.totalTarget || 0) - Number(goalsCtx.totalSaved || 0));
 
   const openCreate = () => {
     setDraft({
@@ -127,104 +146,159 @@ export default function GoalsScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={{ padding: compactMode ? 12 : 16, paddingBottom: 30 }}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.hero, { borderColor, backgroundColor: colors.surface }]}>
-          <View style={styles.heroTop}>
-            <View style={[styles.heroIcon, { borderColor, backgroundColor: colors.surface2 }]}>
-              <Ionicons name="flag-outline" size={17} color={colors.textTitle} />
+        <View style={styles.heroCard}>
+          <View style={[styles.heroBubble, styles.heroBubbleTop]} />
+          <View style={[styles.heroBubble, styles.heroBubbleBottom]} />
+
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIcon}>
+              <Ionicons name="rocket-outline" size={17} color={colors.textTitle} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroTitle}>Obiettivi risparmio</Text>
+              <Text style={styles.heroTitle}>Savings Missions</Text>
               <Text style={styles.heroSub}>
                 {euro(goalsCtx.totalSaved)} su {euro(goalsCtx.totalTarget)}
               </Text>
             </View>
             <Pressable
               onPress={openCreate}
-              style={({ pressed }) => [
-                styles.addBtn,
-                { borderColor: colors.accent35, backgroundColor: colors.accent18 },
-                pressed && { opacity: 0.9 },
-              ]}
+              style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.88 }]}
             >
-              <Ionicons name="add" size={16} color={colors.textOnAccent} />
+              <Ionicons name="add" size={16} color={colors.textOnAccentStrong} />
               <Text style={styles.addBtnText}>Nuovo</Text>
             </Pressable>
           </View>
 
-          <View style={[styles.progressTrack, { backgroundColor: colors.surface2, borderColor }]}>
+          <View style={styles.mainProgressTrack}>
             <View
               style={[
-                styles.progressFill,
+                styles.mainProgressFill,
                 {
                   width: `${Math.max(4, completion)}%`,
-                  backgroundColor: colors.accent500,
                 },
               ]}
             />
           </View>
-          <Text style={styles.progressText}>Completamento totale: {completion}%</Text>
+          <Text style={styles.mainProgressText}>{completion}% completamento totale</Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <StatTile
+            icon="albums-outline"
+            label="Obiettivi"
+            value={String((goalsCtx.goals || []).length)}
+            styles={styles}
+            colors={colors}
+          />
+          <StatTile
+            icon="pulse-outline"
+            label="Media progressi"
+            value={`${averageProgress}%`}
+            styles={styles}
+            colors={colors}
+          />
+          <StatTile
+            icon="hourglass-outline"
+            label="Da risparmiare"
+            value={euro(remaining)}
+            styles={styles}
+            colors={colors}
+          />
         </View>
 
         {(goalsCtx.goals || []).length === 0 ? (
-          <View style={[styles.emptyCard, { borderColor, backgroundColor: colors.surface }]}>
-            <Text style={styles.emptyText}>Nessun obiettivo. Crea il primo e monitora il progresso.</Text>
+          <View style={styles.emptyStateCard}>
+            <View style={styles.emptyStateIcon}>
+              <Ionicons name="flag-outline" size={20} color={colors.textTitle} />
+            </View>
+            <Text style={styles.emptyStateTitle}>Nessun obiettivo attivo</Text>
+            <Text style={styles.emptyStateSub}>
+              Imposta un target concreto e monitora il progresso in tempo reale.
+            </Text>
+            <Pressable
+              onPress={openCreate}
+              style={({ pressed }) => [styles.emptyStateCta, pressed && { opacity: 0.88 }]}
+            >
+              <Text style={styles.emptyStateCtaText}>Crea il primo obiettivo</Text>
+            </Pressable>
           </View>
         ) : (
-          <View style={{ gap: 10, marginTop: 12 }}>
+          <View style={styles.goalList}>
             {(goalsCtx.goals || []).map((goal) => {
               const pct = toPercent(goal);
+              const remainingGoal = Math.max(
+                0,
+                Number(goal?.targetAmount || 0) - Number(goal?.currentAmount || 0),
+              );
+
               return (
-                <View key={goal.id} style={[styles.goalCard, { borderColor, backgroundColor: colors.surface }]}>
-                  <View style={styles.goalTop}>
+                <View key={goal.id} style={styles.goalCard}>
+                  <View style={styles.goalHeader}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.goalTitle}>{goal.title}</Text>
                       <Text style={styles.goalAmounts}>
                         {euro(goal.currentAmount)} / {euro(goal.targetAmount)}
                       </Text>
                     </View>
-                    <Pressable onPress={() => openEdit(goal)} style={styles.iconBtn}>
-                      <Ionicons name="create-outline" size={18} color={colors.textTitle} />
-                    </Pressable>
-                    <Pressable onPress={() => deleteGoal(goal)} style={styles.iconBtn}>
-                      <Ionicons name="trash-outline" size={18} color={colors.textTitle} />
-                    </Pressable>
+                    <View style={styles.goalBadge}>
+                      <Text style={styles.goalBadgeText}>{pct}%</Text>
+                    </View>
                   </View>
 
-                  <View style={[styles.progressTrack, { backgroundColor: colors.surface2, borderColor }]}>
+                  <View style={styles.goalProgressTrack}>
                     <View
                       style={[
-                        styles.progressFill,
-                        {
-                          width: `${Math.max(3, pct)}%`,
-                          backgroundColor: colors.accent500,
-                        },
+                        styles.goalProgressFill,
+                        { width: `${Math.max(3, pct)}%` },
                       ]}
                     />
                   </View>
-                  <Text style={styles.progressText}>{pct}% completato</Text>
-                  {!!goal.notes && <Text style={styles.notes}>{goal.notes}</Text>}
 
-                  <View style={styles.quickActions}>
+                  <View style={styles.goalMetaRow}>
+                    <Text style={styles.goalMetaText}>Mancano {euro(remainingGoal)}</Text>
+                    {!!goal.notes ? (
+                      <Text style={styles.goalMetaText} numberOfLines={1}>
+                        {goal.notes}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.quickRow}>
+                    {[-10, 10, 50].map((value) => (
+                      <Pressable
+                        key={`${goal.id}-${value}`}
+                        onPress={() => goalsCtx.addProgress(goal.id, value)}
+                        style={({ pressed }) => [
+                          styles.quickBtn,
+                          pressed && { opacity: 0.9 },
+                        ]}
+                      >
+                        <Text style={styles.quickBtnText}>
+                          {value > 0 ? `+${value}` : value} EUR
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  <View style={styles.goalActions}>
                     <Pressable
-                      onPress={() => goalsCtx.addProgress(goal.id, -10)}
-                      style={({ pressed }) => [styles.quickBtn, pressed && { opacity: 0.9 }]}
+                      onPress={() => openEdit(goal)}
+                      style={({ pressed }) => [styles.goalActionBtn, pressed && { opacity: 0.9 }]}
                     >
-                      <Text style={styles.quickBtnText}>-10 €</Text>
+                      <Ionicons name="create-outline" size={14} color={colors.textTitle} />
+                      <Text style={styles.goalActionText}>Modifica</Text>
                     </Pressable>
                     <Pressable
-                      onPress={() => goalsCtx.addProgress(goal.id, 10)}
-                      style={({ pressed }) => [styles.quickBtn, pressed && { opacity: 0.9 }]}
+                      onPress={() => deleteGoal(goal)}
+                      style={({ pressed }) => [styles.goalActionBtn, pressed && { opacity: 0.9 }]}
                     >
-                      <Text style={styles.quickBtnText}>+10 €</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => goalsCtx.addProgress(goal.id, 50)}
-                      style={({ pressed }) => [styles.quickBtn, pressed && { opacity: 0.9 }]}
-                    >
-                      <Text style={styles.quickBtnText}>+50 €</Text>
+                      <Ionicons name="trash-outline" size={14} color={colors.error500} />
+                      <Text style={[styles.goalActionText, { color: colors.error500 }]}>
+                        Elimina
+                      </Text>
                     </Pressable>
                   </View>
                 </View>
@@ -236,47 +310,49 @@ export default function GoalsScreen() {
 
       <Modal transparent visible={modalOpen} animationType="fade" onRequestClose={() => setModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { borderColor, backgroundColor: colors.surface }]}>
+          <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{draft.id ? "Modifica obiettivo" : "Nuovo obiettivo"}</Text>
 
             <TextInput
               value={draft.title}
               onChangeText={(value) => setDraft((prev) => ({ ...prev, title: value }))}
-              style={[styles.input, { borderColor, backgroundColor: colors.surface2, color: colors.textTitle }]}
-              placeholder="Titolo"
+              style={styles.input}
+              placeholder="Titolo (es. Fondo vacanze)"
               placeholderTextColor={colors.textFaint}
             />
             <TextInput
               value={draft.targetAmount}
               onChangeText={(value) => setDraft((prev) => ({ ...prev, targetAmount: value }))}
               keyboardType="decimal-pad"
-              style={[styles.input, { borderColor, backgroundColor: colors.surface2, color: colors.textTitle }]}
-              placeholder="Target (€)"
+              style={styles.input}
+              placeholder="Target EUR"
               placeholderTextColor={colors.textFaint}
             />
             <TextInput
               value={draft.currentAmount}
               onChangeText={(value) => setDraft((prev) => ({ ...prev, currentAmount: value }))}
               keyboardType="decimal-pad"
-              style={[styles.input, { borderColor, backgroundColor: colors.surface2, color: colors.textTitle }]}
-              placeholder="Importo risparmiato (€)"
+              style={styles.input}
+              placeholder="Importo gia risparmiato"
               placeholderTextColor={colors.textFaint}
             />
             <TextInput
               value={draft.notes}
               onChangeText={(value) => setDraft((prev) => ({ ...prev, notes: value }))}
-              style={[styles.input, { borderColor, backgroundColor: colors.surface2, color: colors.textTitle }]}
+              style={[styles.input, { minHeight: 64 }]}
               placeholder="Note (opzionale)"
               placeholderTextColor={colors.textFaint}
               multiline
             />
 
             <View style={styles.modalActions}>
-              <Pressable onPress={() => setModalOpen(false)} style={styles.actionBtn}>
-                <Text style={styles.actionText}>Annulla</Text>
+              <Pressable onPress={() => setModalOpen(false)} style={styles.modalSecondaryBtn}>
+                <Text style={styles.modalSecondaryText}>Annulla</Text>
               </Pressable>
-              <Pressable onPress={submitGoal} style={styles.actionBtn} disabled={saving}>
-                <Text style={styles.actionText}>{saving ? "Salvataggio..." : "Salva"}</Text>
+              <Pressable onPress={submitGoal} style={styles.modalPrimaryBtn} disabled={saving}>
+                <Text style={styles.modalPrimaryText}>
+                  {saving ? "Salvataggio..." : "Salva obiettivo"}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -286,27 +362,54 @@ export default function GoalsScreen() {
   );
 }
 
-function makeStyles(colors) {
+function makeStyles(colors, compactMode) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
-    hero: {
-      borderRadius: 18,
-      borderWidth: 1,
-      padding: 12,
+    content: {
+      paddingHorizontal: compactMode ? 12 : 16,
+      paddingTop: compactMode ? 10 : 14,
+      paddingBottom: 30,
+      gap: 12,
     },
-    heroTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-    heroIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
+    heroCard: {
+      borderRadius: 22,
       borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 13,
+      overflow: "hidden",
+      position: "relative",
+    },
+    heroBubble: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent18,
+      backgroundColor: colors.accent12,
+    },
+    heroBubbleTop: { width: 120, height: 120, top: -34, right: -34 },
+    heroBubbleBottom: { width: 68, height: 68, right: 46, bottom: -30 },
+    heroTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    heroIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
       alignItems: "center",
       justifyContent: "center",
     },
-    heroTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 16 },
-    heroSub: { marginTop: 3, color: colors.textMuted, fontWeight: "800" },
+    heroTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 18 },
+    heroSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 12 },
     addBtn: {
       borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.accent500,
       borderRadius: 12,
       paddingHorizontal: 10,
       paddingVertical: 8,
@@ -314,55 +417,169 @@ function makeStyles(colors) {
       alignItems: "center",
       gap: 4,
     },
-    addBtnText: { color: colors.textOnAccent, fontWeight: "900", fontSize: 12 },
-    progressTrack: {
-      marginTop: 10,
-      borderWidth: 1,
-      borderRadius: 999,
-      overflow: "hidden",
-      height: 9,
-    },
-    progressFill: { height: "100%", borderRadius: 999 },
-    progressText: { marginTop: 6, color: colors.textMuted, fontWeight: "800", fontSize: 12 },
-    emptyCard: {
+    addBtnText: { color: colors.textOnAccentStrong, fontWeight: "900", fontSize: 12 },
+    mainProgressTrack: {
       marginTop: 12,
       borderWidth: 1,
-      borderRadius: 16,
-      padding: 14,
+      borderColor: colors.white10,
+      borderRadius: 999,
+      overflow: "hidden",
+      height: 10,
+      backgroundColor: colors.surface2,
     },
-    emptyText: { color: colors.textMuted, fontWeight: "800" },
-    goalCard: { borderWidth: 1, borderRadius: 16, padding: 12 },
-    goalTop: { flexDirection: "row", alignItems: "center", gap: 6 },
-    goalTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 15 },
-    goalAmounts: { color: colors.textBody, fontWeight: "800", marginTop: 3 },
-    iconBtn: {
-      width: 30,
-      height: 30,
+    mainProgressFill: {
+      height: "100%",
+      borderRadius: 999,
+      backgroundColor: colors.accent500,
+    },
+    mainProgressText: { marginTop: 6, color: colors.textMuted, fontWeight: "800", fontSize: 12 },
+
+    statsRow: { flexDirection: "row", gap: 9 },
+    statTile: {
+      flex: 1,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 10,
+      paddingHorizontal: 9,
+    },
+    statIcon: {
+      width: 28,
+      height: 28,
       borderRadius: 10,
-      alignItems: "center",
-      justifyContent: "center",
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
     },
-    notes: { marginTop: 6, color: colors.textMuted, fontWeight: "700" },
-    quickActions: { marginTop: 8, flexDirection: "row", gap: 8 },
-    quickBtn: {
+    statLabel: { color: colors.textMuted, fontWeight: "800", fontSize: 11 },
+    statValue: { marginTop: 2, color: colors.textTitle, fontWeight: "900", fontSize: 13 },
+
+    emptyStateCard: {
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      alignItems: "center",
+      paddingVertical: 18,
+      paddingHorizontal: 14,
+    },
+    emptyStateIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 10,
+    },
+    emptyStateTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 15 },
+    emptyStateSub: {
+      marginTop: 4,
+      color: colors.textMuted,
+      fontWeight: "700",
+      textAlign: "center",
+      lineHeight: 18,
+      fontSize: 12,
+    },
+    emptyStateCta: {
+      marginTop: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.accent500,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+    },
+    emptyStateCtaText: { color: colors.textOnAccentStrong, fontWeight: "900", fontSize: 12 },
+
+    goalList: { gap: 10 },
+    goalCard: {
+      borderWidth: 1,
+      borderColor: colors.white10,
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      paddingVertical: 11,
+      paddingHorizontal: 11,
+    },
+    goalHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    goalTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 15 },
+    goalAmounts: { marginTop: 2, color: colors.textBody, fontWeight: "800", fontSize: 12 },
+    goalBadge: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+      minWidth: 50,
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      alignItems: "center",
+    },
+    goalBadgeText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    goalProgressTrack: {
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      borderRadius: 999,
+      overflow: "hidden",
+      height: 9,
+      backgroundColor: colors.surface2,
+    },
+    goalProgressFill: {
+      height: "100%",
+      borderRadius: 999,
+      backgroundColor: colors.accent500,
+    },
+    goalMetaRow: {
+      marginTop: 6,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    goalMetaText: { color: colors.textMuted, fontWeight: "700", fontSize: 11, flex: 1 },
+    quickRow: { marginTop: 10, flexDirection: "row", gap: 8 },
+    quickBtn: {
+      borderWidth: 1,
+      borderColor: colors.white12,
       backgroundColor: colors.surface2,
       borderRadius: 10,
       paddingVertical: 7,
       paddingHorizontal: 10,
     },
-    quickBtnText: { color: colors.textTitle, fontWeight: "900", fontSize: 12 },
+    quickBtnText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    goalActions: { marginTop: 10, flexDirection: "row", gap: 8 },
+    goalActionBtn: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      borderRadius: 10,
+      paddingVertical: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 5,
+    },
+    goalActionText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+
     modalBackdrop: {
       flex: 1,
       padding: 18,
       backgroundColor: colors.overlay72,
       justifyContent: "center",
     },
-    modalCard: { borderRadius: 16, borderWidth: 1, padding: 12 },
+    modalCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 12,
+    },
     modalTitle: {
       color: colors.textTitle,
       fontWeight: "900",
@@ -371,22 +588,35 @@ function makeStyles(colors) {
     },
     input: {
       borderWidth: 1,
+      borderColor: colors.white10,
       borderRadius: 12,
+      backgroundColor: colors.surface2,
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontWeight: "700",
+      color: colors.textTitle,
       marginBottom: 8,
     },
-    modalActions: { marginTop: 6, flexDirection: "row", gap: 10 },
-    actionBtn: {
+    modalActions: { marginTop: 4, flexDirection: "row", gap: 8 },
+    modalSecondaryBtn: {
       flex: 1,
       borderWidth: 1,
       borderColor: colors.white10,
-      backgroundColor: colors.surface2,
+      backgroundColor: colors.white08,
       borderRadius: 12,
       paddingVertical: 10,
       alignItems: "center",
     },
-    actionText: { color: colors.textTitle, fontWeight: "900" },
+    modalSecondaryText: { color: colors.textTitle, fontWeight: "900", fontSize: 12 },
+    modalPrimaryBtn: {
+      flex: 1.2,
+      borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.accent500,
+      borderRadius: 12,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    modalPrimaryText: { color: colors.textOnAccentStrong, fontWeight: "900", fontSize: 12 },
   });
 }
