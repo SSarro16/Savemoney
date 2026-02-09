@@ -12,6 +12,7 @@ import {
 import { AuthContext } from "./auth-context";
 import { BudgetContext } from "./budget-context";
 import { PaymentContext } from "./payment-context";
+import { CustomizationContext } from "./customization-context";
 
 import {
   fetchExpenses,
@@ -31,6 +32,8 @@ import {
 } from "../util/expenses/expense-normalize";
 
 import { PAYMENT_METHOD } from "../util/expenses/expense-presets";
+import { maybeSendBudgetThresholdAlerts } from "../util/notifications/budget-alerts";
+import { logger } from "../util/logger";
 
 export const ExpensesContext = createContext({
   expenses: [],
@@ -121,6 +124,7 @@ export default function ExpensesContextProvider({ children }) {
   const authCtx = useContext(AuthContext);
   const budgetCtx = useContext(BudgetContext);
   const paymentCtx = useContext(PaymentContext);
+  const customizationCtx = useContext(CustomizationContext);
 
   const userId = authCtx.userId;
   const token = authCtx.token;
@@ -162,6 +166,31 @@ export default function ExpensesContextProvider({ children }) {
   useEffect(() => {
     expensesRef.current = expensesState;
   }, [expensesState]);
+
+  useEffect(() => {
+    if (!userId || !token) return;
+
+    maybeSendBudgetThresholdAlerts({
+      expenses: expensesState,
+      budgetTotal: budgetCtx?.total,
+      budgetId: budgetCtx?.budgetId,
+      userId,
+      enabled: customizationCtx?.budgetAlertsEnabled,
+      notifyAt80: customizationCtx?.budgetAlertAt80,
+      notifyAt100: customizationCtx?.budgetAlertAt100,
+    }).catch((error) => {
+      logger.warn("Budget threshold alert sync failed", error);
+    });
+  }, [
+    expensesState,
+    budgetCtx?.total,
+    budgetCtx?.budgetId,
+    customizationCtx?.budgetAlertsEnabled,
+    customizationCtx?.budgetAlertAt80,
+    customizationCtx?.budgetAlertAt100,
+    userId,
+    token,
+  ]);
 
   useEffect(() => {
     return () => {

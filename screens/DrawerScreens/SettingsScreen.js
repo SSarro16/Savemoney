@@ -57,6 +57,9 @@ export default function SettingsScreen({ navigation }) {
     showPaymentTag,
     recurringRemindersEnabled,
     recurringReminderHour,
+    budgetAlertsEnabled,
+    budgetAlertAt80,
+    budgetAlertAt100,
     setCompactMode,
     setLargeText,
     setReduceMotion,
@@ -64,6 +67,9 @@ export default function SettingsScreen({ navigation }) {
     setShowPaymentTag,
     setRecurringRemindersEnabled,
     setRecurringReminderHour,
+    setBudgetAlertsEnabled,
+    setBudgetAlertAt80,
+    setBudgetAlertAt100,
   } = useContext(CustomizationContext);
 
   const goDrawerScreen = (screenName) => {
@@ -78,6 +84,9 @@ export default function SettingsScreen({ navigation }) {
     setShowPaymentTag(true);
     setRecurringRemindersEnabled(false);
     setRecurringReminderHour(9);
+    setBudgetAlertsEnabled(false);
+    setBudgetAlertAt80(true);
+    setBudgetAlertAt100(true);
   };
 
   return (
@@ -236,6 +245,36 @@ export default function SettingsScreen({ navigation }) {
             </Pressable>
           </View>
         </View>
+      ) : null}
+
+      <ToggleRow
+        title="Allerte budget"
+        subtitle="Notifiche quando il budget mensile viene raggiunto"
+        value={budgetAlertsEnabled}
+        onChange={setBudgetAlertsEnabled}
+        colors={colors}
+        styles={styles}
+      />
+
+      {budgetAlertsEnabled ? (
+        <>
+          <ToggleRow
+            title="Soglia 80%"
+            subtitle="Avvisa quando superi l'80% del budget"
+            value={budgetAlertAt80}
+            onChange={setBudgetAlertAt80}
+            colors={colors}
+            styles={styles}
+          />
+          <ToggleRow
+            title="Soglia 100%"
+            subtitle="Avvisa quando arrivi al 100% del budget"
+            value={budgetAlertAt100}
+            onChange={setBudgetAlertAt100}
+            colors={colors}
+            styles={styles}
+          />
+        </>
       ) : null}
 
       <Pressable
