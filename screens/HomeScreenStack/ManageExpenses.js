@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -339,22 +340,59 @@ function ManageExpenses({ route, navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <View style={styles.heroIcon}>
-            <Ionicons
-              name={isEditing ? "create-outline" : "add-circle-outline"}
-              size={20}
-              color={colors.textTitle}
-            />
+          <View
+            style={[
+              styles.heroOrb,
+              styles.heroOrbTop,
+              { backgroundColor: colors.accent12, borderColor: colors.accent18 },
+            ]}
+          />
+          <View
+            style={[
+              styles.heroOrb,
+              styles.heroOrbBottom,
+              { backgroundColor: colors.accent12, borderColor: colors.accent18 },
+            ]}
+          />
+
+          <View style={styles.heroTopRow}>
+            <View style={styles.logoWrap}>
+              <Image
+                source={require("../../assets/icon.png")}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
+            <View style={styles.heroBadge}>
+              <Ionicons
+                name={isEditing ? "create-outline" : "add-circle-outline"}
+                size={14}
+                color={colors.textTitle}
+              />
+              <Text style={styles.heroBadgeText}>
+                {isEditing ? "Edit Mode" : "Nuova Spesa"}
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>
-              {isEditing ? "Aggiorna la tua spesa" : "Aggiungi una nuova spesa"}
-            </Text>
-            <Text style={styles.heroSub}>
-              {isEditing
-                ? "Modifica i dettagli e salva. Cestino = elimina con undo."
-                : "Compila il form e registra la spesa. Stella = preferito."}
-            </Text>
+
+          <Text style={styles.heroTitle}>
+            {isEditing ? "Aggiorna la tua spesa" : "Aggiungi una nuova spesa"}
+          </Text>
+          <Text style={styles.heroSub}>
+            {isEditing
+              ? "Rivedi i campi e salva una sola volta. Cestino = elimina con undo."
+              : "Compila il form e registra in modo rapido. Stella = preferito."}
+          </Text>
+
+          <View style={styles.heroMetaRow}>
+            <View style={styles.heroMetaPill}>
+              <Ionicons name="wallet-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.heroMetaText}>Savemoney</Text>
+            </View>
+            <View style={styles.heroMetaPill}>
+              <Ionicons name="checkmark-done-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.heroMetaText}>Salvataggio protetto</Text>
+            </View>
           </View>
         </View>
 
@@ -381,7 +419,7 @@ export default ManageExpenses;
 
 function makeStyles(colors) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.primary800 },
+    container: { flex: 1, backgroundColor: colors.bg },
     content: { paddingHorizontal: 16, paddingTop: 12 },
     heroCard: {
       borderRadius: 20,
@@ -390,40 +428,105 @@ function makeStyles(colors) {
       backgroundColor: colors.surface,
       paddingVertical: 14,
       paddingHorizontal: 14,
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 12,
+      gap: 10,
       marginBottom: 14,
+      overflow: "hidden",
+      position: "relative",
     },
-    heroIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 14,
+    heroOrb: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    heroOrbTop: {
+      width: 104,
+      height: 104,
+      right: -30,
+      top: -28,
+    },
+    heroOrbBottom: {
+      width: 62,
+      height: 62,
+      right: 24,
+      bottom: -30,
+    },
+    heroTopRow: {
+      flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    logoWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      overflow: "hidden",
       borderWidth: 1,
       borderColor: colors.accent30,
-      backgroundColor: colors.accent16,
+      backgroundColor: colors.white10,
+    },
+    logoImage: {
+      width: "100%",
+      height: "100%",
+    },
+    heroBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.white08,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+    },
+    heroBadgeText: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 11,
+      letterSpacing: 0.2,
     },
     heroTitle: {
       color: colors.textTitle,
       fontWeight: "900",
-      fontSize: 16,
+      fontSize: 17,
       lineHeight: 20,
     },
     heroSub: {
-      marginTop: 4,
+      marginTop: 1,
       color: colors.textMuted,
       fontWeight: "800",
       fontSize: 12,
       lineHeight: 18,
     },
+    heroMetaRow: {
+      marginTop: 2,
+      flexDirection: "row",
+      gap: 8,
+      flexWrap: "wrap",
+    },
+    heroMetaPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.white06,
+      paddingVertical: 5,
+      paddingHorizontal: 9,
+    },
+    heroMetaText: {
+      color: colors.textMuted,
+      fontWeight: "800",
+      fontSize: 11,
+    },
     formWrap: {
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: colors.white10,
-      backgroundColor: colors.white08,
-      padding: 8,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      padding: 9,
     },
 
     headerRight: {
