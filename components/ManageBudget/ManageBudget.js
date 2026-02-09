@@ -216,35 +216,6 @@ export default function ManageBudget({ onSave }) {
   }, [isOver]);
 
   // ✅ dirty
-  const isDirty = useMemo(() => {
-    const ctxTotal = Number(budgetCtx.total) || 0;
-    const ctxCats = budgetCtx.categories || {};
-    const cleanLocalTitle = String(localTitleText || "").trim();
-    const cleanCtxTitle = String(currentTitle || "").trim();
-    if (cleanLocalTitle && cleanLocalTitle !== cleanCtxTitle) return true;
-    if (toNumber(localTotalText) !== ctxTotal) return true;
-
-    for (const k of Object.keys(localCategoriesText)) {
-      if ((Number(ctxCats[k]) || 0) !== toNumber(localCategoriesText[k]))
-        return true;
-    }
-    return false;
-  }, [
-    budgetCtx.total,
-    budgetCtx.categories,
-    localTotalText,
-    localCategoriesText,
-    localTitleText,
-    currentTitle,
-  ]);
-
-  const handleUpdateContext = () => {
-    budgetCtx.setTotal(totalNumber);
-    Object.entries(categoriesNumbers).forEach(([cat, val]) => {
-      budgetCtx.updateCategory(cat, val);
-    });
-  };
-
   const handleChangeCategory = (cat, text) => {
     setLocalCategoriesText((prev) => ({ ...prev, [cat]: text }));
   };
@@ -299,7 +270,7 @@ export default function ManageBudget({ onSave }) {
   };
 
   async function saveHandler() {
-    if (!isDirty || isSaving) return;
+    if (isSaving) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
@@ -469,7 +440,6 @@ export default function ManageBudget({ onSave }) {
                   keyboardType="numeric"
                   value={localTotalText}
                   onChangeText={setLocalTotalText}
-                  onEndEditing={handleUpdateContext}
                   placeholder="0"
                   placeholderTextColor={colors.white40}
                   returnKeyType="done"
@@ -506,7 +476,6 @@ export default function ManageBudget({ onSave }) {
                       keyboardType="numeric"
                       value={val}
                       onChangeText={(text) => handleChangeCategory(cat, text)}
-                      onEndEditing={handleUpdateContext}
                       onFocus={scrollToBottomSoon}
                       placeholder="0"
                       placeholderTextColor={colors.white40}
@@ -571,12 +540,12 @@ export default function ManageBudget({ onSave }) {
 
             <Pressable
               onPress={saveHandler}
-              disabled={!isDirty || isSaving}
+              disabled={isSaving}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnPrimary,
-                (pressed || !isDirty || isSaving) && styles.pressed,
-                (!isDirty || isSaving) && styles.btnDisabled,
+                (pressed || isSaving) && styles.pressed,
+                isSaving && styles.btnDisabled,
               ]}
             >
               {isSaving ? (
