@@ -54,6 +54,26 @@ export const THEMES = {
     textOnPrimary: "dark",
   },
 
+  MINT: {
+    key: "MINT",
+    label: "Menta",
+    primary800: "#e8f8f2",
+    primary700: "#f4fffb",
+    primary500: "#d7f2e7",
+    accent500: "#1f9f79",
+    textOnPrimary: "dark",
+  },
+
+  SAND: {
+    key: "SAND",
+    label: "Sabbia",
+    primary800: "#f8f1e5",
+    primary700: "#fff9ee",
+    primary500: "#f0e1c6",
+    accent500: "#b7791f",
+    textOnPrimary: "dark",
+  },
+
   PURPLE_GOLD: {
     key: "PURPLE_GOLD",
     label: "Viola",
@@ -163,6 +183,26 @@ export const THEMES = {
     primary700: "#27201b",
     primary500: "#3e342c",
     accent500: "#f0a35a",
+    textOnPrimary: "light",
+  },
+
+  AURORA: {
+    key: "AURORA",
+    label: "Aurora",
+    primary800: "#101c2a",
+    primary700: "#16283d",
+    primary500: "#214666",
+    accent500: "#6fe7dd",
+    textOnPrimary: "light",
+  },
+
+  CHERRY_NIGHT: {
+    key: "CHERRY_NIGHT",
+    label: "Cherry Night",
+    primary800: "#1d0f17",
+    primary700: "#2a1621",
+    primary500: "#47273a",
+    accent500: "#ff6b93",
     textOnPrimary: "light",
   },
 };

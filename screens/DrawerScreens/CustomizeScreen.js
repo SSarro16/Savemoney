@@ -38,6 +38,8 @@ const THEME_GROUPS = [
       { key: "GREEN", icon: "leaf-outline" },
       { key: "RED", icon: "flame-outline" },
       { key: "YELLOW", icon: "color-filter-outline" },
+      { key: "MINT", icon: "flower-outline" },
+      { key: "SAND", icon: "cafe-outline" },
     ],
   },
   {
@@ -53,6 +55,8 @@ const THEME_GROUPS = [
       { key: "GRAPHITE_LIME", icon: "contrast-outline" },
       { key: "BORDEAUX", icon: "wine-outline" },
       { key: "NIGHT_COPPER", icon: "flame-outline" },
+      { key: "AURORA", icon: "rainy-outline" },
+      { key: "CHERRY_NIGHT", icon: "moon-outline" },
     ],
   },
 ];
