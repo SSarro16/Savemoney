@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 import { advanceToFuture } from "../recurring/recurring-utils";
+import { canUseLocalNotifications } from "./runtime";
 
 const REMINDER_KIND = "recurring_reminder";
 
@@ -35,6 +36,8 @@ async function clearManagedReminders() {
 }
 
 async function ensurePermissions() {
+  if (!canUseLocalNotifications()) return false;
+
   const current = await Notifications.getPermissionsAsync();
   if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
     return true;
@@ -48,6 +51,8 @@ async function ensurePermissions() {
 }
 
 export async function syncRecurringReminderNotifications(items, options = {}) {
+  if (!canUseLocalNotifications()) return 0;
+
   const enabled = options?.enabled !== false;
   const reminderHour = normalizeHour(options?.hour);
 

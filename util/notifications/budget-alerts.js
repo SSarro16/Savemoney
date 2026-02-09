@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
+import { canUseLocalNotifications } from "./runtime";
 
 const ALERT_KEY_PREFIX = "budget_alert_sent_v1";
 
@@ -36,6 +37,8 @@ function getCurrentMonthSpent(expenses, budgetId) {
 }
 
 async function ensurePermissions() {
+  if (!canUseLocalNotifications()) return false;
+
   const current = await Notifications.getPermissionsAsync();
   if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
     return true;
@@ -57,6 +60,7 @@ export async function maybeSendBudgetThresholdAlerts({
   notifyAt80,
   notifyAt100,
 }) {
+  if (!canUseLocalNotifications()) return;
   if (!enabled) return;
 
   const total = Number(budgetTotal || 0);
