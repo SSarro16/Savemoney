@@ -518,7 +518,7 @@ function makeDrawerStyles(colors, textScale) {
 
 const DRAWER_SECTIONS = [
   { key: "Operativo", routes: ["Spese", "Budget", "Recurring", "Payments"] },
-  { key: "Organizzazione", routes: ["Settings", "Goals"] },
+  { key: "Organizzazione", routes: ["Goals", "Settings"] },
   { key: "Account", routes: ["Logout"] },
 ];
 
@@ -1053,23 +1053,23 @@ function AppDrawer() {
       />
 
       <Drawer.Screen
-        name="Settings"
-        component={SettingsStack}
-        options={{
-          title: "Impostazioni",
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
         name="Goals"
         component={GoalsStack}
         options={{
           title: "Obiettivi",
           drawerIcon: ({ color, size }) => (
             <Ionicons name="flag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Drawer.Screen
+        name="Settings"
+        component={SettingsStack}
+        options={{
+          title: "Impostazioni",
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       />
