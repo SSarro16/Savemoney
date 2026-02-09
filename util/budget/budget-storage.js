@@ -10,7 +10,7 @@ import {
 const LEGACY_LOCAL_KEY = "BUDGETS_V1";
 const ACTIVE_KEY = "BUDGETS_ACTIVE_ID_V1";
 const MIGRATION_KEY_PREFIX = "BUDGETS_MIGRATED_TO_FIREBASE_V1_";
-const DEFAULT_CATEGORIES = { Risparmio: 0, Spese: 0, Svago: 0, Altro: 0 };
+const DEFAULT_CATEGORIES = { Risparmio: 0, Spese: 0, Svago: 0 };
 
 function uid() {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`;

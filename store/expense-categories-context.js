@@ -10,7 +10,7 @@ import {
 import { AuthContext } from "./auth-context";
 
 const STORAGE_PREFIX = "expenseCategories_v1_";
-export const DEFAULT_EXPENSE_CATEGORIES = ["Spese", "Risparmio", "Svago", "Altro"];
+export const DEFAULT_EXPENSE_CATEGORIES = ["Spese", "Risparmio", "Svago"];
 
 export const ExpenseCategoriesContext = createContext({
   categories: DEFAULT_EXPENSE_CATEGORIES,
