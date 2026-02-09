@@ -4,9 +4,9 @@ import { GlobalStyles } from "../../constants/styles";
 const SOURCE = require("../../assets/icon.png");
 const DEFAULT_CROP = {
   top: 0,
-  right: 0.0225,
+  right: 0,
   bottom: 0,
-  left: 0.0225,
+  left: 0,
 };
 
 function clamp(value, min, max) {
