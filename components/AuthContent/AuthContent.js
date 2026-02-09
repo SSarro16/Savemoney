@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import FlatButton from "../ui/FlatButton";
 import AuthForm from "./AuthForm";
 import { GlobalStyles } from "../../constants/styles";
+import AppLogo from "../ui/AppLogo";
 
 function AuthContent({ isLogin, onAuthenticate }) {
   const navigation = useNavigation();
@@ -108,28 +109,51 @@ function AuthContent({ isLogin, onAuthenticate }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.logo}>
+      <View style={styles.identityCard}>
+        <View style={styles.identityLogoWrap}>
+          <AppLogo size={58} borderRadius={22} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.identityEyebrow}>Savemoney</Text>
+          <Text style={styles.identityTitle}>
+            {isLogin ? "Area Privata" : "Nuovo Account"}
+          </Text>
+          <Text style={styles.identitySub}>Controllo spese con stile premium</Text>
+        </View>
+        <View style={styles.identityBadge}>
           <Ionicons
-            name="wallet-outline"
-            size={26}
+            name={isLogin ? "log-in-outline" : "sparkles-outline"}
+            size={12}
             color={colors.textOnAccentStrong}
           />
+          <Text style={styles.identityBadgeText}>
+            {isLogin ? "LOGIN" : "SIGNUP"}
+          </Text>
         </View>
-
-        <Text style={styles.title}>
-          {isLogin ? "Bentornato" : "Crea il tuo account"}
-        </Text>
-        <Text style={styles.subtitle}>
-          {isLogin
-            ? "Accedi per gestire spese e budget."
-            : "Registrati in pochi secondi e inizia subito."}
-        </Text>
       </View>
+
+      <Text style={styles.title}>
+        {isLogin ? "Bentornato." : "Crea il tuo spazio."}
+      </Text>
+      <Text style={styles.subtitle}>
+        {isLogin
+          ? "Accedi e continua a monitorare entrate e uscite."
+          : "Registrati e inizia a tracciare spese, budget e obiettivi."}
+      </Text>
 
       <View style={styles.card}>
         <View style={[styles.cardBlob, styles.cardBlobTop]} />
+        <View style={[styles.cardBlob, styles.cardBlobMid]} />
         <View style={[styles.cardBlob, styles.cardBlobBottom]} />
+
+        <View style={styles.formHeader}>
+          <View style={styles.formHeaderIcon}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textTitle} />
+          </View>
+          <Text style={styles.formHeaderText}>
+            {isLogin ? "Accesso sicuro" : "Onboarding protetto"}
+          </Text>
+        </View>
         <AuthForm
           isLogin={isLogin}
           onSubmit={submitHandler}
@@ -138,7 +162,7 @@ function AuthContent({ isLogin, onAuthenticate }) {
         />
 
         <View style={styles.footer}>
-          <FlatButton onPress={switchAuthModeHandler}>
+          <FlatButton mode="primary" onPress={switchAuthModeHandler}>
             {isLogin ? "Crea un nuovo account" : "Hai gia un account? Accedi"}
           </FlatButton>
         </View>
@@ -153,47 +177,85 @@ function makeStyles(colors) {
   return StyleSheet.create({
     container: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: 560,
       alignSelf: "center",
     },
-
-    header: {
+    identityCard: {
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      marginBottom: 12,
+      flexDirection: "row",
       alignItems: "center",
-      marginBottom: 14,
+      gap: 10,
     },
-    logo: {
-      width: 54,
-      height: 54,
-      borderRadius: 18,
-      backgroundColor: colors.accent500,
+    identityLogoWrap: {
+      width: 60,
+      height: 60,
+      borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: 10,
-      shadowColor: "black",
-      shadowOpacity: 0.35,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 8,
+      borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.white08,
+    },
+    identityEyebrow: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: "900",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    identityTitle: {
+      marginTop: 1,
+      color: colors.textTitle,
+      fontSize: 16,
+      fontWeight: "900",
+    },
+    identitySub: {
+      marginTop: 1,
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    identityBadge: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.accent500,
+      paddingVertical: 5,
+      paddingHorizontal: 9,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    identityBadgeText: {
+      color: colors.textOnAccentStrong,
+      fontWeight: "900",
+      fontSize: 10,
+      letterSpacing: 0.3,
     },
     title: {
       color: colors.textTitle,
-      fontSize: 22,
+      fontSize: 28,
       fontWeight: "900",
-      textAlign: "center",
+      lineHeight: 32,
     },
     subtitle: {
-      marginTop: 6,
+      marginTop: 4,
+      marginBottom: 14,
       color: colors.textMuted,
-      fontSize: 13,
+      fontSize: 13.5,
       fontWeight: "700",
-      textAlign: "center",
       lineHeight: 18,
     },
-
     card: {
-      backgroundColor: colors.primary700,
-      borderRadius: 22,
-      padding: 18,
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      padding: 16,
       borderWidth: 1,
       borderColor: colors.white10,
       overflow: "hidden",
@@ -210,10 +272,34 @@ function makeStyles(colors) {
       borderWidth: 1,
       borderColor: colors.accent18,
     },
-    cardBlobTop: { width: 110, height: 110, right: -24, top: -30 },
-    cardBlobBottom: { width: 64, height: 64, right: 30, bottom: -24 },
+    cardBlobTop: { width: 130, height: 130, right: -34, top: -40 },
+    cardBlobMid: { width: 70, height: 70, right: 88, top: 18 },
+    cardBlobBottom: { width: 84, height: 84, left: -30, bottom: -34 },
+    formHeader: {
+      marginBottom: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    formHeaderIcon: {
+      width: 24,
+      height: 24,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.white12,
+      backgroundColor: colors.white08,
+    },
+    formHeaderText: {
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    },
     footer: {
-      marginTop: 10,
+      marginTop: 14,
       alignItems: "center",
     },
   });

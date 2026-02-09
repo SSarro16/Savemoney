@@ -99,7 +99,12 @@ function AuthForm({ isLogin, onSubmit, credentialsInvalid, onFieldChange }) {
 
   return (
     <View>
-      <Text style={styles.title}>{isLogin ? "Accedi" : "Registrati"}</Text>
+      <Text style={styles.title}>{isLogin ? "Credenziali" : "Crea le credenziali"}</Text>
+      <Text style={styles.subtitle}>
+        {isLogin
+          ? "Inserisci email e password per continuare."
+          : "Compila i campi base e conferma la password."}
+      </Text>
 
       {!isLogin && (
         <>
@@ -234,13 +239,18 @@ function makeStyles(colors) {
   return StyleSheet.create({
     title: {
       color: colors.textTitle,
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: "900",
-      textAlign: "center",
-      marginBottom: 12,
+      marginBottom: 4,
+    },
+    subtitle: {
+      color: colors.textMuted,
+      fontSize: 12,
+      fontWeight: "700",
+      marginBottom: 8,
     },
     buttons: {
-      marginTop: 14,
+      marginTop: 16,
     },
   });
 }

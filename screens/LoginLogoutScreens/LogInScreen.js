@@ -53,8 +53,10 @@ function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
-      <View style={[styles.bgBubble, styles.bgBubbleTop]} />
-      <View style={[styles.bgBubble, styles.bgBubbleBottom]} />
+      <View style={[styles.bgBubble, styles.bgBubbleA]} />
+      <View style={[styles.bgBubble, styles.bgBubbleB]} />
+      <View style={[styles.bgBubble, styles.bgBubbleC]} />
+      <View style={[styles.bgBubble, styles.bgBubbleD]} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -81,17 +83,29 @@ function makeStyles(colors) {
       borderWidth: 1,
       borderColor: colors.accent18,
     },
-    bgBubbleTop: {
-      width: 260,
-      height: 260,
-      top: -120,
-      right: -80,
+    bgBubbleA: {
+      width: 280,
+      height: 280,
+      top: -132,
+      right: -82,
     },
-    bgBubbleBottom: {
-      width: 170,
-      height: 170,
-      bottom: 40,
-      left: -70,
+    bgBubbleB: {
+      width: 176,
+      height: 176,
+      bottom: 34,
+      left: -68,
+    },
+    bgBubbleC: {
+      width: 84,
+      height: 84,
+      top: 190,
+      left: -26,
+    },
+    bgBubbleD: {
+      width: 110,
+      height: 110,
+      bottom: -36,
+      right: 68,
     },
     scroll: {
       flexGrow: 1,

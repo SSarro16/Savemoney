@@ -59,8 +59,10 @@ function SignupScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
-      <View style={[styles.bgBubble, styles.bgBubbleTop]} />
-      <View style={[styles.bgBubble, styles.bgBubbleBottom]} />
+      <View style={[styles.bgBubble, styles.bgBubbleA]} />
+      <View style={[styles.bgBubble, styles.bgBubbleB]} />
+      <View style={[styles.bgBubble, styles.bgBubbleC]} />
+      <View style={[styles.bgBubble, styles.bgBubbleD]} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -87,17 +89,29 @@ function makeStyles(colors) {
       borderWidth: 1,
       borderColor: colors.accent18,
     },
-    bgBubbleTop: {
-      width: 260,
-      height: 260,
-      top: -120,
-      right: -80,
+    bgBubbleA: {
+      width: 276,
+      height: 276,
+      top: -146,
+      left: -82,
     },
-    bgBubbleBottom: {
-      width: 170,
-      height: 170,
-      bottom: 40,
-      left: -70,
+    bgBubbleB: {
+      width: 182,
+      height: 182,
+      bottom: 18,
+      right: -62,
+    },
+    bgBubbleC: {
+      width: 92,
+      height: 92,
+      top: 220,
+      right: 18,
+    },
+    bgBubbleD: {
+      width: 76,
+      height: 76,
+      bottom: -26,
+      left: 72,
     },
     scroll: {
       flexGrow: 1,
