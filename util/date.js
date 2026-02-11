@@ -1,4 +1,4 @@
-﻿import { getCurrentLocaleTag } from "../store/language-context";
+import { getCurrentLocaleTag } from "../store/language-context";
 
 function safeDate(dateLike) {
   const d = dateLike instanceof Date ? dateLike : new Date(dateLike);

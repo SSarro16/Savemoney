@@ -186,6 +186,7 @@ function getWelcomePrefix(firstName, language, t) {
 
 function ExpensesScreen() {
   const expensesCtx = useContext(ExpensesContext);
+  const { fetchAndSetExpenses } = expensesCtx;
   const authCtx = useContext(AuthContext);
   useThemeRefresh();
   const colors = GlobalStyles.colors;
@@ -216,14 +217,14 @@ function ExpensesScreen() {
     setError(null);
 
     try {
-      await expensesCtx.fetchAndSetExpenses();
+      await fetchAndSetExpenses();
     } catch {
       setError(t("expenses.loadExpensesFailed"));
     } finally {
       if (!hasLoadedRef.current) setIsFetching(false);
       hasLoadedRef.current = true;
     }
-  }, [expensesCtx.fetchAndSetExpenses, t]);
+  }, [fetchAndSetExpenses, t]);
 
   // ✅ una sola fetch all’avvio (no loop)
   useEffect(() => {

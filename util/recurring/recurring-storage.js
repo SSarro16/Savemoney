@@ -11,6 +11,7 @@ import {
 const LEGACY_KEY = "recurringItems_v1";
 const KEY_PREFIX = "recurringItems_v2_";
 const MIGRATION_DONE_KEY_PREFIX = "recurring_items_migrated_firebase_v1_";
+const LEGACY_OWNER_KEY = "recurring_items_v1_owner_uid";
 
 function keyForUser(userId) {
   const uid = userId ? String(userId) : "anon";
@@ -110,8 +111,18 @@ async function migrateIfNeeded(userId, token) {
   }
 
   const userLocal = await AsyncStorage.getItem(keyForUser(userId));
-  const legacyLocal = await AsyncStorage.getItem(LEGACY_KEY);
-  const raw = userLocal || legacyLocal;
+
+  let raw = userLocal;
+  if (!raw) {
+    // Legacy local data is migrated only when ownership marker matches userId.
+    // This avoids importing previous-account data on shared devices.
+    const legacyOwner = String(
+      (await AsyncStorage.getItem(LEGACY_OWNER_KEY)) || "",
+    ).trim();
+    if (legacyOwner && legacyOwner === String(userId || "").trim()) {
+      raw = await AsyncStorage.getItem(LEGACY_KEY);
+    }
+  }
 
   if (raw) {
     try {

@@ -303,7 +303,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
           : Promise.resolve([]);
 
       const [templatesResult, recurringResult] = await Promise.allSettled([
-        getExpenseTemplates(),
+        userId && token ? getExpenseTemplates(userId, token) : Promise.resolve([]),
         recurringPromise,
       ]);
 
@@ -422,7 +422,10 @@ export default function QuickAddExpenseScreen({ navigation }) {
         style: "destructive",
         onPress: async () => {
           try {
-            const next = await removeExpenseTemplate(id);
+            if (!userId || !token) {
+              throw new Error(t("quickAdd.authUnavailable"));
+            }
+            const next = await removeExpenseTemplate(userId, token, id);
             setTemplates(Array.isArray(next) ? next : []);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           } catch {

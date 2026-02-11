@@ -26,6 +26,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { useThemeRefresh } from "../../store/theme-context";
 import { ExpensesContext } from "../../store/expenses-context";
 import { PaymentContext } from "../../store/payment-context";
+import { AuthContext } from "../../store/auth-context";
 import { useTranslation } from "../../store/language-context";
 import ExpenseForm from "../../components/ManageExpense/ExpenseForm";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
@@ -70,11 +71,14 @@ function ManageExpenses({ route, navigation }) {
 
   useThemeRefresh();
   const colors = GlobalStyles.colors;
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const expensesCtx = useContext(ExpensesContext);
   const paymentCtx = useContext(PaymentContext);
+  const authCtx = useContext(AuthContext);
   const { t } = useTranslation();
+  const userId = authCtx.userId;
+  const token = authCtx.token;
 
   const editedExpenseId = route.params?.expenseId;
   const isEditing = !!editedExpenseId;
@@ -117,8 +121,11 @@ function ManageExpenses({ route, navigation }) {
         payMethod: pm,
         ...(pm === PAYMENT_METHOD.CARD ? { cardId: cid } : {}),
       };
+      if (!userId || !token) {
+        throw new Error(t("quickAdd.authUnavailable"));
+      }
       const targetFingerprint = templateFingerprint(payload);
-      const templates = await getExpenseTemplates();
+      const templates = await getExpenseTemplates(userId, token);
       const matching = (templates || []).find(
         (template) => templateFingerprint(template) === targetFingerprint,
       );
@@ -126,7 +133,7 @@ function ManageExpenses({ route, navigation }) {
       if (favoriteSaved) {
         const removeId = String(favoriteTemplateId || matching?.id || "").trim();
         if (removeId) {
-          await removeExpenseTemplate(removeId);
+          await removeExpenseTemplate(userId, token, removeId);
         }
 
         setFavoriteSaved(false);
@@ -149,7 +156,7 @@ function ManageExpenses({ route, navigation }) {
         return;
       }
 
-      const next = await addExpenseTemplate(payload);
+      const next = await addExpenseTemplate(userId, token, payload);
       const added =
         (next || []).find(
           (template) => templateFingerprint(template) === targetFingerprint,
@@ -170,7 +177,7 @@ function ManageExpenses({ route, navigation }) {
         saveError?.message || t("manageExpense.favoriteSaveFailed"),
       );
     }
-  }, [favoriteSaved, favoriteTemplateId, t]);
+  }, [favoriteSaved, favoriteTemplateId, t, userId, token]);
 
   useEffect(() => {
     setFavoriteSaved(false);
@@ -178,12 +185,32 @@ function ManageExpenses({ route, navigation }) {
     submitLockRef.current = false;
   }, [editedExpenseId]);
 
-  function confirmDelete() {
+  const deleteExpenseHandler = useCallback(async () => {
+    if (!editedExpenseId || isSubmitting) return;
+
+    lastActionRef.current = { type: "delete", id: editedExpenseId };
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await expensesCtx.deleteExpenseWithUndo(editedExpenseId);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
+        () => {},
+      );
+      navigation.goBack();
+    } catch {
+      setError(t("manageExpense.deleteFailed"));
+      setIsSubmitting(false);
+      submitLockRef.current = false;
+    }
+  }, [editedExpenseId, expensesCtx, isSubmitting, navigation, t]);
+
+  const confirmDelete = useCallback(() => {
     Alert.alert(t("manageExpense.confirmDeleteTitle"), t("manageExpense.confirmDeleteMessage"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: deleteExpenseHandler },
     ]);
-  }
+  }, [deleteExpenseHandler, t]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -228,33 +255,14 @@ function ManageExpenses({ route, navigation }) {
     isEditing,
     isSubmitting,
     saveFavoriteHandler,
-    favoriteTemplateId,
+    confirmDelete,
     favoriteSaved,
     colors.error500,
     colors.textOnAccentStrong,
     colors.textTitle,
+    styles,
     t,
   ]);
-
-  async function deleteExpenseHandler() {
-    if (!editedExpenseId || isSubmitting) return;
-
-    lastActionRef.current = { type: "delete", id: editedExpenseId };
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await expensesCtx.deleteExpenseWithUndo(editedExpenseId);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
-        () => {},
-      );
-      navigation.goBack();
-    } catch {
-      setError(t("manageExpense.deleteFailed"));
-      setIsSubmitting(false);
-      submitLockRef.current = false;
-    }
-  }
 
   function cancelHandler() {
     navigation.goBack();
