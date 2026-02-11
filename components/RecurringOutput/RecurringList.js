@@ -15,6 +15,7 @@ import {
 export default function RecurringList({
   items,
   onEdit,
+  onOpenDetail,
   onDelete,
   onQuickAdd,
   onQuickPay,
@@ -26,14 +27,15 @@ export default function RecurringList({
 }) {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
-  const openSwipeRef = useRef(null);
+  const swipeRefs = useRef({});
+  const openSwipeIdRef = useRef(null);
   const { t } = useTranslation();
 
   const closeOpenSwipe = useCallback(() => {
-    if (openSwipeRef.current) {
-      openSwipeRef.current.close?.();
-      openSwipeRef.current = null;
-    }
+    const openId = String(openSwipeIdRef.current || "");
+    if (!openId) return;
+    swipeRefs.current[openId]?.close?.();
+    openSwipeIdRef.current = null;
   }, []);
 
   const renderLeftActions = useCallback(
@@ -44,6 +46,8 @@ export default function RecurringList({
           closeOpenSwipe();
           onEdit?.(item);
         }}
+        accessibilityRole="button"
+        accessibilityLabel={t("recurring.editAction")}
         style={({ pressed }) => [
           styles.action,
           {
@@ -70,6 +74,8 @@ export default function RecurringList({
           closeOpenSwipe();
           onDelete?.(item);
         }}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.delete")}
         style={({ pressed }) => [
           styles.action,
           { backgroundColor: colors.danger20, borderColor: colors.danger30 },
@@ -86,37 +92,48 @@ export default function RecurringList({
   const renderItem = ({ item }) => {
     const isSub = item.type === RecurringType.SUBSCRIPTION;
     const isDue = isSub && isDueTodayOrPast(item.nextDue);
+    const itemId = String(item?.id || "");
 
     return (
       <Swipeable
         ref={(ref) => {
-          item.__swipeRef = ref;
+          if (!itemId) return;
+          if (ref) {
+            swipeRefs.current[itemId] = ref;
+            return;
+          }
+          delete swipeRefs.current[itemId];
         }}
         renderLeftActions={() => renderLeftActions(item)}
         renderRightActions={() => renderRightActions(item)}
         overshootLeft={false}
         overshootRight={false}
         onSwipeableWillOpen={() => {
-          if (
-            openSwipeRef.current &&
-            openSwipeRef.current !== item.__swipeRef
-          ) {
-            openSwipeRef.current.close?.();
+          const openId = String(openSwipeIdRef.current || "");
+          if (openId && openId !== itemId) {
+            swipeRefs.current[openId]?.close?.();
           }
-          openSwipeRef.current = item.__swipeRef;
+          openSwipeIdRef.current = itemId || null;
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
             () => {},
           );
         }}
         onSwipeableWillClose={() => {
-          if (openSwipeRef.current === item.__swipeRef)
-            openSwipeRef.current = null;
+          if (String(openSwipeIdRef.current || "") === itemId) {
+            openSwipeIdRef.current = null;
+          }
         }}
       >
         <RecurringItem
           item={item}
           isDue={isDue}
-          onPress={() => onEdit?.(item)}
+          onPress={() => {
+            if (onOpenDetail) {
+              onOpenDetail(item);
+              return;
+            }
+            onEdit?.(item);
+          }}
           onQuickAction={() => {
             if (isSub) onQuickPay?.(item);
             else onQuickAdd?.(item);
@@ -148,7 +165,7 @@ function makeStyles(colors) {
   return StyleSheet.create({
     action: {
       width: 120,
-      marginVertical: 8,
+      marginVertical: 5,
       marginHorizontal: 10,
       borderRadius: 16,
       borderWidth: 1,
