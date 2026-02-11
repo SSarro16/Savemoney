@@ -20,6 +20,8 @@ export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
   const amount = Number(item?.amount || 0);
   const isSub = item?.type === RecurringType.SUBSCRIPTION;
   const isPaidSubscription = isSub && !isDue;
+  const typeLabel = isSub ? t("recurring.typeSubscription") : t("recurring.typeHabit");
+  const typeIcon = isSub ? "repeat-outline" : "flash-outline";
   const quickLabel = isSub
     ? isPaidSubscription
       ? t("recurring.quickPaid")
@@ -33,10 +35,18 @@ export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        isSub ? styles.cardSubscription : styles.cardHabit,
+        isDue && isSub && styles.cardDue,
         pressed && { opacity: 0.92, transform: [{ scale: 0.995 }] },
-        isDue && styles.cardDue,
       ]}
     >
+      <View
+        style={[
+          styles.typeRail,
+          isSub ? styles.typeRailSubscription : styles.typeRailHabit,
+          isDue && isSub && styles.typeRailDue,
+        ]}
+      />
       <View style={styles.left}>
         <View style={[styles.iconWrap, isDue && styles.iconWrapDue]}>
           {isEmoji(icon) ? (
@@ -47,11 +57,23 @@ export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
         </View>
 
         <View style={{ flex: 1 }}>
+          <View style={styles.metaRow}>
+            <View
+              style={[
+                styles.typeChip,
+                isSub ? styles.typeChipSubscription : styles.typeChipHabit,
+                isDue && isSub && styles.typeChipDue,
+              ]}
+            >
+              <Ionicons name={typeIcon} size={12} color={colors.textTitle} />
+              <Text style={styles.typeChipText}>{typeLabel}</Text>
+            </View>
+          </View>
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
           <Text style={styles.sub} numberOfLines={1}>
-            {isSub ? t("recurring.typeSubscription") : t("recurring.typeHabit")} - {amount.toFixed(2)} {t("common.currencyCode")}
+            {amount.toFixed(2)} {t("common.currencyCode")}
           </Text>
         </View>
       </View>
@@ -63,10 +85,18 @@ export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
           onQuickAction?.();
         }}
         disabled={isPaidSubscription}
+        accessibilityRole="button"
+        accessibilityLabel={
+          isSub
+            ? `${t("accessibility.quickPay")} ${title}`
+            : `${t("accessibility.quickAdd")} ${title}`
+        }
         style={({ pressed }) => [
           styles.quickBtn,
+          !isSub && styles.quickBtnHabit,
+          isSub && !isDue && !isPaidSubscription && styles.quickBtnSubscription,
           pressed && { opacity: 0.9 },
-          isDue && styles.quickBtnDue,
+          isSub && isDue && styles.quickBtnDue,
           isPaidSubscription && styles.quickBtnDisabled,
         ]}
       >
@@ -103,18 +133,32 @@ export default function RecurringItem({ item, isDue, onPress, onQuickAction }) {
 function makeStyles(colors) {
   return StyleSheet.create({
     card: {
+      position: "relative",
       padding: 12,
       borderRadius: 18,
-      backgroundColor: colors.white06,
       borderWidth: 1,
-      borderColor: colors.white10,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       gap: 12,
       marginBottom: 10,
     },
-    cardDue: { borderColor: colors.accent35, backgroundColor: colors.accent12 },
+    cardHabit: { borderColor: colors.accent30, backgroundColor: colors.accent12 },
+    cardSubscription: { borderColor: colors.white12, backgroundColor: colors.white06 },
+    cardDue: { borderColor: colors.accent35, backgroundColor: colors.accent16 },
+
+    typeRail: {
+      position: "absolute",
+      left: 0,
+      top: 10,
+      bottom: 10,
+      width: 4,
+      borderTopRightRadius: 8,
+      borderBottomRightRadius: 8,
+    },
+    typeRailHabit: { backgroundColor: colors.accent500 },
+    typeRailSubscription: { backgroundColor: colors.white35 },
+    typeRailDue: { backgroundColor: colors.accent500 },
 
     left: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
 
@@ -134,6 +178,30 @@ function makeStyles(colors) {
     },
     emoji: { fontSize: 18 },
 
+    metaRow: { marginBottom: 4 },
+    typeChip: {
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    typeChipHabit: {
+      backgroundColor: colors.accent18,
+      borderColor: colors.accent35,
+    },
+    typeChipSubscription: {
+      backgroundColor: colors.white08,
+      borderColor: colors.white16,
+    },
+    typeChipDue: {
+      backgroundColor: colors.accent18,
+      borderColor: colors.accent35,
+    },
+    typeChipText: { color: colors.textTitle, fontWeight: "900", fontSize: 10 },
     title: { color: colors.textTitle, fontWeight: "900" },
     sub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 12 },
 
@@ -141,12 +209,18 @@ function makeStyles(colors) {
       paddingVertical: 10,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: colors.accent18,
       borderWidth: 1,
-      borderColor: colors.accent35,
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
+    },
+    quickBtnHabit: {
+      backgroundColor: colors.white08,
+      borderColor: colors.white12,
+    },
+    quickBtnSubscription: {
+      backgroundColor: colors.accent18,
+      borderColor: colors.accent35,
     },
     quickBtnDue: {
       backgroundColor: colors.accent500,

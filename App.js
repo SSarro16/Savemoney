@@ -33,6 +33,7 @@ import ExpensesScreen from "./screens/HomeScreenStack/ExpensesScreen";
 import ManageExpenses from "./screens/HomeScreenStack/ManageExpenses";
 import QuickAddExpenseScreen from "./screens/HomeScreenStack/QuickAddExpenseScreen";
 import InsightsScreen from "./screens/HomeScreenStack/InsightsScreen";
+import ExpenseDetailScreen from "./screens/HomeScreenStack/ExpenseDetailScreen";
 
 import BudgetScreen from "./screens/DrawerScreens/BudgetScreen";
 import BudgetOverviewScreen from "./screens/DrawerScreens/BudgetOverviewScreen";
@@ -1168,6 +1169,11 @@ function AuthenticatedStack() {
         name="ManageExpenses"
         component={ManageExpenses}
         options={{ title: t("navigation.manageExpense"), presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="ExpenseDetail"
+        component={ExpenseDetailScreen}
+        options={{ title: t("navigation.expenseDetail") }}
       />
     </Stack.Navigator>
   );

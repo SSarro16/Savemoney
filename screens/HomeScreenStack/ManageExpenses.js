@@ -40,6 +40,7 @@ import {
 } from "../../util/expenses/expense-template";
 
 import { PAYMENT_METHOD } from "../../util/expenses/expense-presets";
+import { toUiErrorMessage } from "../../util/ui-error-message";
 
 function safePayMethod(v) {
   return v === PAYMENT_METHOD.CARD ? PAYMENT_METHOD.CARD : PAYMENT_METHOD.CASH;
@@ -174,7 +175,7 @@ function ManageExpenses({ route, navigation }) {
     } catch (saveError) {
       Alert.alert(
         t("common.error"),
-        saveError?.message || t("manageExpense.favoriteSaveFailed"),
+        toUiErrorMessage(saveError, t("manageExpense.favoriteSaveFailed"), t),
       );
     }
   }, [favoriteSaved, favoriteTemplateId, t, userId, token]);
@@ -222,6 +223,8 @@ function ManageExpenses({ route, navigation }) {
           <Pressable
             onPress={saveFavoriteHandler}
             disabled={isSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel={t("accessibility.saveExpenseTemplate")}
             style={({ pressed }) => [
               styles.saveBtn,
               favoriteSaved && styles.saveBtnSaved,
@@ -239,6 +242,8 @@ function ManageExpenses({ route, navigation }) {
           {isEditing ? (
             <Pressable
               onPress={confirmDelete}
+              accessibilityRole="button"
+              accessibilityLabel={t("accessibility.deleteExpense")}
               style={({ pressed }) => [
                 styles.trashBtn,
                 pressed && { opacity: 0.88 },

@@ -21,7 +21,7 @@ import { AuthContext } from "../../store/auth-context";
 import { CustomizationContext } from "../../store/customization-context";
 import { useTranslation } from "../../store/language-context";
 
-import LoadingOverlay from "../../components/ui/LoadingOverlay";
+import DataScreenSkeleton from "../../components/ui/DataScreenSkeleton";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 
 import {
@@ -39,6 +39,7 @@ import {
 } from "../../util/recurring/recurring-utils";
 import { PAYMENT_METHOD } from "../../util/expenses/expense-presets";
 import { normalizeIcon } from "../../util/expenses/expense-normalize";
+import { toUiErrorMessage } from "../../util/ui-error-message";
 
 const RETRY_DELAYS_MS = [0, 450, 900];
 const QUICK_RECURRING_TIMEOUT_MS = 2200;
@@ -69,6 +70,7 @@ function Row({
   subtitle,
   icon,
   onPress,
+  accessibilityLabel,
   highlight = false,
   compact = false,
   contrast = false,
@@ -78,6 +80,8 @@ function Row({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
       style={({ pressed }) => [
         styles.row,
         {
@@ -147,6 +151,8 @@ function SwipeTemplateRow({
             swipeRef.current?.close?.();
             onDelete?.(item);
           }}
+          accessibilityRole="button"
+          accessibilityLabel={t("quickAdd.deleteTemplateTitle")}
           style={({ pressed }) => [
             styles.deleteSwipeAction,
             pressed && { opacity: 0.9 },
@@ -177,6 +183,7 @@ function ActionButton({
   label,
   icon,
   onPress,
+  accessibilityLabel,
   variant = "accent",
   compact = false,
   colors,
@@ -188,6 +195,8 @@ function ActionButton({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || label}
       style={({ pressed }) => [
         styles.actionBtn,
         {
@@ -325,8 +334,8 @@ export default function QuickAddExpenseScreen({ navigation }) {
       ) {
         throw templatesResult.reason || recurringResult.reason || new Error(t("quickAdd.loadFailed"));
       }
-    } catch {
-      setError(t("quickAdd.loadFailed"));
+    } catch (loadError) {
+      setError(toUiErrorMessage(loadError, t("quickAdd.loadFailed"), t));
     } finally {
       setIsLoading(false);
     }
@@ -428,8 +437,11 @@ export default function QuickAddExpenseScreen({ navigation }) {
             const next = await removeExpenseTemplate(userId, token, id);
             setTemplates(Array.isArray(next) ? next : []);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          } catch {
-            Alert.alert(t("common.error"), t("quickAdd.deleteTemplateFailed"));
+          } catch (error) {
+            Alert.alert(
+              t("common.error"),
+              toUiErrorMessage(error, t("quickAdd.deleteTemplateFailed"), t),
+            );
           }
         },
       },
@@ -464,10 +476,10 @@ export default function QuickAddExpenseScreen({ navigation }) {
           try {
             await updateRecurringWithRetry(patch);
             Alert.alert(t("quickAdd.operationCompletedTitle"), t("quickAdd.recurringUpdated"));
-          } catch {
+          } catch (error) {
             Alert.alert(
               t("common.error"),
-              t("quickAdd.updateRecurringStillFailed"),
+              toUiErrorMessage(error, t("quickAdd.updateRecurringStillFailed"), t),
             );
           }
         },
@@ -504,8 +516,8 @@ export default function QuickAddExpenseScreen({ navigation }) {
         () => {},
       );
       close();
-    } catch {
-      setError(t("quickAdd.addExpenseFailed"));
+    } catch (error) {
+      setError(toUiErrorMessage(error, t("quickAdd.addExpenseFailed"), t));
     }
   };
 
@@ -538,8 +550,8 @@ export default function QuickAddExpenseScreen({ navigation }) {
         () => {},
       );
       close();
-    } catch {
-      setError(t("quickAdd.addExpenseFailed"));
+    } catch (error) {
+      setError(toUiErrorMessage(error, t("quickAdd.addExpenseFailed"), t));
     }
   };
 
@@ -591,10 +603,10 @@ export default function QuickAddExpenseScreen({ navigation }) {
                             await updateRecurringWithRetry(patch);
                           }
                           Alert.alert(t("quickAdd.operationCompletedTitle"), t("quickAdd.recurringsUpdated"));
-                        } catch {
+                        } catch (error) {
                           Alert.alert(
                             t("common.error"),
-                            t("quickAdd.someRecurringNotUpdated"),
+                            toUiErrorMessage(error, t("quickAdd.someRecurringNotUpdated"), t),
                           );
                         }
                       },
@@ -607,8 +619,8 @@ export default function QuickAddExpenseScreen({ navigation }) {
                 ).catch(() => {});
                 close();
               }
-            } catch {
-              setError(t("quickAdd.addAllDueFailed"));
+            } catch (error) {
+              setError(toUiErrorMessage(error, t("quickAdd.addAllDueFailed"), t));
             }
           },
         },
@@ -616,7 +628,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
     );
   };
 
-  if (isLoading) return <LoadingOverlay message={t("common.loading")} />;
+  if (isLoading) return <DataScreenSkeleton sections={3} compact={compactMode} />;
   if (error) {
     return <ErrorOverlay message={error} onRetry={loadAll} retryLabel={t("common.retry")} />;
   }
@@ -648,6 +660,8 @@ export default function QuickAddExpenseScreen({ navigation }) {
           </View>
           <Pressable
             onPress={close}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.close")}
             style={({ pressed }) => [
               styles.closeBtn,
               {
@@ -695,6 +709,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                 label={t("quickAdd.noRecurringAction")}
                 icon="sparkles-outline"
                 onPress={goToRecurring}
+                accessibilityLabel={t("accessibility.quickAdd")}
                 variant="accent"
                 compact={compactMode}
                 colors={colors}
@@ -713,6 +728,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                 label={t("quickAdd.addAllDueButton", { count: dueSubs.length })}
                 icon="checkmark-done-outline"
                 onPress={addAllDue}
+                accessibilityLabel={t("accessibility.quickPay")}
                 variant="accent"
                 compact={compactMode}
                 colors={colors}
@@ -727,6 +743,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                   icon={normalizeIcon(item.icon)}
                   highlight
                   onPress={() => quickPaySubscription(item)}
+                  accessibilityLabel={`${t("accessibility.quickPay")} ${item.title}`}
                   compact={compactMode}
                   contrast={highContrast}
                   colors={colors}
@@ -754,6 +771,7 @@ export default function QuickAddExpenseScreen({ navigation }) {
                   subtitle={`${Number(item.amount || 0).toFixed(2)} ${t("common.currencyCode")}`}
                   icon={normalizeIcon(item.icon)}
                   onPress={() => quickAddHabit(item)}
+                  accessibilityLabel={`${t("accessibility.quickAdd")} ${item.title}`}
                   compact={compactMode}
                   contrast={highContrast}
                   colors={colors}
@@ -782,31 +800,31 @@ export default function QuickAddExpenseScreen({ navigation }) {
                 </Text>
               </View>
             ) : (
-              (templates || []).slice(0, 10).map((t) => (
+              (templates || []).slice(0, 10).map((templateItem) => (
                 <SwipeTemplateRow
-                  key={t.id || t.title}
-                  item={t}
+                  key={templateItem.id || templateItem.title}
+                  item={templateItem}
                   onDelete={deleteTemplate}
                   onAdd={async () => {
                     try {
                       await addExpense({
-                        amount: t.amount,
-                        description: t.title || t.description,
-                        icon: t.icon,
-                        category: t.category,
-                        payMethod: t.payMethod,
-                        cardId: t.cardId,
-                        cashId: t.cashId,
-                        methodType: t.methodType,
-                        methodId: t.methodId,
+                        amount: templateItem.amount,
+                        description: templateItem.title || templateItem.description,
+                        icon: templateItem.icon,
+                        category: templateItem.category,
+                        payMethod: templateItem.payMethod,
+                        cardId: templateItem.cardId,
+                        cashId: templateItem.cashId,
+                        methodType: templateItem.methodType,
+                        methodId: templateItem.methodId,
                       });
 
                       Haptics.notificationAsync(
                         Haptics.NotificationFeedbackType.Success,
                       ).catch(() => {});
                       close();
-                    } catch {
-                      setError(t("quickAdd.addExpenseFailed"));
+                    } catch (error) {
+                      setError(toUiErrorMessage(error, t("quickAdd.addExpenseFailed"), t));
                     }
                   }}
                   compact={compactMode}

@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
 import { useThemeRefresh } from "../../store/theme-context";
-import LoadingOverlay from "../../components/ui/LoadingOverlay";
+import DataScreenSkeleton from "../../components/ui/DataScreenSkeleton";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 
 import { ExpensesContext } from "../../store/expenses-context";
@@ -37,6 +37,7 @@ import {
 } from "../../util/recurring/recurring-storage";
 import { syncRecurringReminderNotifications } from "../../util/notifications/recurring-reminders";
 import { logger } from "../../util/logger";
+import { toUiErrorMessage } from "../../util/ui-error-message";
 
 const RETRY_DELAYS_MS = [0, 450, 900];
 const LOAD_TIMEOUT_MS = 6000;
@@ -59,26 +60,7 @@ function isAuthHttpError(error) {
 }
 
 function toRecurringErrorMessage(error, t) {
-  const rawError = error?.response?.data?.error;
-  const raw =
-    typeof rawError === "string"
-      ? rawError.toLowerCase()
-      : String(rawError?.message || "").toLowerCase();
-
-  if (raw.includes("permission_denied") || raw.includes("permission denied")) {
-    return t("payments.permissionDenied");
-  }
-
-  if (
-    raw.includes("token expired") ||
-    raw.includes("id token expired") ||
-    raw.includes("invalid id token") ||
-    raw.includes("invalid token")
-  ) {
-    return t("payments.sessionExpired");
-  }
-
-  return error?.message || t("recurring.loadFailed");
+  return toUiErrorMessage(error, t("recurring.loadFailed"), t);
 }
 
 function makeRecurringPatch(item, type) {
@@ -100,11 +82,35 @@ function makeRecurringPatch(item, type) {
   };
 }
 
-export default function RecurringScreen() {
+function sanitizeRecurringForNavigation(item) {
+  if (!item || typeof item !== "object") return null;
+  return {
+    id: item.id ?? "",
+    type: item.type ?? RecurringType.HABIT,
+    title: item.title ?? "",
+    description: item.description ?? "",
+    amount: Number(item.amount || 0),
+    category: item.category ?? "Spese",
+    icon: item.icon ?? "repeat-outline",
+    cadence: item.cadence ?? "MONTHLY",
+    nextDue: item.nextDue ?? null,
+    lastPaidAt: item.lastPaidAt ?? null,
+    lastAddedAt: item.lastAddedAt ?? null,
+    createdAt: item.createdAt ?? null,
+    updatedAt: item.updatedAt ?? null,
+    methodType: item.methodType ?? item.payMethod ?? null,
+    methodId: item.methodId ?? null,
+    payMethod: item.payMethod ?? item.methodType ?? null,
+    cardId: item.cardId ?? null,
+    cashId: item.cashId ?? null,
+  };
+}
+
+export default function RecurringScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const expensesCtx = useContext(ExpensesContext);
   const authCtx = useContext(AuthContext);
-  const { recurringRemindersEnabled, recurringReminderHour } = useContext(CustomizationContext);
+  const { recurringRemindersEnabled, recurringReminderHour, compactMode } = useContext(CustomizationContext);
   useThemeRefresh();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
@@ -124,6 +130,7 @@ export default function RecurringScreen() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDefaults, setModalDefaults] = useState(null);
   const [showPaidSubscriptions, setShowPaidSubscriptions] = useState(false);
+  const lastEditRequestRef = useRef("");
 
   useEffect(() => {
     refreshSessionRef.current = refreshSession;
@@ -286,6 +293,42 @@ export default function RecurringScreen() {
     setModalOpen(true);
   };
 
+  useEffect(() => {
+    const editRecurringId = String(route?.params?.editRecurringId || "").trim();
+    if (!editRecurringId) return;
+
+    const requestId = String(route?.params?.requestId || "");
+    if (requestId && requestId === lastEditRequestRef.current) return;
+
+    const fromList = (items || []).find(
+      (entry) => String(entry?.id || "").trim() === editRecurringId,
+    );
+    const fallbackParam = route?.params?.recurringItem;
+    const target = fromList || fallbackParam;
+    if (!target) return;
+
+    lastEditRequestRef.current = requestId || editRecurringId;
+    openEdit(target);
+    navigation.setParams?.({
+      editRecurringId: undefined,
+      recurringItem: undefined,
+      requestId: undefined,
+    });
+  }, [route?.params, items, navigation]);
+
+  const openRecurringDetail = useCallback(
+    (item) => {
+      if (!item) return;
+      const safeRecurringItem = sanitizeRecurringForNavigation(item);
+      if (!safeRecurringItem) return;
+      navigation.navigate("ExpenseDetail", {
+        detailType: "RECURRING",
+        recurringItem: safeRecurringItem,
+      });
+    },
+    [navigation],
+  );
+
   const closeModal = () => {
     setModalOpen(false);
     setModalDefaults(null);
@@ -325,8 +368,11 @@ export default function RecurringScreen() {
         () => {},
       );
       closeModal();
-    } catch {
-      Alert.alert(t("common.error"), t("recurring.saveFailed"));
+    } catch (error) {
+      Alert.alert(
+        t("common.error"),
+        toUiErrorMessage(error, t("recurring.saveFailed"), t),
+      );
     }
   };
 
@@ -340,8 +386,11 @@ export default function RecurringScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
         () => {},
       );
-    } catch {
-      Alert.alert(t("common.error"), t("recurring.deleteFailed"));
+    } catch (error) {
+      Alert.alert(
+        t("common.error"),
+        toUiErrorMessage(error, t("recurring.deleteFailed"), t),
+      );
     }
   };
 
@@ -383,7 +432,7 @@ export default function RecurringScreen() {
               Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success,
               ).catch(() => {});
-            } catch {
+            } catch (error) {
               if (expenseAdded) {
                 setItems((prev) => prev);
                 Alert.alert(
@@ -397,10 +446,14 @@ export default function RecurringScreen() {
                         try {
                           await updateRecurringWithRetry(patch);
                           Alert.alert(t("recurring.operationCompletedTitle"), t("recurring.recurringUpdated"));
-                        } catch {
+                        } catch (errorRetry) {
                           Alert.alert(
                             t("common.error"),
-                            t("recurring.updateRecurringStillFailed"),
+                            toUiErrorMessage(
+                              errorRetry,
+                              t("recurring.updateRecurringStillFailed"),
+                              t,
+                            ),
                           );
                         }
                       },
@@ -409,7 +462,10 @@ export default function RecurringScreen() {
                 );
                 return;
               }
-              Alert.alert(t("common.error"), t("recurring.addExpenseFailed"));
+              Alert.alert(
+                t("common.error"),
+                toUiErrorMessage(error, t("recurring.addExpenseFailed"), t),
+              );
             }
           },
         },
@@ -455,7 +511,7 @@ export default function RecurringScreen() {
               Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success,
               ).catch(() => {});
-            } catch {
+            } catch (error) {
               if (expenseAdded) {
                 Alert.alert(
                   t("recurring.partialCompletedTitle"),
@@ -468,10 +524,14 @@ export default function RecurringScreen() {
                         try {
                           await updateRecurringWithRetry(patch);
                           Alert.alert(t("recurring.operationCompletedTitle"), t("recurring.recurringUpdated"));
-                        } catch {
+                        } catch (errorRetry) {
                           Alert.alert(
                             t("common.error"),
-                            t("recurring.updateRecurringStillFailed"),
+                            toUiErrorMessage(
+                              errorRetry,
+                              t("recurring.updateRecurringStillFailed"),
+                              t,
+                            ),
                           );
                         }
                       },
@@ -480,7 +540,10 @@ export default function RecurringScreen() {
                 );
                 return;
               }
-              Alert.alert(t("common.error"), t("recurring.payFailed"));
+              Alert.alert(
+                t("common.error"),
+                toUiErrorMessage(error, t("recurring.payFailed"), t),
+              );
             }
           },
         },
@@ -538,10 +601,14 @@ export default function RecurringScreen() {
                             await updateRecurringWithRetry(patch);
                           }
                           Alert.alert(t("recurring.operationCompletedTitle"), t("recurring.recurringsUpdated"));
-                        } catch {
+                        } catch (errorRetry) {
                           Alert.alert(
                             t("common.error"),
-                            t("recurring.someRecurringStillNotUpdated"),
+                            toUiErrorMessage(
+                              errorRetry,
+                              t("recurring.someRecurringStillNotUpdated"),
+                              t,
+                            ),
                           );
                         }
                       },
@@ -553,8 +620,11 @@ export default function RecurringScreen() {
                   Haptics.NotificationFeedbackType.Success,
                 ).catch(() => {});
               }
-            } catch {
-              Alert.alert(t("common.error"), t("recurring.addAllFailed"));
+            } catch (error) {
+              Alert.alert(
+                t("common.error"),
+                toUiErrorMessage(error, t("recurring.addAllFailed"), t),
+              );
             }
           },
         },
@@ -574,7 +644,9 @@ export default function RecurringScreen() {
     }
   };
 
-  if (isFetching) return <LoadingOverlay message={t("recurring.loading")} />;
+  if (isFetching) {
+    return <DataScreenSkeleton sections={3} compact={compactMode} />;
+  }
   if (error) {
     return <ErrorOverlay message={error} onRetry={retry} retryLabel={t("common.retry")} />;
   }
@@ -583,6 +655,7 @@ export default function RecurringScreen() {
     <View style={styles.container}>
       <RecurringList
         items={visibleItems}
+        onOpenDetail={openRecurringDetail}
         onEdit={openEdit}
         onDelete={handleDeleteRecurring}
         onQuickAdd={addExpenseFromHabit}

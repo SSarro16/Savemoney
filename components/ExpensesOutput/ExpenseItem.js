@@ -63,7 +63,10 @@ function ExpenseItem({
   }, [payMethod, methodId, cardId, cashId, paymentCtx, t]);
 
   function expensePressHandler() {
-    navigation.navigate("ManageExpenses", { expenseId: id });
+    navigation.navigate("ExpenseDetail", {
+      detailType: "EXPENSE",
+      expenseId: id,
+    });
   }
 
   return (
