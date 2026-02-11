@@ -1,4 +1,4 @@
-﻿import { getCurrentLocaleTag } from "../../store/language-context";
+import { getCurrentLocaleTag } from "../../store/language-context";
 
 export const RecurringType = {
   HABIT: "HABIT",

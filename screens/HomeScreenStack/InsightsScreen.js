@@ -146,7 +146,7 @@ export default function InsightsScreen() {
     return Array.from(map.entries())
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);
-  }, [filtered]);
+  }, [filtered, t]);
 
   const byMethod = useMemo(() => {
     const map = new Map();

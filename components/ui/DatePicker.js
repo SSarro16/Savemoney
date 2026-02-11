@@ -76,7 +76,7 @@ export default function CustomDatePicker({
       duration: 160,
       useNativeDriver: false,
     }).start();
-  }, [open]);
+  }, [open, focusAnim]);
 
   const openPicker = () => {
     if (disabled) return;

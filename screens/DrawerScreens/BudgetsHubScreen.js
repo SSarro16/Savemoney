@@ -154,7 +154,7 @@ export default function BudgetsHubScreen({ navigation }) {
         hasLoadedRef.current = true;
       }
     },
-    [userId, withAuthRetry],
+    [userId, withAuthRetry, t],
   );
 
   useFocusEffect(

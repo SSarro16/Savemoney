@@ -394,9 +394,7 @@ export default function ExpensesContextProvider({ children }) {
       ensureAuth,
       userId,
       budgetCtx,
-      paymentCtx?.defaultCashWalletId,
-      paymentCtx?.applyCashExpense,
-      paymentCtx?.applyCardExpense,
+      paymentCtx,
       withAuthRetry,
     ],
   );
@@ -486,9 +484,7 @@ export default function ExpensesContextProvider({ children }) {
       ensureAuth,
       userId,
       budgetCtx?.budgetId,
-      paymentCtx?.defaultCashWalletId,
-      paymentCtx?.applyCashExpense,
-      paymentCtx?.applyCardExpense,
+      paymentCtx,
       withAuthRetry,
     ],
   );
@@ -529,9 +525,7 @@ export default function ExpensesContextProvider({ children }) {
     [
       ensureAuth,
       userId,
-      paymentCtx?.defaultCashWalletId,
-      paymentCtx?.applyCashExpense,
-      paymentCtx?.applyCardExpense,
+      paymentCtx,
       withAuthRetry,
     ],
   );
@@ -623,9 +617,7 @@ export default function ExpensesContextProvider({ children }) {
     [
       ensureAuth,
       userId,
-      paymentCtx?.defaultCashWalletId,
-      paymentCtx?.applyCashExpense,
-      paymentCtx?.applyCardExpense,
+      paymentCtx,
       withAuthRetry,
     ],
   );
