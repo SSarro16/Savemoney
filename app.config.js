@@ -25,6 +25,11 @@ function buildSentryPluginConfig() {
     }
   }
 
+  const hasCompleteSentryConfig = Boolean(organization && project && authToken);
+  if (!hasCompleteSentryConfig) {
+    return null;
+  }
+
   return {
     organization,
     project,
@@ -41,7 +46,10 @@ module.exports = ({ config }) => {
     return name !== "@sentry/react-native" && name !== "@sentry/react-native/expo";
   });
 
-  plugins.push(["@sentry/react-native/expo", buildSentryPluginConfig()]);
+  const sentryPluginConfig = buildSentryPluginConfig();
+  if (sentryPluginConfig) {
+    plugins.push(["@sentry/react-native/expo", sentryPluginConfig]);
+  }
 
   return {
     ...base,
