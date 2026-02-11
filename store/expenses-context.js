@@ -113,14 +113,17 @@ function expensesReducer(state, action) {
     case "SET":
       return sortByDateDesc(action.payload);
     case "UPDATE": {
-      const index = state.findIndex((e) => e.id === action.payload.id);
+      const targetId = String(action.payload.id ?? "");
+      const index = state.findIndex((e) => String(e?.id ?? "") === targetId);
       if (index < 0) return state;
       const updated = [...state];
       updated[index] = { ...updated[index], ...action.payload.data };
       return sortByDateDesc(updated);
     }
     case "DELETE":
-      return state.filter((e) => e.id !== action.payload);
+      return state.filter(
+        (e) => String(e?.id ?? "") !== String(action.payload ?? ""),
+      );
     default:
       return state;
   }
@@ -492,10 +495,12 @@ export default function ExpensesContextProvider({ children }) {
   const deleteExpenseHandler = useCallback(
     async (id) => {
       ensureAuth();
-      const prev = expensesRef.current.find((e) => e.id === id) || null;
+      const targetId = String(id ?? "");
+      const prev =
+        expensesRef.current.find((e) => String(e?.id ?? "") === targetId) || null;
 
-      await withAuthRetry((t) => deleteExpense(userId, t, id));
-      dispatch({ type: "DELETE", payload: id });
+      await withAuthRetry((t) => deleteExpense(userId, t, targetId));
+      dispatch({ type: "DELETE", payload: targetId });
 
       if (prev) {
         const prevMethodType = safePayMethod(prev?.methodType || prev?.payMethod);
@@ -534,19 +539,24 @@ export default function ExpensesContextProvider({ children }) {
     async (id, delayMs = 4500) => {
       ensureAuth();
 
-      const toDelete = expensesRef.current.find((e) => e.id === id);
+      const targetId = String(id ?? "");
+      if (!targetId) return;
+
+      const toDelete = expensesRef.current.find(
+        (e) => String(e?.id ?? "") === targetId,
+      );
       if (!toDelete) return;
 
       const snapshot = makeSnapshot(toDelete);
-      const opId = `${id}_${Date.now()}`;
+      const opId = `${targetId}_${Date.now()}`;
 
-      const oldOp = pendingDeletesRef.current.get(id);
+      const oldOp = pendingDeletesRef.current.get(targetId);
       if (oldOp?.timerId) clearTimeout(oldOp.timerId);
 
-      dispatch({ type: "DELETE", payload: id });
+      dispatch({ type: "DELETE", payload: targetId });
 
       const op = {
-        id,
+        id: targetId,
         opId,
         snapshot,
         undone: false,
@@ -557,10 +567,12 @@ export default function ExpensesContextProvider({ children }) {
       const commitDelete = async () => {
         op.status = "committing";
         try {
-          await withAuthRetry((t) => deleteExpense(userId, t, id));
+          await withAuthRetry((t) => deleteExpense(userId, t, targetId));
 
           if (op.undone) {
-            await withAuthRetry((t) => upsertExpenseById(userId, t, id, op.snapshot));
+            await withAuthRetry((t) =>
+              upsertExpenseById(userId, t, targetId, op.snapshot),
+            );
           } else {
             const prevMethodType = safePayMethod(
               op.snapshot?.methodType || op.snapshot?.payMethod,
@@ -593,7 +605,7 @@ export default function ExpensesContextProvider({ children }) {
           }
         } finally {
           op.status = "done";
-          pendingDeletesRef.current.delete(id);
+          pendingDeletesRef.current.delete(targetId);
           if (lastDeletedRef.current?.opId === opId) {
             lastDeletedRef.current = null;
             setCanUndo(false);
@@ -605,10 +617,10 @@ export default function ExpensesContextProvider({ children }) {
         commitDelete().catch(() => {});
       }, delayMs);
 
-      pendingDeletesRef.current.set(id, op);
+      pendingDeletesRef.current.set(targetId, op);
       lastDeletedRef.current = {
         opId,
-        id,
+        id: targetId,
         expense: snapshot,
         deletedAt: Date.now(),
       };

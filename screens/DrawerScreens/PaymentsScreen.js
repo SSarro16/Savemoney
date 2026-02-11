@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { GlobalStyles } from "../../constants/styles";
 import { useThemeRefresh } from "../../store/theme-context";
@@ -21,6 +22,7 @@ import { ExpensesContext } from "../../store/expenses-context";
 import { useTranslation } from "../../store/language-context";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { formatDateIT } from "../../util/date";
+import { toUiErrorMessage } from "../../util/ui-error-message";
 
 function emptyCardDraft() {
   return { id: "", name: "", brand: "", last4: "", balance: "" };
@@ -36,34 +38,6 @@ function parseAmount(value) {
     .replace(/[^\d.-]/g, "");
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
-}
-
-function toUiErrorMessage(error, fallback, t) {
-  const status = Number(error?.response?.status || 0);
-  const rawError = error?.response?.data?.error;
-  const raw =
-    typeof rawError === "string"
-      ? rawError.toLowerCase()
-      : String(rawError?.message || "").toLowerCase();
-
-  if (raw.includes("permission_denied") || raw.includes("permission denied")) {
-    return t("payments.permissionDenied");
-  }
-
-  if (
-    raw.includes("token expired") ||
-    raw.includes("id token expired") ||
-    raw.includes("invalid id token") ||
-    raw.includes("invalid token")
-  ) {
-    return t("payments.sessionExpired");
-  }
-
-  if (status === 401 || status === 403) {
-    return t("payments.unauthorized");
-  }
-
-  return error?.message || fallback;
 }
 
 function SectionHeader({ icon, title, subtitle, onAdd, colors, styles }) {
@@ -96,6 +70,8 @@ export default function PaymentsScreen({ navigation }) {
   const paymentCtx = useContext(PaymentContext);
   const expensesCtx = useContext(ExpensesContext);
   const { t } = useTranslation();
+  const refreshPayments = paymentCtx.refreshPayments;
+  const refreshExpenses = expensesCtx.fetchAndSetExpenses;
 
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [cardDraft, setCardDraft] = useState(emptyCardDraft());
@@ -104,6 +80,24 @@ export default function PaymentsScreen({ navigation }) {
   const [cashDraft, setCashDraft] = useState(emptyCashDraft());
 
   const [saving, setSaving] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+
+      (async () => {
+        if (!active) return;
+        await Promise.allSettled([
+          refreshExpenses?.(),
+          refreshPayments?.(),
+        ]);
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, [refreshExpenses, refreshPayments]),
+  );
 
   const openMethodDetails = (methodType, methodId) => {
     const id = String(methodId || "").trim();
