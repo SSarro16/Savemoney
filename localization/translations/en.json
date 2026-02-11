@@ -21,7 +21,16 @@
     "english": "English",
     "saved": "Saved",
     "error": "Error",
-    "currencyCode": "EUR"
+    "currencyCode": "EUR",
+    "networkUnavailable": "No network or unstable connection. Check connectivity and try again.",
+    "requestTimeout": "The request took too long. Please try again."
+  },
+  "accessibility": {
+    "saveExpenseTemplate": "Save expense template",
+    "deleteExpense": "Delete expense",
+    "quickAdd": "Quick add",
+    "quickPay": "Quick pay",
+    "exportMonthlyReport": "Export monthly report"
   },
   "drawer": {
     "sectionOperations": "Operations",
@@ -83,6 +92,7 @@
   "navigation": {
     "insights": "Insights",
     "manageExpense": "Manage Expense",
+    "expenseDetail": "Detail",
     "editBudget": "Edit Budget",
     "recurringHome": "Recurring",
     "paymentsHome": "Cards and Cash",
@@ -414,6 +424,24 @@
     "secureSaving": "Secure save",
     "updateAction": "Update"
   },
+  "expenseDetail": {
+    "notFound": "Detail unavailable: item not found.",
+    "expenseLabel": "Expense",
+    "recurringFallback": "Recurring",
+    "mainDetails": "Main details",
+    "amount": "Amount",
+    "date": "Date",
+    "nextDue": "Next due date",
+    "category": "Category",
+    "paymentMethod": "Payment method",
+    "cadence": "Frequency",
+    "activity": "Activity",
+    "lastAction": "Last action",
+    "notes": "Notes",
+    "noNotes": "No notes available.",
+    "notAvailable": "N/A",
+    "editAction": "Edit"
+  },
   "goals": {
     "heroTitle": "Goals",
     "savedOnTarget": "{{saved}} of {{target}}",
@@ -464,7 +492,7 @@
     "exportMonth": "Export month",
     "exporting": "Exporting...",
     "reportCreatedTitle": "Report created",
-    "reportCreatedMessage": "{{count}} entries - Total {{total}} {{currency}}",
+    "reportCreatedMessage": "{{count}} entries - Total {{total}}",
     "reportFailedMessage": "Unable to create report."
   },
   "quickAdd": {
@@ -635,6 +663,8 @@
     "cadenceMonthly": "Monthly",
     "cadenceYearly": "Yearly",
     "nextDueLabel": "Next due date",
+    "noDueForHabit": "No due date",
+    "noDueHabitHint": "Habits do not have a due date. The app records each action based on your selected frequency.",
     "notesLabel": "Notes (optional)",
     "notesPlaceholder": "e.g. every 1st of the month",
     "selectIconTitle": "Select recurring icon",
