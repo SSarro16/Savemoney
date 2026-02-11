@@ -6,13 +6,28 @@ import { GlobalStyles } from "../../constants/styles";
 import { useTranslation } from "../../store/language-context";
 import RecurringTimeline from "./RecurringTimeline";
 
-function ActionCard({ title, subtitle, icon, onPress, styles, colors }) {
+function ActionCard({
+  title,
+  subtitle,
+  icon,
+  onPress,
+  variant = "neutral",
+  styles,
+  colors,
+}) {
+  const isHabit = variant === "habit";
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.9 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}`}
+      style={({ pressed }) => [
+        styles.actionCard,
+        isHabit && styles.actionCardHabit,
+        pressed && { opacity: 0.9 },
+      ]}
     >
-      <View style={styles.actionIcon}>
+      <View style={[styles.actionIcon, isHabit && styles.actionIconHabit]}>
         <Ionicons name={icon} size={17} color={colors.textTitle} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -90,6 +105,7 @@ export default function RecurringOutputHeader({
           title={t("recurring.newHabitTitle")}
           subtitle={t("recurring.newHabitSubtitle")}
           icon="flash-outline"
+          variant="habit"
           onPress={onCreateHabit}
           styles={styles}
           colors={colors}
@@ -107,6 +123,8 @@ export default function RecurringOutputHeader({
       {!!dueCount ? (
         <Pressable
           onPress={onAddAllDue}
+          accessibilityRole="button"
+          accessibilityLabel={t("accessibility.quickPay")}
           style={({ pressed }) => [styles.addAllBtn, pressed && { opacity: 0.9 }]}
         >
           <Ionicons name="checkmark-done-outline" size={18} color={colors.textOnAccentStrong} />
@@ -213,14 +231,18 @@ function makeStyles(colors) {
     actionCard: {
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.white10,
-      backgroundColor: colors.white06,
-      paddingVertical: 10,
-      paddingHorizontal: 10,
-      flexDirection: "row",
+          borderColor: colors.white10,
+          backgroundColor: colors.white06,
+          paddingVertical: 10,
+          paddingHorizontal: 10,
+          flexDirection: "row",
       alignItems: "center",
       gap: 9,
       minHeight: 58,
+    },
+    actionCardHabit: {
+      backgroundColor: colors.accent12,
+      borderColor: colors.accent30,
     },
     actionIcon: {
       width: 34,
@@ -231,6 +253,10 @@ function makeStyles(colors) {
       borderColor: colors.accent35,
       alignItems: "center",
       justifyContent: "center",
+    },
+    actionIconHabit: {
+      backgroundColor: colors.accent500,
+      borderColor: colors.accent30,
     },
     actionTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 13 },
     actionSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 11 },

@@ -1,5 +1,13 @@
 import React, { useContext, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ExpensesContext } from "../../store/expenses-context";
@@ -9,6 +17,7 @@ import { CustomizationContext } from "../../store/customization-context";
 import { exportCurrentMonthCsv } from "../../util/reports/monthly-csv-export";
 import { logger } from "../../util/logger";
 import { useTranslation } from "../../store/language-context";
+import DataScreenSkeleton from "../../components/ui/DataScreenSkeleton";
 
 const PRESETS = {
   DAYS_7: "DAYS_7",
@@ -45,11 +54,6 @@ function getPresetRange(preset) {
     return { from: startOfDay(d), to: today };
   }
   return { from: null, to: null };
-}
-
-function euro(n) {
-  const v = Number(n || 0);
-  return `${v.toFixed(2)} EUR`;
 }
 
 function PresetPill({ label, active, onPress, styles, colors }) {
@@ -112,12 +116,37 @@ export default function InsightsScreen() {
   const { compactMode } = useContext(CustomizationContext);
   useThemeRefresh();
   const colors = GlobalStyles.colors;
-  const styles = makeStyles(colors, compactMode);
-  const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isSmallMobile = width < 360;
+  const styles = makeStyles(colors, compactMode, isSmallMobile);
+  const { t, localeTag } = useTranslation();
 
   const [preset, setPreset] = useState(PRESETS.DAYS_7);
   const [exporting, setExporting] = useState(false);
   const range = useMemo(() => getPresetRange(preset), [preset]);
+  const currencyCode = String(t("common.currencyCode") || "EUR").trim() || "EUR";
+
+  const moneyFormatter = useMemo(() => {
+    try {
+      return new Intl.NumberFormat(localeTag || "it-IT", {
+        style: "currency",
+        currency: currencyCode,
+      });
+    } catch {
+      return new Intl.NumberFormat("it-IT", {
+        style: "currency",
+        currency: "EUR",
+      });
+    }
+  }, [localeTag, currencyCode]);
+
+  const formatMoney = useMemo(
+    () => (value) => {
+      const safeValue = Number(value || 0);
+      return moneyFormatter.format(Number.isFinite(safeValue) ? safeValue : 0);
+    },
+    [moneyFormatter],
+  );
 
   const filtered = useMemo(() => {
     const { from, to } = range;
@@ -190,7 +219,10 @@ export default function InsightsScreen() {
       const result = await exportCurrentMonthCsv(expensesCtx.expenses || []);
       Alert.alert(
         t("insights.reportCreatedTitle"),
-        t("insights.reportCreatedMessage", { count: result.count, total: euro(result.total) }),
+        t("insights.reportCreatedMessage", {
+          count: result.count,
+          total: formatMoney(result.total),
+        }),
       );
     } catch (error) {
       logger.warn("Monthly CSV export failed", error);
@@ -199,6 +231,10 @@ export default function InsightsScreen() {
       setExporting(false);
     }
   };
+
+  if (!Array.isArray(expensesCtx.expenses)) {
+    return <DataScreenSkeleton sections={3} compact={compactMode} />;
+  }
 
   return (
     <ScrollView
@@ -219,6 +255,8 @@ export default function InsightsScreen() {
           </View>
           <Pressable
             onPress={handleExportMonthlyCsv}
+            accessibilityRole="button"
+            accessibilityLabel={t("accessibility.exportMonthlyReport")}
             style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.88 }]}
           >
             <Ionicons name="download-outline" size={14} color={colors.textTitle} />
@@ -257,7 +295,7 @@ export default function InsightsScreen() {
         <MetricTile
           icon="wallet-outline"
           label={t("insights.totalPeriod")}
-          value={euro(total)}
+          value={formatMoney(total)}
           sub={t("insights.movementsCount", { count: filtered.length })}
           styles={styles}
           colors={colors}
@@ -265,7 +303,7 @@ export default function InsightsScreen() {
         <MetricTile
           icon="stats-chart-outline"
           label={t("insights.averageTicket")}
-          value={euro(averageSpend)}
+          value={formatMoney(averageSpend)}
           sub={filtered.length ? t("insights.perMovement") : t("insights.noData")}
           styles={styles}
           colors={colors}
@@ -274,7 +312,7 @@ export default function InsightsScreen() {
           icon="ribbon-outline"
           label={t("insights.topCategory")}
           value={topCategory?.category || t("common.none")}
-          sub={topCategory ? euro(topCategory.amount) : ""}
+          sub={topCategory ? formatMoney(topCategory.amount) : ""}
           styles={styles}
           colors={colors}
         />
@@ -297,7 +335,7 @@ export default function InsightsScreen() {
                     <Text style={styles.rankLabel} numberOfLines={1}>
                       {item.category}
                     </Text>
-                    <Text style={styles.rankValue}>{euro(item.amount)}</Text>
+                    <Text style={styles.rankValue}>{formatMoney(item.amount)}</Text>
                   </View>
                   <View style={styles.rankTrack}>
                     <View style={[styles.rankFill, { width: `${relative}%` }]} />
@@ -314,12 +352,12 @@ export default function InsightsScreen() {
         <View style={styles.methodGrid}>
           <View style={styles.methodCard}>
             <Text style={styles.methodLabel}>{t("expensesOutput.card")}</Text>
-            <Text style={styles.methodValue}>{euro(cardAmount)}</Text>
+            <Text style={styles.methodValue}>{formatMoney(cardAmount)}</Text>
             <Text style={styles.methodSub}>{t("insights.percentOfTotal", { percent: cardPct })}</Text>
           </View>
           <View style={styles.methodCard}>
             <Text style={styles.methodLabel}>{t("expensesOutput.cash")}</Text>
-            <Text style={styles.methodValue}>{euro(cashAmount)}</Text>
+            <Text style={styles.methodValue}>{formatMoney(cashAmount)}</Text>
             <Text style={styles.methodSub}>{t("insights.percentOfTotal", { percent: cashPct })}</Text>
           </View>
         </View>
@@ -338,7 +376,7 @@ export default function InsightsScreen() {
                 <Text style={styles.topDesc} numberOfLines={1}>
                   {item.desc}
                 </Text>
-                <Text style={styles.topAmount}>{euro(item.amount)}</Text>
+                <Text style={styles.topAmount}>{formatMoney(item.amount)}</Text>
               </View>
             ))}
           </View>
@@ -348,13 +386,18 @@ export default function InsightsScreen() {
   );
 }
 
-function makeStyles(colors, compactMode) {
+function makeStyles(colors, compactMode, isSmallMobile) {
+  const pagePadding = compactMode ? 12 : isSmallMobile ? 12 : 16;
+  const sectionPadding = isSmallMobile ? 10 : 12;
+  const metricWidth = isSmallMobile ? "100%" : "48%";
+  const metricValueSize = isSmallMobile ? 13 : 14;
+
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.bg },
     content: {
-      padding: compactMode ? 12 : 16,
+      padding: pagePadding,
       paddingBottom: 28,
-      gap: 12,
+      gap: isSmallMobile ? 10 : 12,
     },
 
     heroCard: {
@@ -362,7 +405,7 @@ function makeStyles(colors, compactMode) {
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface,
-      padding: 12,
+      padding: sectionPadding,
       overflow: "hidden",
       position: "relative",
     },
@@ -393,26 +436,26 @@ function makeStyles(colors, compactMode) {
     heroTitle: {
       color: colors.textTitle,
       fontWeight: "900",
-      fontSize: 19,
+      fontSize: isSmallMobile ? 17 : 19,
     },
     heroSub: {
       marginTop: 2,
       color: colors.textMuted,
       fontWeight: "700",
-      fontSize: 12,
+      fontSize: isSmallMobile ? 11 : 12,
     },
     exportBtn: {
       borderRadius: 11,
       borderWidth: 1,
       borderColor: colors.white12,
       backgroundColor: colors.surface2,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
+      paddingHorizontal: isSmallMobile ? 8 : 10,
+      paddingVertical: isSmallMobile ? 7 : 8,
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
     },
-    exportBtnText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
+    exportBtnText: { color: colors.textTitle, fontWeight: "900", fontSize: isSmallMobile ? 10 : 11 },
     presetRow: {
       marginTop: 12,
       flexDirection: "row",
@@ -424,28 +467,28 @@ function makeStyles(colors, compactMode) {
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.white06,
-      paddingVertical: 9,
+      paddingVertical: isSmallMobile ? 8 : 9,
       alignItems: "center",
     },
     presetPillActive: {
       borderColor: colors.accent35,
       backgroundColor: colors.accent18,
     },
-    presetPillText: { fontWeight: "900", fontSize: 12 },
+    presetPillText: { fontWeight: "900", fontSize: isSmallMobile ? 11 : 12 },
 
     metricsGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: 10,
+      gap: isSmallMobile ? 8 : 10,
     },
     metricTile: {
-      width: "48%",
+      width: metricWidth,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface,
-      paddingVertical: 10,
-      paddingHorizontal: 10,
+      paddingVertical: isSmallMobile ? 8 : 10,
+      paddingHorizontal: isSmallMobile ? 9 : 10,
     },
     metricIcon: {
       width: 30,
@@ -458,8 +501,8 @@ function makeStyles(colors, compactMode) {
       justifyContent: "center",
       marginBottom: 7,
     },
-    metricLabel: { color: colors.textMuted, fontWeight: "900", fontSize: 11 },
-    metricValue: { marginTop: 2, color: colors.textTitle, fontWeight: "900", fontSize: 14 },
+    metricLabel: { color: colors.textMuted, fontWeight: "900", fontSize: isSmallMobile ? 10 : 11 },
+    metricValue: { marginTop: 2, color: colors.textTitle, fontWeight: "900", fontSize: metricValueSize },
     metricSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 11 },
 
     sectionCard: {
@@ -467,8 +510,8 @@ function makeStyles(colors, compactMode) {
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface,
-      paddingVertical: 12,
-      paddingHorizontal: 12,
+      paddingVertical: isSmallMobile ? 10 : 12,
+      paddingHorizontal: sectionPadding,
     },
     sectionHeader: {
       flexDirection: "row",
@@ -486,11 +529,11 @@ function makeStyles(colors, compactMode) {
       alignItems: "center",
       justifyContent: "center",
     },
-    sectionTitle: { color: colors.textTitle, fontWeight: "900", fontSize: 14 },
+    sectionTitle: { color: colors.textTitle, fontWeight: "900", fontSize: isSmallMobile ? 13 : 14 },
     emptyText: { color: colors.textFaint, fontWeight: "700", fontSize: 12 },
 
-    rankWrap: { gap: 10 },
-    rankRow: { gap: 5 },
+    rankWrap: { gap: isSmallMobile ? 8 : 10 },
+    rankRow: { gap: isSmallMobile ? 4 : 5 },
     rankHead: { flexDirection: "row", alignItems: "center", gap: 8 },
     rankBadge: {
       width: 22,
@@ -503,8 +546,8 @@ function makeStyles(colors, compactMode) {
       justifyContent: "center",
     },
     rankBadgeText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
-    rankLabel: { flex: 1, color: colors.textTitle, fontWeight: "800", fontSize: 12 },
-    rankValue: { color: colors.accent500, fontWeight: "900", fontSize: 12 },
+    rankLabel: { flex: 1, color: colors.textTitle, fontWeight: "800", fontSize: isSmallMobile ? 11 : 12 },
+    rankValue: { color: colors.accent500, fontWeight: "900", fontSize: isSmallMobile ? 11 : 12 },
     rankTrack: {
       height: 9,
       borderRadius: 999,
@@ -514,21 +557,21 @@ function makeStyles(colors, compactMode) {
       overflow: "hidden",
     },
     rankFill: { height: "100%", borderRadius: 999, backgroundColor: colors.accent500 },
-    rankShare: { color: colors.textMuted, fontWeight: "700", fontSize: 11 },
+    rankShare: { color: colors.textMuted, fontWeight: "700", fontSize: isSmallMobile ? 10 : 11 },
 
-    methodGrid: { flexDirection: "row", gap: 10 },
+    methodGrid: { flexDirection: isSmallMobile ? "column" : "row", gap: 10 },
     methodCard: {
       flex: 1,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface2,
-      paddingVertical: 10,
-      paddingHorizontal: 10,
+      paddingVertical: isSmallMobile ? 9 : 10,
+      paddingHorizontal: isSmallMobile ? 9 : 10,
     },
-    methodLabel: { color: colors.textMuted, fontWeight: "800", fontSize: 12 },
-    methodValue: { marginTop: 3, color: colors.textTitle, fontWeight: "900", fontSize: 14 },
-    methodSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: 11 },
+    methodLabel: { color: colors.textMuted, fontWeight: "800", fontSize: isSmallMobile ? 11 : 12 },
+    methodValue: { marginTop: 3, color: colors.textTitle, fontWeight: "900", fontSize: metricValueSize },
+    methodSub: { marginTop: 2, color: colors.textMuted, fontWeight: "700", fontSize: isSmallMobile ? 10 : 11 },
 
     topList: { gap: 8 },
     topRow: {
@@ -536,8 +579,8 @@ function makeStyles(colors, compactMode) {
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface2,
-      paddingVertical: 9,
-      paddingHorizontal: 9,
+      paddingVertical: isSmallMobile ? 8 : 9,
+      paddingHorizontal: isSmallMobile ? 8 : 9,
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
@@ -553,7 +596,7 @@ function makeStyles(colors, compactMode) {
       justifyContent: "center",
     },
     topRankText: { color: colors.textTitle, fontWeight: "900", fontSize: 11 },
-    topDesc: { flex: 1, color: colors.textTitle, fontWeight: "800", fontSize: 12 },
-    topAmount: { color: colors.textBody, fontWeight: "900", fontSize: 12 },
+    topDesc: { flex: 1, color: colors.textTitle, fontWeight: "800", fontSize: isSmallMobile ? 11 : 12 },
+    topAmount: { color: colors.textBody, fontWeight: "900", fontSize: isSmallMobile ? 11 : 12 },
   });
 }

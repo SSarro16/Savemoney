@@ -9,6 +9,8 @@ export default function CButton({
   type = "primary",
   mode,
   disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
 }) {
   const colors = GlobalStyles.colors;
 
@@ -55,6 +57,9 @@ export default function CButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || String(text || "")}
+      accessibilityHint={accessibilityHint}
       onPressIn={() => animateTo(1)}
       onPressOut={() => animateTo(0)}
       style={styles.outer}

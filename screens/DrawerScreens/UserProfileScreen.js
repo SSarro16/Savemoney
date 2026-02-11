@@ -25,6 +25,7 @@ import AppLogo from "../../components/ui/AppLogo";
 import Button from "../../components/ui/CButton";
 import CustomDatePicker from "../../components/ui/DatePicker";
 import { useTranslation } from "../../store/language-context";
+import { toUiErrorMessage } from "../../util/ui-error-message";
 
 function isAuthHttpError(error) {
   const status = Number(error?.response?.status || 0);
@@ -72,6 +73,8 @@ function QuickAction({ icon, title, subtitle, onPress, colors, styles }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
       style={({ pressed }) => [
         styles.actionCard,
         {
@@ -278,8 +281,11 @@ export default function UserProfileScreen({ navigation }) {
           total: Number(result.total || 0).toFixed(2),
         }),
       );
-    } catch {
-      Alert.alert(t("profile.exportFailedTitle"), t("profile.exportFailedMessage"));
+    } catch (error) {
+      Alert.alert(
+        t("profile.exportFailedTitle"),
+        toUiErrorMessage(error, t("profile.exportFailedMessage"), t),
+      );
     } finally {
       setIsExporting(false);
     }
@@ -318,7 +324,7 @@ export default function UserProfileScreen({ navigation }) {
       }
       Alert.alert(
         t("profile.profileUpdateFailedTitle"),
-        t("profile.profileUpdateFailedMessage"),
+        toUiErrorMessage(error, t("profile.profileUpdateFailedMessage"), t),
       );
     } finally {
       setIsSavingProfile(false);
