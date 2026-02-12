@@ -46,6 +46,40 @@ function safePayMethod(v) {
   return v === PAYMENT_METHOD.CARD ? PAYMENT_METHOD.CARD : PAYMENT_METHOD.CASH;
 }
 
+function normalizeMethodId(value) {
+  return String(value || "").trim();
+}
+
+function getDefaultCashMethodId(cashWallets = [], defaultCashWalletId = "") {
+  const list = Array.isArray(cashWallets) ? cashWallets : [];
+  const defaultId =
+    normalizeMethodId(defaultCashWalletId) ||
+    normalizeMethodId(list.find((wallet) => wallet?.isDefault)?.id) ||
+    normalizeMethodId(list[0]?.id);
+  return defaultId;
+}
+
+function resolveCashMethodId(candidate, cashWallets = [], defaultCashWalletId = "") {
+  const list = Array.isArray(cashWallets) ? cashWallets : [];
+  const candidateId = normalizeMethodId(candidate);
+  if (candidateId && list.some((wallet) => normalizeMethodId(wallet?.id) === candidateId)) {
+    return candidateId;
+  }
+  return getDefaultCashMethodId(list, defaultCashWalletId);
+}
+
+function resolveCardMethodId(candidate, cards = []) {
+  const list = Array.isArray(cards) ? cards : [];
+  const candidateId = normalizeMethodId(candidate);
+  if (candidateId && list.some((card) => normalizeMethodId(card?.id) === candidateId)) {
+    return candidateId;
+  }
+  if (list.length === 1) {
+    return normalizeMethodId(list[0]?.id);
+  }
+  return "";
+}
+
 function formatCompactDate(value, localeTag) {
   const date = value instanceof Date ? value : new Date(value);
   if (!date || Number.isNaN(date.getTime())) return "-";
@@ -85,6 +119,10 @@ const ExpenseForm = forwardRef(function ExpenseForm(
       defaultValues?.cashId ||
       "",
   ).trim();
+  const initialResolvedMethodId =
+    initialPayMethod === PAYMENT_METHOD.CARD
+      ? resolveCardMethodId(initialMethodId, cards)
+      : resolveCashMethodId(initialMethodId, cashWallets, defaultCashWalletId);
 
   const [inputs, setInputs] = useState({
     amount:
@@ -98,11 +136,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
     icon: defaultValues?.icon || "pricetag-outline",
     category: defaultValues?.category || "",
     payMethod: initialPayMethod,
-    methodId:
-      initialMethodId ||
-      (initialPayMethod === PAYMENT_METHOD.CASH
-        ? String(defaultCashWalletId || "")
-        : ""),
+    methodId: initialResolvedMethodId,
   });
 
   const amountRef = useRef(null);
@@ -124,6 +158,19 @@ const ExpenseForm = forwardRef(function ExpenseForm(
   const showAmountError = (submitted || touched.amount) && !amountOk;
   const showDescriptionError = (submitted || touched.description) && !descOk;
 
+  useEffect(() => {
+    setInputs((current) => {
+      const payMethod = safePayMethod(current?.payMethod);
+      const currentMethodId = normalizeMethodId(current?.methodId);
+      const nextMethodId =
+        payMethod === PAYMENT_METHOD.CARD
+          ? resolveCardMethodId(currentMethodId, cards)
+          : resolveCashMethodId(currentMethodId, cashWallets, defaultCashWalletId);
+      if (nextMethodId === currentMethodId) return current;
+      return { ...current, methodId: nextMethodId };
+    });
+  }, [cards, cashWallets, defaultCashWalletId]);
+
   function inputChangedHandler(key, value) {
     setInputs((cur) => ({ ...cur, [key]: value }));
   }
@@ -143,8 +190,8 @@ const ExpenseForm = forwardRef(function ExpenseForm(
     const payMethod = safePayMethod(inputs.payMethod);
     const methodId =
       payMethod === PAYMENT_METHOD.CARD
-        ? String(inputs.methodId || "").trim()
-        : String(inputs.methodId || defaultCashWalletId || "").trim();
+        ? resolveCardMethodId(inputs.methodId, cards)
+        : resolveCashMethodId(inputs.methodId, cashWallets, defaultCashWalletId);
 
     if (payMethod === PAYMENT_METHOD.CARD && !methodId) {
       Alert.alert(t("expenseForm.cardMissingTitle"), t("expenseForm.cardMissingMessage"));
@@ -189,8 +236,8 @@ const ExpenseForm = forwardRef(function ExpenseForm(
       const payMethod = safePayMethod(inputs.payMethod);
       const methodId =
         payMethod === PAYMENT_METHOD.CARD
-          ? String(inputs.methodId || "").trim()
-          : String(inputs.methodId || defaultCashWalletId || "").trim();
+          ? resolveCardMethodId(inputs.methodId, cards)
+          : resolveCashMethodId(inputs.methodId, cashWallets, defaultCashWalletId);
 
       return {
         title: (desc || category || t("expenseForm.favoriteFallback")).slice(0, 22),
@@ -519,9 +566,14 @@ const ExpenseForm = forwardRef(function ExpenseForm(
               <Pressable
                 onPress={() => {
                   inputChangedHandler("payMethod", PAYMENT_METHOD.CASH);
-                  if (!String(inputs.methodId || "").trim()) {
-                    inputChangedHandler("methodId", String(defaultCashWalletId || ""));
-                  }
+                  inputChangedHandler(
+                    "methodId",
+                    resolveCashMethodId(
+                      inputs.methodId,
+                      cashWallets,
+                      defaultCashWalletId,
+                    ),
+                  );
                 }}
                 style={[
                   styles.catCell,
@@ -534,9 +586,7 @@ const ExpenseForm = forwardRef(function ExpenseForm(
               <Pressable
                 onPress={() => {
                   inputChangedHandler("payMethod", PAYMENT_METHOD.CARD);
-                  if (inputs.payMethod !== PAYMENT_METHOD.CARD) {
-                    inputChangedHandler("methodId", "");
-                  }
+                  inputChangedHandler("methodId", resolveCardMethodId(inputs.methodId, cards));
                 }}
                 style={[
                   styles.catCell,

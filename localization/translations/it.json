@@ -468,8 +468,16 @@
     "targetPlaceholder": "Importo target",
     "savedAmountPlaceholder": "Importo già risparmiato",
     "notesPlaceholder": "Note (opzionale)",
+    "periodLabel": "Cadenza risparmio",
+    "periodWeekly": "Settimanale",
+    "periodMonthly": "Mensile",
+    "periodYearly": "Annuale",
     "saveGoal": "Salva obiettivo",
-    "remainingAmount": "Restano {{amount}}"
+    "remainingAmount": "Restano {{amount}}",
+    "periodValue": "Cadenza: {{period}}",
+    "suggestionTitle": "Suggerimento accantonamento (piano annuale)",
+    "suggestionHint": "Importo suggerito {{period}}: {{amount}}",
+    "hideKeyboard": "Nascondi tastiera"
   },
   "insights": {
     "heroTitle": "Insights",
