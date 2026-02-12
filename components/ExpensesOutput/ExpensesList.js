@@ -19,7 +19,8 @@ function ExpensesList({ expenses }) {
   const colors = GlobalStyles.colors;
   const { t } = useTranslation();
 
-  const openSwipeRef = useRef(null);
+  const swipeRefs = useRef({});
+  const openSwipeIdRef = useRef(null);
   const animMapRef = useRef({});
 
   const getAnim = (id) => {
@@ -39,11 +40,20 @@ function ExpensesList({ expenses }) {
   }, [expenses]);
 
   const closeOpenSwipe = useCallback(() => {
-    if (openSwipeRef.current) {
-      openSwipeRef.current.close?.();
-      openSwipeRef.current = null;
-    }
+    const openId = String(openSwipeIdRef.current || "");
+    if (!openId) return;
+    swipeRefs.current[openId]?.close?.();
+    openSwipeIdRef.current = null;
   }, []);
+
+  useEffect(
+    () => () => {
+      Object.values(swipeRefs.current || {}).forEach((ref) => ref?.close?.());
+      swipeRefs.current = {};
+      openSwipeIdRef.current = null;
+    },
+    [],
+  );
 
   const handleEdit = useCallback(
     (id) => {
@@ -127,6 +137,7 @@ function ExpensesList({ expenses }) {
 
   const renderItem = ({ item }) => {
     const anim = getAnim(item.id);
+    const itemId = String(item?.id || "");
 
     return (
       <Animated.View
@@ -138,26 +149,31 @@ function ExpensesList({ expenses }) {
       >
         <Swipeable
           ref={(ref) => {
-            item.__swipeRef = ref;
+            if (!itemId) return;
+            if (ref) {
+              swipeRefs.current[itemId] = ref;
+              return;
+            }
+            delete swipeRefs.current[itemId];
           }}
           renderLeftActions={() => renderLeftActions(item.id)}
           renderRightActions={() => renderRightActions(item.id)}
           overshootLeft={false}
           overshootRight={false}
           onSwipeableWillOpen={() => {
-            if (
-              openSwipeRef.current &&
-              openSwipeRef.current !== item.__swipeRef
-            )
-              openSwipeRef.current.close?.();
-            openSwipeRef.current = item.__swipeRef;
+            const openId = String(openSwipeIdRef.current || "");
+            if (openId && openId !== itemId) {
+              swipeRefs.current[openId]?.close?.();
+            }
+            openSwipeIdRef.current = itemId || null;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
               () => {},
             );
           }}
           onSwipeableWillClose={() => {
-            if (openSwipeRef.current === item.__swipeRef)
-              openSwipeRef.current = null;
+            if (String(openSwipeIdRef.current || "") === itemId) {
+              openSwipeIdRef.current = null;
+            }
           }}
         >
           <ExpenseItem {...item} />
@@ -170,7 +186,7 @@ function ExpensesList({ expenses }) {
     <FlatList
       data={expenses}
       renderItem={renderItem}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item) => String(item.id)}
       contentContainerStyle={{ paddingBottom: 90 }}
       showsVerticalScrollIndicator={false}
       style={{

@@ -1,7 +1,10 @@
 import React, { useContext, useMemo, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,6 +30,24 @@ function toPercent(goal) {
   const current = Number(goal?.currentAmount || 0);
   if (target <= 0) return 0;
   return Math.min(100, Math.max(0, Math.round((current / target) * 100)));
+}
+
+const GOAL_PERIOD = {
+  WEEKLY: "WEEKLY",
+  MONTHLY: "MONTHLY",
+  YEARLY: "YEARLY",
+};
+
+function normalizeGoalPeriod(value) {
+  if (value === GOAL_PERIOD.WEEKLY) return GOAL_PERIOD.WEEKLY;
+  if (value === GOAL_PERIOD.YEARLY) return GOAL_PERIOD.YEARLY;
+  return GOAL_PERIOD.MONTHLY;
+}
+
+function periodLabel(period, t) {
+  if (period === GOAL_PERIOD.WEEKLY) return t("goals.periodWeekly");
+  if (period === GOAL_PERIOD.YEARLY) return t("goals.periodYearly");
+  return t("goals.periodMonthly");
 }
 
 function StatTile({ icon, label, value, styles, colors }) {
@@ -58,6 +79,7 @@ export default function GoalsScreen() {
     targetAmount: "",
     currentAmount: "",
     notes: "",
+    period: GOAL_PERIOD.MONTHLY,
   });
 
   const completion = useMemo(() => {
@@ -80,6 +102,7 @@ export default function GoalsScreen() {
       targetAmount: "",
       currentAmount: "",
       notes: "",
+      period: GOAL_PERIOD.MONTHLY,
     });
     setModalOpen(true);
   };
@@ -91,6 +114,7 @@ export default function GoalsScreen() {
       targetAmount: String(Number(goal?.targetAmount || 0)),
       currentAmount: String(Number(goal?.currentAmount || 0)),
       notes: String(goal?.notes || ""),
+      period: normalizeGoalPeriod(goal?.period),
     });
     setModalOpen(true);
   };
@@ -100,6 +124,7 @@ export default function GoalsScreen() {
     const targetAmount = Number(draft.targetAmount || 0);
     const currentAmount = Number(draft.currentAmount || 0);
     const notes = String(draft.notes || "").trim();
+    const period = normalizeGoalPeriod(draft.period);
 
     if (!title) {
       Alert.alert(t("goals.missingTitle"), t("goals.missingTitleMessage"));
@@ -118,6 +143,7 @@ export default function GoalsScreen() {
         targetAmount,
         currentAmount: Number.isFinite(currentAmount) ? Math.max(0, currentAmount) : 0,
         notes,
+        period,
       });
       setModalOpen(false);
     } catch {
@@ -126,6 +152,36 @@ export default function GoalsScreen() {
       setSaving(false);
     }
   };
+
+  const targetForSuggestion = Number(draft.targetAmount || 0);
+  const savingSuggestions = useMemo(() => {
+    if (!Number.isFinite(targetForSuggestion) || targetForSuggestion <= 0) return [];
+    return [
+      {
+        key: GOAL_PERIOD.WEEKLY,
+        icon: "cash-outline",
+        label: t("goals.periodWeekly"),
+        amount: targetForSuggestion / 52,
+      },
+      {
+        key: GOAL_PERIOD.MONTHLY,
+        icon: "wallet-outline",
+        label: t("goals.periodMonthly"),
+        amount: targetForSuggestion / 12,
+      },
+      {
+        key: GOAL_PERIOD.YEARLY,
+        icon: "cash",
+        label: t("goals.periodYearly"),
+        amount: targetForSuggestion,
+      },
+    ];
+  }, [targetForSuggestion, t]);
+
+  const selectedSuggestion = useMemo(
+    () => savingSuggestions.find((entry) => entry.key === normalizeGoalPeriod(draft.period)) || null,
+    [savingSuggestions, draft.period],
+  );
 
   const deleteGoal = (goal) => {
     Alert.alert(t("goals.deleteTitle"), goal?.title || t("goals.goalFallback"), [
@@ -271,12 +327,17 @@ export default function GoalsScreen() {
                     <Text style={styles.goalMetaText}>
                       {t("goals.remainingAmount", { amount: formatMoney(remainingGoal, currencyCode) })}
                     </Text>
-                    {!!goal.notes ? (
-                      <Text style={styles.goalMetaText} numberOfLines={1}>
-                        {goal.notes}
-                      </Text>
-                    ) : null}
+                    <Text style={[styles.goalMetaText, styles.goalMetaTextRight]} numberOfLines={1}>
+                      {t("goals.periodValue", {
+                        period: periodLabel(normalizeGoalPeriod(goal?.period), t),
+                      })}
+                    </Text>
                   </View>
+                  {!!goal.notes ? (
+                    <Text style={styles.goalNoteText} numberOfLines={1}>
+                      {goal.notes}
+                    </Text>
+                  ) : null}
 
                   <View style={styles.quickRow}>
                     {[-10, 10, 50].map((value) => (
@@ -322,54 +383,162 @@ export default function GoalsScreen() {
 
       <Modal transparent visible={modalOpen} animationType="fade" onRequestClose={() => setModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {draft.id ? t("goals.editGoalTitle") : t("goals.newGoalTitle")}
-            </Text>
-
-            <TextInput
-              value={draft.title}
-              onChangeText={(value) => setDraft((prev) => ({ ...prev, title: value }))}
-              style={styles.input}
-              placeholder={t("goals.titlePlaceholder")}
-              placeholderTextColor={colors.textFaint}
-            />
-            <TextInput
-              value={draft.targetAmount}
-              onChangeText={(value) => setDraft((prev) => ({ ...prev, targetAmount: value }))}
-              keyboardType="decimal-pad"
-              style={styles.input}
-              placeholder={t("goals.targetPlaceholder")}
-              placeholderTextColor={colors.textFaint}
-            />
-            <TextInput
-              value={draft.currentAmount}
-              onChangeText={(value) => setDraft((prev) => ({ ...prev, currentAmount: value }))}
-              keyboardType="decimal-pad"
-              style={styles.input}
-              placeholder={t("goals.savedAmountPlaceholder")}
-              placeholderTextColor={colors.textFaint}
-            />
-            <TextInput
-              value={draft.notes}
-              onChangeText={(value) => setDraft((prev) => ({ ...prev, notes: value }))}
-              style={[styles.input, { minHeight: 64 }]}
-              placeholder={t("goals.notesPlaceholder")}
-              placeholderTextColor={colors.textFaint}
-              multiline
-            />
-
-            <View style={styles.modalActions}>
-              <Pressable onPress={() => setModalOpen(false)} style={styles.modalSecondaryBtn}>
-                <Text style={styles.modalSecondaryText}>{t("common.cancel")}</Text>
-              </Pressable>
-              <Pressable onPress={submitGoal} style={styles.modalPrimaryBtn} disabled={saving}>
-                <Text style={styles.modalPrimaryText}>
-                  {saving ? t("profile.saving") : t("goals.saveGoal")}
+          <KeyboardAvoidingView
+            style={styles.modalAvoid}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 72 : 0}
+          >
+            <View style={styles.modalCard}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+                contentContainerStyle={styles.modalScrollContent}
+              >
+                <Text style={styles.modalTitle}>
+                  {draft.id ? t("goals.editGoalTitle") : t("goals.newGoalTitle")}
                 </Text>
-              </Pressable>
+
+                <TextInput
+                  value={draft.title}
+                  onChangeText={(value) => setDraft((prev) => ({ ...prev, title: value }))}
+                  style={styles.input}
+                  placeholder={t("goals.titlePlaceholder")}
+                  placeholderTextColor={colors.textFaint}
+                />
+                <TextInput
+                  value={draft.targetAmount}
+                  onChangeText={(value) => setDraft((prev) => ({ ...prev, targetAmount: value }))}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                  placeholder={t("goals.targetPlaceholder")}
+                  placeholderTextColor={colors.textFaint}
+                />
+                <TextInput
+                  value={draft.currentAmount}
+                  onChangeText={(value) => setDraft((prev) => ({ ...prev, currentAmount: value }))}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                  placeholder={t("goals.savedAmountPlaceholder")}
+                  placeholderTextColor={colors.textFaint}
+                />
+                <TextInput
+                  value={draft.notes}
+                  onChangeText={(value) => setDraft((prev) => ({ ...prev, notes: value }))}
+                  style={[styles.input, { minHeight: 64 }]}
+                  placeholder={t("goals.notesPlaceholder")}
+                  placeholderTextColor={colors.textFaint}
+                  multiline
+                />
+
+                <Text style={styles.modalSectionLabel}>{t("goals.periodLabel")}</Text>
+                <View style={styles.periodRow}>
+                  {[
+                    {
+                      key: GOAL_PERIOD.WEEKLY,
+                      icon: "calendar-outline",
+                      label: t("goals.periodWeekly"),
+                    },
+                    {
+                      key: GOAL_PERIOD.MONTHLY,
+                      icon: "calendar-number-outline",
+                      label: t("goals.periodMonthly"),
+                    },
+                    {
+                      key: GOAL_PERIOD.YEARLY,
+                      icon: "calendar-clear-outline",
+                      label: t("goals.periodYearly"),
+                    },
+                  ].map((periodOption) => {
+                    const active = normalizeGoalPeriod(draft.period) === periodOption.key;
+                    return (
+                      <Pressable
+                        key={periodOption.key}
+                        onPress={() =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            period: periodOption.key,
+                          }))}
+                        style={({ pressed }) => [
+                          styles.periodChip,
+                          active && styles.periodChipActive,
+                          pressed && { opacity: 0.9 },
+                        ]}
+                      >
+                        <Ionicons
+                          name={periodOption.icon}
+                          size={13}
+                          color={active ? colors.textTitle : colors.textMuted}
+                        />
+                        <Text style={[styles.periodChipText, active && styles.periodChipTextActive]}>
+                          {periodOption.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {!!savingSuggestions.length ? (
+                  <View style={styles.suggestionsCard}>
+                    <Text style={styles.suggestionsTitle}>{t("goals.suggestionTitle")}</Text>
+
+                    <View style={styles.suggestionRow}>
+                      {savingSuggestions.map((entry) => {
+                        const active = normalizeGoalPeriod(draft.period) === entry.key;
+                        return (
+                          <View
+                            key={entry.key}
+                            style={[
+                              styles.suggestionPill,
+                              active && styles.suggestionPillActive,
+                            ]}
+                          >
+                            <Ionicons
+                              name={entry.icon}
+                              size={12}
+                              color={active ? colors.textTitle : colors.textMuted}
+                            />
+                            <Text style={styles.suggestionLabel}>{entry.label}</Text>
+                            <Text style={styles.suggestionAmount}>
+                              {formatMoney(entry.amount, currencyCode)}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {selectedSuggestion ? (
+                      <Text style={styles.suggestionHint}>
+                        {t("goals.suggestionHint", {
+                          period: selectedSuggestion.label,
+                          amount: formatMoney(selectedSuggestion.amount, currencyCode),
+                        })}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                <Pressable
+                  onPress={() => Keyboard.dismiss()}
+                  style={({ pressed }) => [styles.hideKeyboardBtn, pressed && { opacity: 0.9 }]}
+                >
+                  <Ionicons name="chevron-down-circle-outline" size={16} color={colors.textMuted} />
+                  <Text style={styles.hideKeyboardText}>{t("goals.hideKeyboard")}</Text>
+                </Pressable>
+
+                <View style={styles.modalActions}>
+                  <Pressable onPress={() => setModalOpen(false)} style={styles.modalSecondaryBtn}>
+                    <Text style={styles.modalSecondaryText}>{t("common.cancel")}</Text>
+                  </Pressable>
+                  <Pressable onPress={submitGoal} style={styles.modalPrimaryBtn} disabled={saving}>
+                    <Text style={styles.modalPrimaryText}>
+                      {saving ? t("profile.saving") : t("goals.saveGoal")}
+                    </Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -556,6 +725,13 @@ function makeStyles(colors, compactMode) {
       gap: 8,
     },
     goalMetaText: { color: colors.textMuted, fontWeight: "700", fontSize: 11, flex: 1 },
+    goalMetaTextRight: { textAlign: "right" },
+    goalNoteText: {
+      marginTop: 4,
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 11,
+    },
     quickRow: { marginTop: 10, flexDirection: "row", gap: 8 },
     quickBtn: {
       borderWidth: 1,
@@ -587,18 +763,30 @@ function makeStyles(colors, compactMode) {
       backgroundColor: colors.overlay72,
       justifyContent: "center",
     },
+    modalAvoid: { width: "100%" },
     modalCard: {
       borderRadius: 18,
       borderWidth: 1,
       borderColor: colors.white10,
       backgroundColor: colors.surface,
       padding: 12,
+      maxHeight: "86%",
     },
+    modalScrollContent: { paddingBottom: 4 },
     modalTitle: {
       color: colors.textTitle,
       fontWeight: "900",
       fontSize: 15,
       marginBottom: 10,
+    },
+    modalSectionLabel: {
+      marginTop: 2,
+      marginBottom: 8,
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
     },
     input: {
       borderWidth: 1,
@@ -611,6 +799,104 @@ function makeStyles(colors, compactMode) {
       color: colors.textTitle,
       marginBottom: 8,
     },
+    periodRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 10,
+    },
+    periodChip: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    periodChipActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    periodChipText: {
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 11,
+    },
+    periodChipTextActive: { color: colors.textTitle },
+    suggestionsCard: {
+      marginTop: 2,
+      marginBottom: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 9,
+      paddingHorizontal: 9,
+      gap: 8,
+    },
+    suggestionsTitle: {
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.2,
+    },
+    suggestionRow: {
+      flexDirection: "row",
+      gap: 6,
+      flexWrap: "wrap",
+    },
+    suggestionPill: {
+      flex: 1,
+      minWidth: 92,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      paddingVertical: 7,
+      paddingHorizontal: 8,
+      gap: 2,
+      alignItems: "center",
+    },
+    suggestionPillActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    suggestionLabel: {
+      color: colors.textMuted,
+      fontWeight: "800",
+      fontSize: 10,
+      textAlign: "center",
+    },
+    suggestionAmount: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 10,
+      textAlign: "center",
+    },
+    suggestionHint: {
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 11,
+      lineHeight: 16,
+    },
+    hideKeyboardBtn: {
+      marginTop: 2,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    hideKeyboardText: { color: colors.textMuted, fontWeight: "900", fontSize: 11 },
     modalActions: { marginTop: 4, flexDirection: "row", gap: 8 },
     modalSecondaryBtn: {
       flex: 1,

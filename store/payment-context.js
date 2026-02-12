@@ -209,13 +209,16 @@ export default function PaymentContextProvider({ children }) {
       const list = Array.isArray(cashWallets) ? cashWallets : [];
       if (!list.length) return;
 
-      const targetId =
-        String(walletId || "").trim() ||
-        String(list.find((w) => w.isDefault)?.id || "").trim() ||
-        String(list[0]?.id || "").trim();
-      if (!targetId) return;
-
-      const target = list.find((w) => String(w.id) === targetId);
+      let targetId = String(walletId || "").trim();
+      let target = targetId
+        ? list.find((wallet) => String(wallet?.id) === targetId)
+        : null;
+      if (!target) {
+        targetId =
+          String(list.find((w) => w.isDefault)?.id || "").trim() ||
+          String(list[0]?.id || "").trim();
+        target = list.find((wallet) => String(wallet?.id) === targetId);
+      }
       if (!target) return;
 
       const nextBalance = Number(target.balance || 0) + delta;
@@ -247,11 +250,13 @@ export default function PaymentContextProvider({ children }) {
       const list = Array.isArray(cards) ? cards : [];
       if (!list.length) return;
 
-      const targetId = String(cardId || "").trim();
-      if (!targetId) return;
-
-      const target = list.find((c) => String(c.id) === targetId);
-      if (!target) return;
+      let targetId = String(cardId || "").trim();
+      let target = targetId ? list.find((card) => String(card?.id) === targetId) : null;
+      if (!target && list.length === 1) {
+        target = list[0];
+        targetId = String(target?.id || "").trim();
+      }
+      if (!target || !targetId) return;
 
       const nextBalance = Number(target.balance || 0) + delta;
       await withAuthRetry((t) =>

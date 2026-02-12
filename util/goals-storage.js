@@ -22,6 +22,12 @@ function goalPath(userId, token, id, legacy = false) {
   return dbUrl(`users/${safeId(userId)}/goals/${safeId(id)}`, token);
 }
 
+function normalizeGoalPeriod(value) {
+  if (value === "WEEKLY") return "WEEKLY";
+  if (value === "YEARLY") return "YEARLY";
+  return "MONTHLY";
+}
+
 function normalizeGoal(raw, forcedId = "") {
   const nowIso = new Date().toISOString();
   return {
@@ -35,6 +41,7 @@ function normalizeGoal(raw, forcedId = "") {
     notes: String(raw?.notes || "")
       .trim()
       .slice(0, 180),
+    period: normalizeGoalPeriod(raw?.period),
     createdAt: raw?.createdAt ? String(raw.createdAt) : nowIso,
     updatedAt: raw?.updatedAt ? String(raw.updatedAt) : nowIso,
   };

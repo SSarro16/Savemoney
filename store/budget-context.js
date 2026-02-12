@@ -194,7 +194,9 @@ function BudgetContextProvider({ children }) {
       const patchTitle = String(patch?.title || "").trim();
       let targetBudgetId = budgetId;
       if (!targetBudgetId) {
-        const created = await createNewBudget(patchTitle || "Budget 1");
+        const hasUserPatch = !!patch && Object.keys(patch || {}).length > 0;
+        if (!hasUserPatch) return;
+        const created = await createNewBudget(patchTitle || "Nuovo budget");
         targetBudgetId = created?.id || null;
       }
       if (!targetBudgetId) throw new Error("Nessun budget selezionato.");
@@ -282,24 +284,21 @@ function BudgetContextProvider({ children }) {
       const list = await withAuthRetry((t) => getBudgets(userId, t));
       if (!isMounted) return;
       setBudgets(list);
-      const active = (await getActiveBudgetId(userId)) || list?.[0]?.id || null;
+      const storedActiveId = await getActiveBudgetId(userId);
+      const hasStored = list.some(
+        (budget) => String(budget?.id || "") === String(storedActiveId || ""),
+      );
+      const active = hasStored ? storedActiveId : list?.[0]?.id || null;
 
       if (!isMounted) return;
 
-      if (!active) {
-        // se non esiste nulla, creane uno
-        const created = await createNewBudget("Budget 1");
-        if (!isMounted) return;
-        setBudgetId(created.id);
-      } else {
-        setBudgetId(active);
-      }
+      setBudgetId(active || null);
     })();
 
     return () => {
       isMounted = false;
     };
-  }, [userId, token, refreshBudgetsList, createNewBudget, withAuthRetry]);
+  }, [userId, token, withAuthRetry]);
 
   // load budget when budgetId ready
   useEffect(() => {

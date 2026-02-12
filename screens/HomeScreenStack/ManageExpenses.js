@@ -194,7 +194,7 @@ function ManageExpenses({ route, navigation }) {
     setError(null);
 
     try {
-      await expensesCtx.deleteExpenseWithUndo(editedExpenseId);
+      await expensesCtx.deleteExpense(editedExpenseId);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
         () => {},
       );
@@ -308,7 +308,7 @@ function ManageExpenses({ route, navigation }) {
 
     try {
       if (last.type === "delete") {
-        await expensesCtx.deleteExpenseWithUndo(last.id);
+        await expensesCtx.deleteExpense(last.id);
         navigation.goBack();
         return;
       }

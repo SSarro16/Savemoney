@@ -196,7 +196,7 @@ function ExpensesScreen() {
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(null);
 
-  const [preset, setPreset] = useState(PRESETS.TODAY);
+  const [preset, setPreset] = useState(PRESETS.DAYS_7);
   const [rangeFrom, setRangeFrom] = useState(null);
   const [rangeTo, setRangeTo] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -575,7 +575,7 @@ function ExpensesScreen() {
           rangeFrom={rangeFrom}
           rangeTo={rangeTo}
           onChangeRange={handleChangeRange}
-          onResetRange={() => handleSelectPreset(PRESETS.TODAY)}
+          onResetRange={() => handleSelectPreset(PRESETS.DAYS_7)}
           onSelectPreset={handleSelectPreset}
           activePreset={preset}
           presets={PRESETS}

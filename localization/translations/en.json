@@ -468,8 +468,16 @@
     "targetPlaceholder": "Target amount",
     "savedAmountPlaceholder": "Saved amount",
     "notesPlaceholder": "Notes (optional)",
+    "periodLabel": "Saving cadence",
+    "periodWeekly": "Weekly",
+    "periodMonthly": "Monthly",
+    "periodYearly": "Yearly",
     "saveGoal": "Save goal",
-    "remainingAmount": "{{amount}} left"
+    "remainingAmount": "{{amount}} left",
+    "periodValue": "Cadence: {{period}}",
+    "suggestionTitle": "Suggested set-aside (year plan)",
+    "suggestionHint": "Suggested {{period}} amount: {{amount}}",
+    "hideKeyboard": "Hide keyboard"
   },
   "insights": {
     "heroTitle": "Insights",
