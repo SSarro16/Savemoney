@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card } from "../ui";
+import Card from "../ui/Card";
 import { GlobalStyles } from "../../constants/styles";
 import { formatDate, formatTime, isSameDay } from "../../utils/dates";
 
