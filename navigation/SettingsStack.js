@@ -5,6 +5,7 @@ import { GlobalStyles } from "../constants/styles";
 import { LanguageContext } from "../context/LanguageContext";
 import CustomizationScreen from "../screens/App/CustomizationScreen";
 import SettingsScreen from "../screens/App/SettingsScreen";
+import UserProfileScreen from "../screens/App/UserProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,11 @@ export default function SettingsStack() {
         name="Customization"
         component={CustomizationScreen}
         options={{ title: t("customization.title") }}
+      />
+      <Stack.Screen
+        name="UserProfile"
+        component={UserProfileScreen}
+        options={{ title: t("profile.title") }}
       />
     </Stack.Navigator>
   );

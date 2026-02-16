@@ -157,6 +157,14 @@ export default function SettingsScreen() {
         </SectionGroup>
 
         <SectionGroup title={t("settings.accountSection")} styles={styles}>
+          <NavCard
+            icon="person-circle-outline"
+            title={t("settings.profileTitle")}
+            subtitle={t("settings.profileSubtitle")}
+            onPress={() => navigation.navigate("UserProfile")}
+            styles={styles}
+          />
+
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
