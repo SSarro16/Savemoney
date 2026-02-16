@@ -8,12 +8,14 @@ import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LanguageContext";
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const colors = GlobalStyles.colors;
   const { user, logout } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView
@@ -27,28 +29,30 @@ export default function SettingsScreen() {
       ]}
       edges={["left", "right"]}
     >
-      <Text style={[styles.title, { color: colors.textTitle }]}>Settings</Text>
+      <Text style={[styles.title, { color: colors.textTitle }]}>{t("settings.title")}</Text>
 
       <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
-        <Text style={[styles.label, { color: colors.textMuted }]}>Email</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>{t("settings.email")}</Text>
         <Text style={[styles.value, { color: colors.textBody }]}>
-          {user?.email || "No email available"}
+          {user?.email || t("settings.noEmail")}
         </Text>
 
-        <Text style={[styles.label, styles.versionLabel, { color: colors.textMuted }]}>App version</Text>
+        <Text style={[styles.label, styles.versionLabel, { color: colors.textMuted }]}>
+          {t("settings.appVersion")}
+        </Text>
         <Text style={[styles.value, { color: colors.textBody }]}>
           {Constants.expoConfig?.version || "0.0.0"}
         </Text>
 
         <View style={styles.actionWrap}>
           <Button variant="secondary" onPress={() => navigation.navigate("Customization")}>
-            Open customization
+            {t("settings.openCustomization")}
           </Button>
         </View>
 
         <View style={styles.actionWrap}>
           <Button variant="danger" onPress={logout}>
-            Logout
+            {t("common.logout")}
           </Button>
         </View>
       </Card>

@@ -1,0 +1,75 @@
+{
+  "common": {
+    "today": "Oggi",
+    "cancel": "Annulla",
+    "save": "Salva",
+    "delete": "Elimina",
+    "logout": "Logout",
+    "retry": "Riprova"
+  },
+  "drawer": {
+    "planner": "Planner",
+    "settings": "Impostazioni",
+    "customization": "Personalizzazione"
+  },
+  "auth": {
+    "welcomeBack": "Bentornato su Savetime",
+    "createAccount": "Crea il tuo account",
+    "loginSubtitle": "Accedi per gestire il tuo planner tempo/eventi.",
+    "signupSubtitle": "Crea un account per iniziare a pianificare.",
+    "login": "Login",
+    "signup": "Crea account",
+    "noAccount": "Non hai un account? Registrati",
+    "haveAccount": "Hai gia un account? Accedi"
+  },
+  "planner": {
+    "loading": "Caricamento planner...",
+    "eventsToday": "Oggi",
+    "focusMode": "Modalita focus su un solo giorno.",
+    "empty": "Nessun evento pianificato. Tocca + per creare il primo.",
+    "todayButton": "Oggi"
+  },
+  "eventEditor": {
+    "newTitle": "Nuovo evento",
+    "editTitle": "Modifica evento",
+    "title": "Titolo",
+    "allDay": "Tutto il giorno",
+    "start": "Inizio",
+    "end": "Fine",
+    "category": "Categoria",
+    "location": "Luogo (opzionale)",
+    "notes": "Note (opzionale)",
+    "save": "Salva",
+    "saving": "Salvataggio...",
+    "delete": "Elimina",
+    "deleting": "Eliminazione...",
+    "cancel": "Annulla",
+    "titleRequired": "Il titolo e obbligatorio.",
+    "invalidRange": "La fine deve essere successiva all'inizio.",
+    "loadError": "Impossibile caricare l'evento.",
+    "saveError": "Impossibile salvare l'evento.",
+    "deleteError": "Impossibile eliminare l'evento."
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "email": "Email",
+    "appVersion": "Versione app",
+    "noEmail": "Email non disponibile",
+    "openCustomization": "Apri personalizzazione"
+  },
+  "customization": {
+    "title": "Personalizzazione",
+    "subtitle": "Tema, lingua e preferenze accessibilita.",
+    "theme": "Tema",
+    "ui": "Preferenze UI",
+    "compactMode": "Modalita compatta",
+    "largeText": "Testo grande",
+    "reduceMotion": "Riduci animazioni",
+    "language": "Lingua",
+    "italian": "Italiano",
+    "english": "Inglese"
+  },
+  "errors": {
+    "somethingWrong": "Si e verificato un errore"
+  }
+}

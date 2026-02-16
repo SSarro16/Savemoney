@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import Card from "../../components/ui/Card";
 import { GlobalStyles, THEMES } from "../../constants/styles";
 import { CustomizationContext } from "../../context/CustomizationContext";
+import { useTranslation } from "../../context/LanguageContext";
 import { ThemeContext } from "../../context/ThemeContext";
 
 function themeEntries() {
@@ -19,6 +20,7 @@ export default function CustomizationScreen() {
   const colors = GlobalStyles.colors;
   const insets = useSafeAreaInsets();
   const { themeKey, setThemeKey } = useContext(ThemeContext);
+  const { language, setLanguage, t } = useTranslation();
   const {
     compactMode,
     largeText,
@@ -46,11 +48,11 @@ export default function CustomizationScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: colors.textTitle }]}>Customization</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>Theme and accessibility preferences.</Text>
+        <Text style={[styles.title, { color: colors.textTitle }]}>{t("customization.title")}</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t("customization.subtitle")}</Text>
 
         <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>Theme</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>{t("customization.theme")}</Text>
           <View style={styles.themeGrid}>
             {themes.map((theme) => {
               const selected = theme.key === themeKey;
@@ -81,10 +83,10 @@ export default function CustomizationScreen() {
         </Card>
 
         <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>UI Preferences</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>{t("customization.ui")}</Text>
 
           <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: colors.textBody }]}>Compact Mode</Text>
+            <Text style={[styles.prefLabel, { color: colors.textBody }]}>{t("customization.compactMode")}</Text>
             <Switch
               value={compactMode}
               onValueChange={setCompactMode}
@@ -94,7 +96,7 @@ export default function CustomizationScreen() {
           </View>
 
           <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: colors.textBody }]}>Large Text</Text>
+            <Text style={[styles.prefLabel, { color: colors.textBody }]}>{t("customization.largeText")}</Text>
             <Switch
               value={largeText}
               onValueChange={setLargeText}
@@ -104,13 +106,41 @@ export default function CustomizationScreen() {
           </View>
 
           <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: colors.textBody }]}>Reduce Motion</Text>
+            <Text style={[styles.prefLabel, { color: colors.textBody }]}>{t("customization.reduceMotion")}</Text>
             <Switch
               value={reduceMotion}
               onValueChange={setReduceMotion}
               trackColor={{ false: colors.white20, true: colors.accent35 }}
               thumbColor={reduceMotion ? colors.accent500 : colors.white88}
             />
+          </View>
+
+          <Text style={[styles.sectionTitle, { color: colors.textTitle, marginTop: 8 }]}>
+            {t("customization.language")}
+          </Text>
+          <View style={styles.themeGrid}>
+            <Pressable
+              onPress={() => setLanguage("it")}
+              style={[
+                styles.themeChip,
+                language === "it"
+                  ? { borderColor: colors.accent500, backgroundColor: colors.accent18 }
+                  : { borderColor: colors.white12, backgroundColor: colors.white08 },
+              ]}
+            >
+              <Text style={[styles.themeLabel, { color: colors.textBody }]}>{t("customization.italian")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setLanguage("en")}
+              style={[
+                styles.themeChip,
+                language === "en"
+                  ? { borderColor: colors.accent500, backgroundColor: colors.accent18 }
+                  : { borderColor: colors.white12, backgroundColor: colors.white08 },
+              ]}
+            >
+              <Text style={[styles.themeLabel, { color: colors.textBody }]}>{t("customization.english")}</Text>
+            </Pressable>
           </View>
         </Card>
       </ScrollView>

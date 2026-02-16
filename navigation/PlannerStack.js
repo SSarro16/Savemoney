@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useContext } from "react";
 
 import { GlobalStyles } from "../constants/styles";
+import { LanguageContext } from "../context/LanguageContext";
 import EventEditorScreen from "../screens/App/EventEditorScreen";
 import PlannerScreen from "../screens/App/PlannerScreen";
 
@@ -8,6 +10,7 @@ const Stack = createNativeStackNavigator();
 
 export default function PlannerStack() {
   const colors = GlobalStyles.colors;
+  const { t } = useContext(LanguageContext);
 
   return (
     <Stack.Navigator
@@ -23,6 +26,7 @@ export default function PlannerStack() {
         name="EventEditor"
         component={EventEditorScreen}
         options={{
+          title: t("eventEditor.newTitle"),
           headerShown: true,
           presentation: "modal",
           headerStyle: {

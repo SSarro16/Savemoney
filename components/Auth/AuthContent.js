@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../context/CustomizationContext";
+import { useTranslation } from "../../context/LanguageContext";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
 import TextField from "../ui/TextField";
@@ -24,6 +25,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { compactMode, textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,9 +41,9 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
   const subtitle = useMemo(
     () =>
       isLogin
-        ? "Accedi per gestire il tuo planner tempo/eventi."
-        : "Crea un account per iniziare a pianificare.",
-    [isLogin],
+        ? t("auth.loginSubtitle")
+        : t("auth.signupSubtitle"),
+    [isLogin, t],
   );
 
   const validate = () => {
@@ -99,7 +101,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
           >
             <View style={styles.header}>
               <Text style={[styles.title, { color: colors.textTitle }]}>
-                {isLogin ? "Bentornato su Savetime" : "Crea il tuo account"}
+                {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
               </Text>
               <Text style={[styles.subtitle, { color: colors.textMuted, fontSize: 13 * textScale }]}>
                 {subtitle}
@@ -181,16 +183,16 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
                 {isSubmitting
                   ? "Attendere..."
                   : isLogin
-                    ? "Login"
-                    : "Crea account"}
+                    ? t("auth.login")
+                    : t("auth.signup")}
               </Button>
             </View>
 
             <Pressable onPress={switchModeHandler} style={styles.switchWrap}>
               <Text style={[styles.switchText, { color: colors.textBody }]}> 
                 {isLogin
-                  ? "Non hai un account? Registrati"
-                  : "Hai gia un account? Accedi"}
+                  ? t("auth.noAccount")
+                  : t("auth.haveAccount")}
               </Text>
             </Pressable>
             </Card>

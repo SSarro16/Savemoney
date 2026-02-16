@@ -1,15 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useContext } from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import PlannerStack from "./PlannerStack";
 import CustomizationScreen from "../screens/App/CustomizationScreen";
 import SettingsScreen from "../screens/App/SettingsScreen";
 import { GlobalStyles } from "../constants/styles";
+import { LanguageContext } from "../context/LanguageContext";
 
 const Drawer = createDrawerNavigator();
 
 export default function AppDrawer() {
   const colors = GlobalStyles.colors;
+  const { t } = useContext(LanguageContext);
 
   return (
     <Drawer.Navigator
@@ -33,7 +36,7 @@ export default function AppDrawer() {
         name="Planner"
         component={PlannerStack}
         options={{
-          title: "Planner",
+          title: t("drawer.planner"),
           headerShown: false,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" color={color} size={size} />
@@ -44,7 +47,7 @@ export default function AppDrawer() {
         name="Customization"
         component={CustomizationScreen}
         options={{
-          title: "Customization",
+          title: t("drawer.customization"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="color-palette-outline" color={color} size={size} />
           ),
@@ -54,7 +57,7 @@ export default function AppDrawer() {
         name="Settings"
         component={SettingsScreen}
         options={{
-          title: "Settings",
+          title: t("drawer.settings"),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" color={color} size={size} />
           ),
