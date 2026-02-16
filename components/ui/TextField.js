@@ -29,6 +29,12 @@ const TextField = forwardRef(function TextField(
     multiline = false,
     numberOfLines = 1,
     showToggleSecure = false,
+    helperText = "",
+    errorText = "",
+    autoCapitalize = "none",
+    autoComplete = "off",
+    textContentType = "none",
+    autoCorrect = false,
   },
   ref,
 ) {
@@ -59,14 +65,11 @@ const TextField = forwardRef(function TextField(
   };
 
   const isSecure = secureTextEntry && !isPasswordVisible;
+  const feedbackText = invalid ? errorText : helperText;
 
   return (
     <View style={styles.inputContainer}>
-      {!!label && (
-        <Text style={[styles.label, invalid && { color: colors.error500 }]}>
-          {label}
-        </Text>
-      )}
+      {!!label && <Text style={[styles.label, invalid && { color: colors.error500 }]}>{label}</Text>}
 
       <Animated.View
         style={[
@@ -88,8 +91,10 @@ const TextField = forwardRef(function TextField(
         <TextInput
           ref={inputRef}
           style={[styles.input, multiline && styles.inputMultiline]}
-          autoCapitalize="none"
-          autoCorrect={false}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -126,6 +131,12 @@ const TextField = forwardRef(function TextField(
           </Pressable>
         )}
       </Animated.View>
+
+      <View style={styles.feedbackRow}>
+        {!!feedbackText && (
+          <Text style={[styles.feedbackText, invalid && { color: colors.error500 }]}>{feedbackText}</Text>
+        )}
+      </View>
     </View>
   );
 });
@@ -135,14 +146,15 @@ export default TextField;
 function makeStyles(colors, compactMode, textScale) {
   return StyleSheet.create({
     inputContainer: {
-      marginVertical: 8,
+      marginVertical: 4,
     },
     label: {
       color: colors.textBody,
-      marginBottom: 6,
-      fontWeight: "800",
-      fontSize: 12 * textScale,
-      letterSpacing: 0.2,
+      marginBottom: 5,
+      fontWeight: "900",
+      fontSize: 11 * textScale,
+      letterSpacing: 0.3,
+      textTransform: "uppercase",
     },
     field: {
       flexDirection: "row",
@@ -163,7 +175,7 @@ function makeStyles(colors, compactMode, textScale) {
     input: {
       flex: 1,
       color: colors.textTitle,
-      fontSize: 16 * textScale,
+      fontSize: 15 * textScale,
       fontWeight: "700",
     },
     inputMultiline: {
@@ -172,6 +184,17 @@ function makeStyles(colors, compactMode, textScale) {
     },
     pressed: {
       opacity: 0.85,
+    },
+    feedbackRow: {
+      minHeight: 16,
+      justifyContent: "center",
+      marginTop: 5,
+    },
+    feedbackText: {
+      color: colors.textFaint,
+      fontSize: 10.5 * textScale,
+      fontWeight: "700",
+      lineHeight: 14 * textScale,
     },
   });
 }

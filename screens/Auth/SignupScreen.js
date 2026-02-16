@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import AuthContent from "../../components/Auth/AuthContent";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
@@ -32,24 +32,17 @@ export default function SignupScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.root, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <View style={[styles.bgBubble, styles.bgBubbleA, { backgroundColor: colors.accent12, borderColor: colors.accent18 }]} />
       <View style={[styles.bgBubble, styles.bgBubbleB, { backgroundColor: colors.accent12, borderColor: colors.accent18 }]} />
       <View style={[styles.bgBubble, styles.bgBubbleC, { backgroundColor: colors.white08, borderColor: colors.white10 }]} />
       <View style={[styles.bgBubble, styles.bgBubbleD, { backgroundColor: colors.white08, borderColor: colors.white10 }]} />
+      <View style={[styles.bgTrack, styles.bgTrackA, { borderColor: colors.white10 }]} />
+      <View style={[styles.bgTrack, styles.bgTrackB, { borderColor: colors.white10 }]} />
+      <View style={[styles.bgTrack, styles.bgTrackC, { borderColor: colors.accent18 }]} />
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <AuthContent isLogin={false} onAuthenticate={signupHandler} isSubmitting={isSubmitting} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <AuthContent isLogin={false} onAuthenticate={signupHandler} isSubmitting={isSubmitting} />
+    </View>
   );
 }
 
@@ -86,10 +79,28 @@ const styles = StyleSheet.create({
     bottom: -26,
     left: 72,
   },
-  scroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 16,
-    paddingVertical: 20,
+  bgTrack: {
+    position: "absolute",
+    borderWidth: 1,
+    borderRadius: 18,
+    backgroundColor: "transparent",
+  },
+  bgTrackA: {
+    width: 108,
+    height: 52,
+    top: 138,
+    left: 16,
+  },
+  bgTrackB: {
+    width: 120,
+    height: 58,
+    bottom: 106,
+    left: -22,
+  },
+  bgTrackC: {
+    width: 84,
+    height: 42,
+    bottom: 64,
+    right: 16,
   },
 });
