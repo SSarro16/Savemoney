@@ -84,6 +84,7 @@ function serializeEvent(event) {
     title: event.title,
     startAt: event.startAt?.toISOString?.() || null,
     endAt: event.endAt?.toISOString?.() || null,
+    expectedDurationMinutes: event.expectedDurationMinutes ?? null,
     allDay: Boolean(event.allDay),
     category: event.category || "General",
     notes: event.notes || "",
