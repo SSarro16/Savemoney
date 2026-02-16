@@ -1,4 +1,4 @@
-import { auth } from "../services/firebase";
+import { getCurrentIdToken } from "../services/firebase";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -49,10 +49,15 @@ function resolveMessage(payload, fallbackMessage) {
 }
 
 async function attachAuthHeader(headers) {
-  const token = await auth.currentUser?.getIdToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const token = await getCurrentIdToken();
+  if (!token) {
+    throw new AuthHttpError("Authenticated session required.", {
+      status: 401,
+      code: "AUTH_SESSION_MISSING",
+    });
   }
+
+  headers.Authorization = `Bearer ${token}`;
 }
 
 async function parseResponse(response) {
