@@ -16,7 +16,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { CustomizationContext } from "../../context/CustomizationContext";
 import { useTranslation } from "../../context/LanguageContext";
-import { getEventsByRange } from "../../services/eventsService";
+import { getEventsByRange, startEventTimer, stopEventTimer } from "../../services/eventsService";
 import {
   eachDayBetween,
   endOfDay,
@@ -135,6 +135,13 @@ function serializeEvent(event) {
     category: event.category || "General",
     notes: event.notes || "",
     location: event.location || "",
+    trackedDurationSeconds: event.trackedDurationSeconds ?? 0,
+    liveTrackedDurationSeconds: event.liveTrackedDurationSeconds ?? 0,
+    actualDurationMinutes: event.actualDurationMinutes ?? 0,
+    timerStartedAt: event.timerStartedAt?.toISOString?.() || null,
+    isTimerRunning: Boolean(event.isTimerRunning),
+    plannedVsActualMinutes: event.plannedVsActualMinutes ?? 0,
+    expectedVsActualMinutes: event.expectedVsActualMinutes ?? null,
   };
 }
 
@@ -151,7 +158,10 @@ export default function PlannerScreen() {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [timerActionEventId, setTimerActionEventId] = useState(null);
+  const [liveTick, setLiveTick] = useState(Date.now());
   const [weekPagerWidth, setWeekPagerWidth] = useState(0);
   const weekPagerRef = useRef(null);
   const weekOffsets = useMemo(
@@ -205,6 +215,19 @@ export default function PlannerScreen() {
         .sort((a, b) => a.startAt - b.startAt),
     [events, selectedDate],
   );
+
+  useEffect(() => {
+    const hasRunningTimer = events.some((event) => event.isTimerRunning);
+    if (!hasRunningTimer) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      setLiveTick(Date.now());
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [events]);
 
   const monthWeeks = useMemo(() => buildMonthWeeks(selectedDate), [selectedDate]);
   const monthWeekdayLabels = useMemo(
@@ -329,6 +352,46 @@ export default function PlannerScreen() {
       eventId: event.id,
       initialEvent: serializeEvent(event),
     });
+  };
+
+  const upsertUpdatedEvent = (updatedEvent) => {
+    setEvents((currentEvents) =>
+      currentEvents.map((item) => (item.id === updatedEvent.id ? updatedEvent : item)),
+    );
+  };
+
+  const handleStartTimer = async (eventId) => {
+    if (!user?.uid || timerActionEventId) {
+      return;
+    }
+
+    setTimerActionEventId(eventId);
+    try {
+      setActionError(null);
+      const updatedEvent = await startEventTimer(user.uid, eventId);
+      upsertUpdatedEvent(updatedEvent);
+    } catch (timerError) {
+      setActionError(timerError?.message || "Unable to start timer.");
+    } finally {
+      setTimerActionEventId(null);
+    }
+  };
+
+  const handleStopTimer = async (eventId) => {
+    if (!user?.uid || timerActionEventId) {
+      return;
+    }
+
+    setTimerActionEventId(eventId);
+    try {
+      setActionError(null);
+      const updatedEvent = await stopEventTimer(user.uid, eventId);
+      upsertUpdatedEvent(updatedEvent);
+    } catch (timerError) {
+      setActionError(timerError?.message || "Unable to stop timer.");
+    } finally {
+      setTimerActionEventId(null);
+    }
   };
 
   if (isLoading) {
@@ -644,6 +707,11 @@ export default function PlannerScreen() {
           <Text style={[styles.eventsTitle, { color: colors.textTitle, fontSize: 19 * textScale }]}>
             {eventsTitle}
           </Text>
+          {!!actionError && (
+            <Text style={[styles.actionErrorText, { color: colors.error500 }]} numberOfLines={2}>
+              {actionError}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -651,7 +719,16 @@ export default function PlannerScreen() {
         style={styles.eventsList}
         data={selectedDayEvents}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <EventListItem event={item} onPress={() => openEditEditor(item)} />}
+        extraData={`${liveTick}-${timerActionEventId || ""}`}
+        renderItem={({ item }) => (
+          <EventListItem
+            event={item}
+            onPress={() => openEditEditor(item)}
+            onStartTimer={() => handleStartTimer(item.id)}
+            onStopTimer={() => handleStopTimer(item.id)}
+            timerBusy={timerActionEventId === item.id}
+          />
+        )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.eventsListContent,
@@ -899,6 +976,11 @@ const styles = StyleSheet.create({
   },
   eventsTitle: {
     fontWeight: "900",
+  },
+  actionErrorText: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "800",
   },
   eventsList: {
     flex: 1,
