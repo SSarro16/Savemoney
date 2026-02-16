@@ -14,12 +14,17 @@ export default function SignupScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const signupHandler = async ({ email, password }) => {
+  const signupHandler = async (payload) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
-      await authContext.signup(email, password);
+      await authContext.signup(payload.email, payload.password, {
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        gender: payload.gender,
+        dateOfBirth: payload.dateOfBirth,
+      });
     } catch (signupError) {
       setError(signupError.message || t("errors.somethingWrong"));
     } finally {

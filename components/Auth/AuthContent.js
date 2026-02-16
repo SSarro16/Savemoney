@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AppLogo from "../ui/AppLogo";
+import DateTimePickerModal from "../ui/DateTimePickerModal";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../context/CustomizationContext";
 import { useTranslation } from "../../context/LanguageContext";
@@ -26,16 +27,27 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { compactMode, textScale } = useContext(CustomizationContext);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [gender, setGender] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState(null);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [firstNameInvalid, setFirstNameInvalid] = useState(false);
+  const [lastNameInvalid, setLastNameInvalid] = useState(false);
+  const [genderInvalid, setGenderInvalid] = useState(false);
+  const [dateOfBirthInvalid, setDateOfBirthInvalid] = useState(false);
   const [emailInvalid, setEmailInvalid] = useState(false);
   const [passwordInvalid, setPasswordInvalid] = useState(false);
   const [confirmPasswordInvalid, setConfirmPasswordInvalid] = useState(false);
 
+  const lastNameInputRef = useRef(null);
+  const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   const confirmPasswordInputRef = useRef(null);
 
@@ -50,24 +62,60 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
     () => [t("auth.scheduleRowOne"), t("auth.scheduleRowTwo"), t("auth.scheduleRowThree")],
     [t],
   );
+  const firstNameError = firstNameInvalid ? t("auth.firstNameInvalid") : "";
+  const lastNameError = lastNameInvalid ? t("auth.lastNameInvalid") : "";
+  const genderError = genderInvalid ? t("auth.genderInvalid") : "";
+  const dateOfBirthError = dateOfBirthInvalid ? t("auth.dateOfBirthInvalid") : "";
   const emailError = emailInvalid ? t("auth.emailInvalid") : "";
   const passwordError = passwordInvalid ? t("auth.passwordInvalid") : "";
   const confirmPasswordError = confirmPasswordInvalid ? t("auth.confirmPasswordInvalid") : "";
+  const dateOfBirthLabel = dateOfBirth
+    ? dateOfBirth.toLocaleDateString(language === "it" ? "it-IT" : "en-US")
+    : t("auth.dateOfBirthPlaceholder");
 
   const validate = () => {
+    const trimmedFirstName = String(firstName || "").trim();
+    const trimmedLastName = String(lastName || "").trim();
+    const normalizedGender = String(gender || "").trim().toLowerCase();
+    const parsedDate = dateOfBirth instanceof Date ? dateOfBirth : null;
+    const isValidDate = parsedDate && !Number.isNaN(parsedDate.getTime());
+    const minBirthDate = new Date("1900-01-01T00:00:00.000Z");
+    const maxBirthDate = new Date();
     const trimmedEmail = String(email || "").trim();
     const trimmedPassword = String(password || "").trim();
     const trimmedConfirmPassword = String(confirmPassword || "").trim();
 
+    const nextFirstNameInvalid = !isLogin && trimmedFirstName.length === 0;
+    const nextLastNameInvalid = !isLogin && trimmedLastName.length === 0;
+    const nextGenderInvalid =
+      !isLogin && !(normalizedGender === "male" || normalizedGender === "female");
+    const nextDateOfBirthInvalid =
+      !isLogin && (
+        !isValidDate
+        || parsedDate > maxBirthDate
+        || parsedDate < minBirthDate
+      );
     const nextEmailInvalid = !trimmedEmail.includes("@");
     const nextPasswordInvalid = trimmedPassword.length < 6;
     const nextConfirmPasswordInvalid = !isLogin && trimmedPassword !== trimmedConfirmPassword;
 
+    setFirstNameInvalid(nextFirstNameInvalid);
+    setLastNameInvalid(nextLastNameInvalid);
+    setGenderInvalid(nextGenderInvalid);
+    setDateOfBirthInvalid(nextDateOfBirthInvalid);
     setEmailInvalid(nextEmailInvalid);
     setPasswordInvalid(nextPasswordInvalid);
     setConfirmPasswordInvalid(nextConfirmPasswordInvalid);
 
-    return !nextEmailInvalid && !nextPasswordInvalid && !nextConfirmPasswordInvalid;
+    return (
+      !nextFirstNameInvalid
+      && !nextLastNameInvalid
+      && !nextGenderInvalid
+      && !nextDateOfBirthInvalid
+      && !nextEmailInvalid
+      && !nextPasswordInvalid
+      && !nextConfirmPasswordInvalid
+    );
   };
 
   const submitHandler = async () => {
@@ -75,10 +123,19 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
       return;
     }
 
-    await onAuthenticate({
+    const payload = {
       email: String(email || "").trim(),
       password: String(password || "").trim(),
-    });
+    };
+
+    if (!isLogin) {
+      payload.firstName = String(firstName || "").trim();
+      payload.lastName = String(lastName || "").trim();
+      payload.gender = String(gender || "").trim().toLowerCase();
+      payload.dateOfBirth = dateOfBirth;
+    }
+
+    await onAuthenticate(payload);
   };
 
   const switchModeHandler = () => {
@@ -148,7 +205,129 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
 
             <Card style={[styles.formCard, { backgroundColor: colors.surface2 }]}>
             <Text style={[styles.formLegend, { color: colors.textMuted }]}>{t("auth.formLegend")}</Text>
+            {!isLogin && (
+              <>
+                <TextField
+                  label={t("auth.firstNameLabel")}
+                  value={firstName}
+                  onChangeText={(value) => {
+                    setFirstName(value);
+                    if (firstNameInvalid) {
+                      setFirstNameInvalid(false);
+                    }
+                  }}
+                  invalid={firstNameInvalid}
+                  errorText={firstNameError}
+                  helperText={t("auth.firstNameHint")}
+                  leftIcon="person-outline"
+                  placeholder={t("auth.firstNamePlaceholder")}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => lastNameInputRef.current?.focus()}
+                  autoCapitalize="words"
+                  textContentType="givenName"
+                  autoFocus={!isLogin}
+                />
+
+                <TextField
+                  ref={lastNameInputRef}
+                  label={t("auth.lastNameLabel")}
+                  value={lastName}
+                  onChangeText={(value) => {
+                    setLastName(value);
+                    if (lastNameInvalid) {
+                      setLastNameInvalid(false);
+                    }
+                  }}
+                  invalid={lastNameInvalid}
+                  errorText={lastNameError}
+                  helperText={t("auth.lastNameHint")}
+                  leftIcon="people-outline"
+                  placeholder={t("auth.lastNamePlaceholder")}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => emailInputRef.current?.focus()}
+                  autoCapitalize="words"
+                  textContentType="familyName"
+                />
+
+                <View style={styles.selectionGroup}>
+                  <Text style={[styles.selectionLabel, { color: genderInvalid ? colors.error500 : colors.textBody }]}>
+                    {t("auth.genderLabel")}
+                  </Text>
+                  <View style={styles.genderRow}>
+                    {["male", "female"].map((option) => {
+                      const isSelected = gender === option;
+                      const textKey = option === "male" ? "auth.genderMale" : "auth.genderFemale";
+
+                      return (
+                        <Pressable
+                          key={option}
+                          onPress={() => {
+                            setGender(option);
+                            if (genderInvalid) {
+                              setGenderInvalid(false);
+                            }
+                          }}
+                          style={[
+                            styles.genderChip,
+                            isSelected
+                              ? {
+                                  borderColor: colors.accent35,
+                                  backgroundColor: colors.accent12,
+                                }
+                              : {
+                                  borderColor: colors.white12,
+                                  backgroundColor: colors.primary800,
+                                },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.genderChipText,
+                              { color: isSelected ? colors.textTitle : colors.textBody },
+                            ]}
+                          >
+                            {t(textKey)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {!!genderError && (
+                    <Text style={[styles.selectionFeedback, { color: colors.error500 }]}>{genderError}</Text>
+                  )}
+                </View>
+
+                <View style={styles.selectionGroup}>
+                  <Text style={[styles.selectionLabel, { color: dateOfBirthInvalid ? colors.error500 : colors.textBody }]}>
+                    {t("auth.dateOfBirthLabel")}
+                  </Text>
+                  <Pressable
+                    onPress={() => setIsDatePickerOpen(true)}
+                    style={[
+                      styles.dateField,
+                      dateOfBirthInvalid
+                        ? { borderColor: colors.error500 }
+                        : { borderColor: colors.white18 },
+                      { backgroundColor: colors.primary800 },
+                    ]}
+                  >
+                    <Ionicons name="calendar-outline" size={18} color={dateOfBirthInvalid ? colors.error500 : colors.textMuted} />
+                    <Text style={[styles.dateFieldText, { color: dateOfBirth ? colors.textTitle : colors.textMuted }]}>
+                      {dateOfBirthLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+                  </Pressable>
+                  <Text style={[styles.selectionFeedback, { color: dateOfBirthInvalid ? colors.error500 : colors.textFaint }]}>
+                    {dateOfBirthInvalid ? dateOfBirthError : t("auth.dateOfBirthHint")}
+                  </Text>
+                </View>
+              </>
+            )}
+
             <TextField
+              ref={emailInputRef}
               label={t("auth.emailLabel")}
               value={email}
               onChangeText={(value) => {
@@ -168,7 +347,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
               onSubmitEditing={() => passwordInputRef.current?.focus()}
               autoComplete="email"
               textContentType="username"
-              autoFocus
+              autoFocus={isLogin}
             />
 
             <TextField
@@ -232,7 +411,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
             <View style={[styles.actions, { marginTop: compactMode ? 8 : 10 }]}>
               <Button onPress={submitHandler} disabled={isSubmitting}>
                 {isSubmitting
-                  ? "Attendere..."
+                  ? t("auth.submitting")
                   : isLogin
                     ? t("auth.login")
                     : t("auth.signup")}
@@ -250,6 +429,18 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
           </ScrollView>
         </Pressable>
       </KeyboardAvoidingView>
+      <DateTimePickerModal
+        visible={isDatePickerOpen}
+        mode="date"
+        value={dateOfBirth || new Date("2000-01-01T00:00:00.000Z")}
+        title={t("auth.dateOfBirthTitle")}
+        onCancel={() => setIsDatePickerOpen(false)}
+        onConfirm={(selectedDate) => {
+          setDateOfBirth(selectedDate);
+          setDateOfBirthInvalid(false);
+          setIsDatePickerOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -383,6 +574,53 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
     marginBottom: 4,
+  },
+  selectionGroup: {
+    marginVertical: 4,
+  },
+  selectionLabel: {
+    marginBottom: 5,
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  genderRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  genderChip: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  genderChipText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  dateField: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dateFieldText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  selectionFeedback: {
+    minHeight: 16,
+    marginTop: 5,
+    fontSize: 10.5,
+    fontWeight: "700",
+    lineHeight: 14,
   },
   actions: {
     marginTop: 12,
