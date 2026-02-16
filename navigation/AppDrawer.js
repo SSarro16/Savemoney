@@ -33,6 +33,7 @@ export default function AppDrawer() {
         component={PlannerStack}
         options={{
           title: "Planner",
+          headerShown: false,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" color={color} size={size} />
           ),
