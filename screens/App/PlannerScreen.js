@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,6 +35,9 @@ const LAYOUT = {
   fabSize: 58,
   fabSpacing: 14,
 };
+const DAYS_IN_WEEK = 7;
+const WEEK_PAGER_WINDOW = 120;
+const WEEK_PAGER_CENTER_INDEX = WEEK_PAGER_WINDOW;
 
 function toDateString(date) {
   return formatDate(date, "yyyy-MM-dd");
@@ -57,6 +60,22 @@ function buildMonthWeeks(monthDate) {
 
 function isSameMonth(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function shiftDays(baseDate, days) {
+  const next = new Date(baseDate);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function diffCalendarDays(a, b) {
+  const aUtc = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const bUtc = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((aUtc - bUtc) / (24 * 60 * 60 * 1000));
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function getRange(viewMode, selectedDate) {
@@ -114,6 +133,17 @@ export default function PlannerScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [weekPagerWidth, setWeekPagerWidth] = useState(0);
+  const weekPagerRef = useRef(null);
+  const weekOffsets = useMemo(
+    () =>
+      Array.from(
+        { length: WEEK_PAGER_WINDOW * 2 + 1 },
+        (_item, index) => index - WEEK_PAGER_WINDOW,
+      ),
+    [],
+  );
+  const anchorWeekStart = useMemo(() => startOfWeek(startOfDay(new Date())), []);
 
   const range = useMemo(() => getRange(viewMode, selectedDate), [selectedDate, viewMode]);
   const rangeStartMs = range.start.getTime();
@@ -162,10 +192,23 @@ export default function PlannerScreen() {
     () => (monthWeeks[0] || []).map((date) => formatDate(date, "EEE")),
     [monthWeeks],
   );
-
-  const weekDays = useMemo(
-    () => eachDayBetween(startOfWeek(selectedDate), endOfWeek(selectedDate), 7),
-    [selectedDate],
+  const selectedWeekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
+  const selectedWeekdayOffset = useMemo(
+    () => diffCalendarDays(startOfDay(selectedDate), selectedWeekStart),
+    [selectedDate, selectedWeekStart],
+  );
+  const selectedWeekOffset = useMemo(
+    () => Math.trunc(diffCalendarDays(selectedWeekStart, anchorWeekStart) / DAYS_IN_WEEK),
+    [anchorWeekStart, selectedWeekStart],
+  );
+  const selectedWeekPageIndex = useMemo(
+    () =>
+      clamp(
+        selectedWeekOffset + WEEK_PAGER_CENTER_INDEX,
+        0,
+        weekOffsets.length - 1,
+      ),
+    [selectedWeekOffset, weekOffsets.length],
   );
 
   const eventsByDateMap = useMemo(() => {
@@ -218,6 +261,42 @@ export default function PlannerScreen() {
     const nextMonth = new Date(monthAnchor);
     nextMonth.setMonth(monthAnchor.getMonth() + delta);
     setSelectedDate(startOfDay(nextMonth));
+  };
+
+  const buildWeekDaysByOffset = useCallback(
+    (weekOffset) => {
+      const weekStart = startOfDay(shiftDays(anchorWeekStart, weekOffset * DAYS_IN_WEEK));
+      return eachDayBetween(weekStart, endOfWeek(weekStart), DAYS_IN_WEEK);
+    },
+    [anchorWeekStart],
+  );
+
+  useEffect(() => {
+    if (viewMode === "month" || weekPagerWidth <= 0 || !weekPagerRef.current) {
+      return;
+    }
+
+    weekPagerRef.current.scrollToIndex({
+      index: selectedWeekPageIndex,
+      animated: true,
+      viewPosition: 0.5,
+    });
+  }, [selectedWeekPageIndex, viewMode, weekPagerWidth]);
+
+  const onWeekPagerMomentumEnd = (event) => {
+    if (!weekPagerWidth) {
+      return;
+    }
+
+    const rawIndex = Math.round(event.nativeEvent.contentOffset.x / weekPagerWidth);
+    const nextIndex = clamp(rawIndex, 0, weekOffsets.length - 1);
+    const weekOffset = weekOffsets[nextIndex];
+    const weekStart = startOfDay(shiftDays(anchorWeekStart, weekOffset * DAYS_IN_WEEK));
+    const nextDate = startOfDay(shiftDays(weekStart, selectedWeekdayOffset));
+
+    if (!isSameDay(nextDate, selectedDate)) {
+      setSelectedDate(nextDate);
+    }
   };
 
   const openEditEditor = (event) => {
@@ -437,54 +516,92 @@ export default function PlannerScreen() {
               </View>
             </View>
           ) : (
-            <View style={styles.dayWeekWrap}>
-              <View style={styles.dayStrip}>
-                {weekDays.map((date) => {
-                  const isSelected = isSameDay(date, selectedDate);
-                  const key = toDateString(date);
-                  const dayCount = eventsByDateMap[key] || 0;
+            <View
+              style={styles.dayWeekWrap}
+              onLayout={(event) => {
+                const nextWidth = Math.round(event.nativeEvent.layout.width);
+                if (nextWidth > 0 && nextWidth !== weekPagerWidth) {
+                  setWeekPagerWidth(nextWidth);
+                }
+              }}
+            >
+              <FlatList
+                ref={weekPagerRef}
+                data={weekOffsets}
+                horizontal
+                pagingEnabled
+                keyExtractor={(item) => `week-${item}`}
+                showsHorizontalScrollIndicator={false}
+                getItemLayout={
+                  weekPagerWidth > 0
+                    ? (_data, index) => ({
+                        length: weekPagerWidth,
+                        offset: weekPagerWidth * index,
+                        index,
+                      })
+                    : undefined
+                }
+                onScrollToIndexFailed={() => {}}
+                onMomentumScrollEnd={onWeekPagerMomentumEnd}
+                renderItem={({ item }) => {
+                  const weekDates = buildWeekDaysByOffset(item);
 
                   return (
-                    <Pressable
-                      key={key}
-                      onPress={() => setSelectedDate(date)}
-                      style={[
-                        styles.dayChip,
-                        { minHeight: compactMode ? 74 : 82 },
-                        isSelected
-                          ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
-                          : { backgroundColor: colors.white08, borderColor: colors.white12 },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dayChipLabel,
-                          { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
-                        ]}
-                      >
-                        {formatDate(date, "EEE")}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.dayChipDate,
-                          { color: isSelected ? colors.textOnAccentStrong : colors.textBody },
-                        ]}
-                      >
-                        {formatDate(date, "d")}
-                      </Text>
-                      {!!dayCount && (
-                        <View
-                          style={[
-                            styles.dayDot,
-                            { backgroundColor: isSelected ? colors.textOnAccentStrong : colors.accent500 },
-                          ]}
-                        />
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
+                    <View style={[styles.weekPage, { width: weekPagerWidth || 1 }]}>
+                      <View style={styles.dayStrip}>
+                        {weekDates.map((date) => {
+                          const isSelected = isSameDay(date, selectedDate);
+                          const key = toDateString(date);
+                          const dayCount = eventsByDateMap[key] || 0;
 
+                          return (
+                            <Pressable
+                              key={key}
+                              onPress={() => setSelectedDate(startOfDay(date))}
+                              style={[
+                                styles.dayChip,
+                                { minHeight: compactMode ? 74 : 82 },
+                                isSelected
+                                  ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                                  : { backgroundColor: colors.white08, borderColor: colors.white12 },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.dayChipLabel,
+                                  { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                                ]}
+                              >
+                                {formatDate(date, "EEE")}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.dayChipDate,
+                                  { color: isSelected ? colors.textOnAccentStrong : colors.textBody },
+                                ]}
+                              >
+                                {formatDate(date, "d")}
+                              </Text>
+                              {!!dayCount && (
+                                <View
+                                  style={[
+                                    styles.dayDot,
+                                    {
+                                      backgroundColor: isSelected
+                                        ? colors.textOnAccentStrong
+                                        : colors.accent500,
+                                    },
+                                  ]}
+                                />
+                              )}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                }}
+              />
             </View>
           )}
         </Card>
@@ -701,6 +818,9 @@ const styles = StyleSheet.create({
   },
   dayWeekWrap: {
     flex: 1,
+    justifyContent: "flex-start",
+  },
+  weekPage: {
     justifyContent: "flex-start",
   },
   dayStrip: {
