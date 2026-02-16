@@ -160,7 +160,7 @@ export default function PlannerScreen() {
   const [viewMode, setViewMode] = useState("week");
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [events, setEvents] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -168,6 +168,10 @@ export default function PlannerScreen() {
   const [liveTick, setLiveTick] = useState(Date.now());
   const [weekPagerWidth, setWeekPagerWidth] = useState(0);
   const weekPagerRef = useRef(null);
+  const weekPagerIndexRef = useRef(WEEK_PAGER_CENTER_INDEX);
+  const hasAlignedWeekPagerRef = useRef(false);
+  const hasLoadedOnceRef = useRef(false);
+  const eventsRequestIdRef = useRef(0);
   const weekOffsets = useMemo(
     () =>
       Array.from(
@@ -182,22 +186,44 @@ export default function PlannerScreen() {
   const rangeStartMs = range.start.getTime();
   const rangeEndMs = range.end.getTime();
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async ({ silent = false } = {}) => {
     if (!user?.uid) {
-      setIsLoading(false);
+      eventsRequestIdRef.current += 1;
+      hasLoadedOnceRef.current = false;
+      setEvents([]);
+      setError(null);
+      setIsInitialLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    const requestId = eventsRequestIdRef.current + 1;
+    eventsRequestIdRef.current = requestId;
+
+    if (!silent) {
+      if (!hasLoadedOnceRef.current) {
+        setIsInitialLoading(true);
+      }
+    }
+
     setError(null);
 
     try {
       const items = await getEventsByRange(user.uid, new Date(rangeStartMs), new Date(rangeEndMs));
+      if (requestId !== eventsRequestIdRef.current) {
+        return;
+      }
       setEvents(items);
     } catch (loadError) {
+      if (requestId !== eventsRequestIdRef.current) {
+        return;
+      }
       setError(loadError.message || "Unable to load events.");
     } finally {
-      setIsLoading(false);
+      if (requestId !== eventsRequestIdRef.current) {
+        return;
+      }
+      hasLoadedOnceRef.current = true;
+      setIsInitialLoading(false);
     }
   }, [rangeEndMs, rangeStartMs, user?.uid]);
 
@@ -207,7 +233,9 @@ export default function PlannerScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadEvents();
+      if (hasLoadedOnceRef.current) {
+        loadEvents({ silent: true });
+      }
       return undefined;
     }, [loadEvents]),
   );
@@ -327,11 +355,18 @@ export default function PlannerScreen() {
       return;
     }
 
+    if (weekPagerIndexRef.current === selectedWeekPageIndex) {
+      hasAlignedWeekPagerRef.current = true;
+      return;
+    }
+
     weekPagerRef.current.scrollToIndex({
       index: selectedWeekPageIndex,
-      animated: true,
+      animated: hasAlignedWeekPagerRef.current,
       viewPosition: 0.5,
     });
+    weekPagerIndexRef.current = selectedWeekPageIndex;
+    hasAlignedWeekPagerRef.current = true;
   }, [selectedWeekPageIndex, viewMode, weekPagerWidth]);
 
   const onWeekPagerMomentumEnd = (event) => {
@@ -341,6 +376,7 @@ export default function PlannerScreen() {
 
     const rawIndex = Math.round(event.nativeEvent.contentOffset.x / weekPagerWidth);
     const nextIndex = clamp(rawIndex, 0, weekOffsets.length - 1);
+    weekPagerIndexRef.current = nextIndex;
     const weekOffset = weekOffsets[nextIndex];
     const weekStart = startOfDay(shiftDays(anchorWeekStart, weekOffset * DAYS_IN_WEEK));
     const nextDate = startOfDay(shiftDays(weekStart, selectedWeekdayOffset));
@@ -400,7 +436,7 @@ export default function PlannerScreen() {
     }
   };
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return <LoadingOverlay message={t("planner.loading")} />;
   }
 
