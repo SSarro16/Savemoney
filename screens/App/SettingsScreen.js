@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -9,6 +10,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 
 export default function SettingsScreen() {
+  const navigation = useNavigation();
   const colors = GlobalStyles.colors;
   const { user, logout } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
@@ -37,6 +39,12 @@ export default function SettingsScreen() {
         <Text style={[styles.value, { color: colors.textBody }]}>
           {Constants.expoConfig?.version || "0.0.0"}
         </Text>
+
+        <View style={styles.actionWrap}>
+          <Button variant="secondary" onPress={() => navigation.navigate("Customization")}>
+            Open customization
+          </Button>
+        </View>
 
         <View style={styles.actionWrap}>
           <Button variant="danger" onPress={logout}>
@@ -74,6 +82,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   actionWrap: {
-    marginTop: 18,
+    marginTop: 12,
   },
 });

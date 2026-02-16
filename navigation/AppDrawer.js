@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import PlannerStack from "./PlannerStack";
+import CustomizationScreen from "../screens/App/CustomizationScreen";
 import SettingsScreen from "../screens/App/SettingsScreen";
 import { GlobalStyles } from "../constants/styles";
 
@@ -36,6 +37,16 @@ export default function AppDrawer() {
           headerShown: false,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Customization"
+        component={CustomizationScreen}
+        options={{
+          title: "Customization",
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="color-palette-outline" color={color} size={size} />
           ),
         }}
       />
