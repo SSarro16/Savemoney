@@ -48,7 +48,15 @@
     "dateLabel": "Data attiva",
     "selectDateTitle": "Seleziona una data",
     "resetToTodayA11y": "Torna a oggi",
-    "empty": "Nessun evento pianificato. Tocca + per creare il primo."
+    "empty": "Nessun evento pianificato. Tocca + per creare il primo.",
+    "homePanelTitle": "Cabina tempo",
+    "homePanelSubtitle": "Pianifica, esegui, misura",
+    "focusRunning": "Focus attivo",
+    "focusIdle": "Pronto a pianificare",
+    "metricEvents": "Eventi",
+    "metricPlanned": "Previsto",
+    "metricTracked": "Reale",
+    "eventsCount": "{{count}} eventi"
   },
   "timer": {
     "start": "Avvia",

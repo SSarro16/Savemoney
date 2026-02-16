@@ -124,6 +124,19 @@ function isEventOnDate(event, date) {
   return event.startAt <= selectedEnd && event.endAt >= selectedStart;
 }
 
+function getLiveTrackedSeconds(event, nowMs) {
+  const baseTrackedSeconds = Number(event?.trackedDurationSeconds);
+  const safeTrackedSeconds = Number.isFinite(baseTrackedSeconds) ? Math.max(0, baseTrackedSeconds) : 0;
+  const startedAt = event?.timerStartedAt ? new Date(event.timerStartedAt) : null;
+
+  if (!startedAt) {
+    return safeTrackedSeconds;
+  }
+
+  const liveSeconds = Math.max(0, Math.floor((nowMs - startedAt.getTime()) / 1000));
+  return safeTrackedSeconds + liveSeconds;
+}
+
 function serializeEvent(event) {
   return {
     id: event.id,
@@ -247,6 +260,31 @@ export default function PlannerScreen() {
         .sort((a, b) => a.startAt - b.startAt),
     [events, selectedDate],
   );
+  const selectedDayMetrics = useMemo(() => {
+    return selectedDayEvents.reduce(
+      (acc, event) => {
+        const plannedRaw = Number(event?.expectedDurationMinutes);
+        const fallbackRaw = Number(event?.scheduledDurationMinutes);
+        const plannedMinutes = Number.isFinite(plannedRaw) && plannedRaw > 0
+          ? plannedRaw
+          : Number.isFinite(fallbackRaw)
+            ? fallbackRaw
+            : 0;
+
+        acc.eventCount += 1;
+        acc.runningCount += event?.isTimerRunning ? 1 : 0;
+        acc.plannedMinutes += Math.max(0, plannedMinutes);
+        acc.trackedMinutes += Math.round(getLiveTrackedSeconds(event, liveTick) / 60);
+        return acc;
+      },
+      {
+        eventCount: 0,
+        runningCount: 0,
+        plannedMinutes: 0,
+        trackedMinutes: 0,
+      },
+    );
+  }, [liveTick, selectedDayEvents]);
 
   useEffect(() => {
     const hasRunningTimer = events.some((event) => event.isTimerRunning);
@@ -311,6 +349,8 @@ export default function PlannerScreen() {
   const eventsTitle = isSameDay(selectedDate, new Date())
     ? t("planner.eventsToday")
     : formatDate(selectedDate, "EEEE, MMM d");
+  const panelStatusLabel = selectedDayMetrics.runningCount > 0 ? t("planner.focusRunning") : t("planner.focusIdle");
+  const eventsCountLabel = t("planner.eventsCount", { count: selectedDayMetrics.eventCount });
   const isTodaySelected = isSameDay(selectedDate, new Date());
   const selectedDateLabel =
     viewMode === "week"
@@ -475,55 +515,90 @@ export default function PlannerScreen() {
         </View>
       </View>
 
-      <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}> 
-        <View style={styles.mottoRow}>
-          <View style={[styles.mottoChip, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
-            <Ionicons name="hourglass-outline" size={14} color={colors.accent500} />
-            <Text style={[styles.mottoText, { color: colors.textMuted }]}>{t("common.motto")}</Text>
+      <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
+        <Card style={[styles.heroCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.heroAura, styles.heroAuraLarge, { borderColor: colors.accent18, backgroundColor: colors.accent12 }]} />
+          <View style={[styles.heroAura, styles.heroAuraSmall, { borderColor: colors.white10, backgroundColor: colors.white08 }]} />
+
+          <View style={styles.heroTopRow}>
+            <View style={[styles.heroIconWrap, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
+              <Ionicons name="time-outline" size={15} color={colors.accent500} />
+            </View>
+            <View style={styles.heroTextWrap}>
+              <Text style={[styles.heroTitle, { color: colors.textTitle }]}>{t("planner.homePanelTitle")}</Text>
+              <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>{t("planner.homePanelSubtitle")}</Text>
+            </View>
+            <View style={[styles.heroStatusPill, { borderColor: colors.accent30, backgroundColor: colors.accent12 }]}>
+              <Text style={[styles.heroStatusText, { color: colors.textBody }]}>{panelStatusLabel}</Text>
+            </View>
           </View>
-        </View>
 
-        <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-        </View>
+          <View style={styles.heroMetricsRow}>
+            <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+              <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricEvents")}</Text>
+              <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.eventCount}</Text>
+            </View>
+            <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+              <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricPlanned")}</Text>
+              <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.plannedMinutes}m</Text>
+            </View>
+            <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+              <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricTracked")}</Text>
+              <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.trackedMinutes}m</Text>
+            </View>
+          </View>
 
-        <View style={styles.datePickerWrap}>
-          <Text style={[styles.datePickerLabel, { color: colors.textMuted }]}>
-            {t("planner.dateLabel")}
-          </Text>
-          <Pressable
-            onPress={() => setIsDatePickerOpen(true)}
-            style={[
-              styles.datePickerField,
-              { backgroundColor: colors.surface, borderColor: colors.white10 },
-            ]}
-          >
-            <Ionicons name="calendar-outline" size={16} color={colors.accent500} />
-            <Text style={[styles.datePickerText, { color: colors.textTitle }]} numberOfLines={1}>
-              {selectedDateLabel}
+          <View style={styles.mottoRow}>
+            <View style={[styles.mottoChip, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
+              <Ionicons name="hourglass-outline" size={14} color={colors.accent500} />
+              <Text style={[styles.mottoText, { color: colors.textMuted }]}>{t("common.motto")}</Text>
+            </View>
+          </View>
+        </Card>
+
+        <View style={[styles.controlsCard, { borderColor: colors.white10, backgroundColor: colors.white06 }]}>
+          <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
+            <ViewToggle value={viewMode} onChange={setViewMode} />
+          </View>
+
+          <View style={styles.datePickerWrap}>
+            <Text style={[styles.datePickerLabel, { color: colors.textMuted }]}>
+              {t("planner.dateLabel")}
             </Text>
-            <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
-          </Pressable>
-        </View>
+            <View style={styles.datePickerRow}>
+              <Pressable
+                onPress={() => setIsDatePickerOpen(true)}
+                style={[
+                  styles.datePickerField,
+                  { backgroundColor: colors.surface, borderColor: colors.white10 },
+                ]}
+              >
+                <Ionicons name="calendar-outline" size={16} color={colors.accent500} />
+                <Text style={[styles.datePickerText, { color: colors.textTitle }]} numberOfLines={1}>
+                  {selectedDateLabel}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+              </Pressable>
 
-        <View style={styles.todayRow}>
-          <Pressable
-            onPress={resetToToday}
-            accessibilityRole="button"
-            accessibilityLabel={t("planner.resetToTodayA11y")}
-            style={[
-              styles.todayIconButton,
-              isTodaySelected
-                ? { backgroundColor: colors.accent18, borderColor: colors.accent35 }
-                : { backgroundColor: colors.white08, borderColor: colors.white12 },
-            ]}
-          >
-            <Ionicons
-              name="refresh-outline"
-              size={16}
-              color={isTodaySelected ? colors.accent500 : colors.textBody}
-            />
-          </Pressable>
+              <Pressable
+                onPress={resetToToday}
+                accessibilityRole="button"
+                accessibilityLabel={t("planner.resetToTodayA11y")}
+                style={[
+                  styles.todayIconButton,
+                  isTodaySelected
+                    ? { backgroundColor: colors.accent18, borderColor: colors.accent35 }
+                    : { backgroundColor: colors.white08, borderColor: colors.white12 },
+                ]}
+              >
+                <Ionicons
+                  name="refresh-outline"
+                  size={16}
+                  color={isTodaySelected ? colors.accent500 : colors.textBody}
+                />
+              </Pressable>
+            </View>
+          </View>
         </View>
 
         <Card
@@ -749,6 +824,7 @@ export default function PlannerScreen() {
           <Text style={[styles.eventsTitle, { color: colors.textTitle, fontSize: 19 * textScale }]}>
             {eventsTitle}
           </Text>
+          <Text style={[styles.eventsSubtitle, { color: colors.textMuted }]}>{eventsCountLabel}</Text>
           {!!actionError && (
             <Text style={[styles.actionErrorText, { color: colors.error500 }]} numberOfLines={2}>
               {actionError}
@@ -841,7 +917,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   mottoRow: {
-    marginBottom: 10,
+    marginTop: 6,
   },
   mottoChip: {
     borderWidth: 1,
@@ -857,13 +933,107 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
   },
-  topSection: {},
+  topSection: {
+    gap: 10,
+  },
+  heroCard: {
+    overflow: "hidden",
+    position: "relative",
+    padding: 12,
+    gap: 10,
+  },
+  heroAura: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  heroAuraLarge: {
+    width: 120,
+    height: 120,
+    top: -38,
+    right: -32,
+  },
+  heroAuraSmall: {
+    width: 58,
+    height: 58,
+    right: 44,
+    top: 18,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  heroIconWrap: {
+    width: 34,
+    height: 34,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroTextWrap: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  heroSubtitle: {
+    marginTop: 1,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  heroStatusPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  heroStatusText: {
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.22,
+  },
+  heroMetricsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  heroMetricCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 2,
+  },
+  heroMetricLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.22,
+  },
+  heroMetricValue: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  controlsCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 9,
+  },
   toggleWrap: {
     marginBottom: 10,
   },
   datePickerWrap: {
-    marginBottom: 10,
     gap: 6,
+  },
+  datePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   datePickerLabel: {
     fontSize: 11,
@@ -872,6 +1042,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   datePickerField: {
+    flex: 1,
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 10,
@@ -884,10 +1055,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "900",
-  },
-  todayRow: {
-    marginBottom: 10,
-    alignItems: "flex-end",
   },
   todayIconButton: {
     borderWidth: 1,
@@ -1019,6 +1186,11 @@ const styles = StyleSheet.create({
   },
   eventsTitle: {
     fontWeight: "900",
+  },
+  eventsSubtitle: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: "800",
   },
   actionErrorText: {
     marginTop: 4,
