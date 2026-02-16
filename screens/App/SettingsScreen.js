@@ -5,6 +5,7 @@ import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
+import AppLogo from "../../components/ui/AppLogo";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { CustomizationContext } from "../../context/CustomizationContext";
@@ -76,7 +77,7 @@ export default function SettingsScreen() {
           <View style={[styles.heroBubble, styles.heroBubbleTop]} />
           <View style={[styles.heroBubble, styles.heroBubbleBottom]} />
           <View style={styles.heroIcon}>
-            <Ionicons name="settings-outline" size={18} color={colors.textTitle} />
+            <AppLogo size={28} borderRadius={10} />
           </View>
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>{t("settings.title")}</Text>

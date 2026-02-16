@@ -10,9 +10,11 @@ import {
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import AppLogo from "../ui/AppLogo";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../context/CustomizationContext";
 import { useTranslation } from "../../context/LanguageContext";
@@ -100,6 +102,19 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
+              <View style={[styles.brandingRow, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
+                <View style={[styles.brandingLogoWrap, { borderColor: colors.accent30, backgroundColor: colors.accent18 }]}>
+                  <AppLogo size={36} borderRadius={13} />
+                </View>
+                <View style={styles.brandingTextWrap}>
+                  <Text style={[styles.brandingTitle, { color: colors.textTitle }]}>Savetime</Text>
+                  <Text style={[styles.brandingSubtitle, { color: colors.textMuted }]}>Il tempo e denaro</Text>
+                </View>
+                <View style={[styles.brandingBadge, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
+                  <Ionicons name="time-outline" size={14} color={colors.textTitle} />
+                </View>
+              </View>
+
               <Text style={[styles.title, { color: colors.textTitle, fontSize: 26 * textScale }]}>
                 {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
               </Text>
@@ -215,6 +230,44 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 14,
+  },
+  brandingRow: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  brandingLogoWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  brandingTextWrap: {
+    flex: 1,
+  },
+  brandingTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  brandingSubtitle: {
+    marginTop: 1,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  brandingBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontSize: 26,

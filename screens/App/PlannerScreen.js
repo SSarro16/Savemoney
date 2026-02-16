@@ -7,6 +7,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import EventListItem from "../../components/calendar/EventListItem";
 import ViewToggle from "../../components/calendar/ViewToggle";
+import AppLogo from "../../components/ui/AppLogo";
 import Card from "../../components/ui/Card";
 import DateTimePickerModal from "../../components/ui/DateTimePickerModal";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
@@ -292,7 +293,9 @@ export default function PlannerScreen() {
           {titleLabel || "Savetime"}
         </Text>
 
-        <IconButton icon="time-outline" size={20} color={colors.textTitle} variant="soft" />
+        <View style={[styles.headerLogoWrap, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+          <AppLogo size={24} borderRadius={9} />
+        </View>
       </View>
 
       <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}> 
@@ -494,6 +497,14 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontWeight: "900",
+  },
+  headerLogoWrap: {
+    width: 38,
+    height: 38,
+    borderWidth: 1,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   topSection: {},
   toggleWrap: {
