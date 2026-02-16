@@ -46,6 +46,13 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
         : t("auth.signupSubtitle"),
     [isLogin, t],
   );
+  const scheduleRows = useMemo(
+    () => [t("auth.scheduleRowOne"), t("auth.scheduleRowTwo"), t("auth.scheduleRowThree")],
+    [t],
+  );
+  const emailError = emailInvalid ? t("auth.emailInvalid") : "";
+  const passwordError = passwordInvalid ? t("auth.passwordInvalid") : "";
+  const confirmPasswordError = confirmPasswordInvalid ? t("auth.confirmPasswordInvalid") : "";
 
   const validate = () => {
     const trimmedEmail = String(email || "").trim();
@@ -93,21 +100,23 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
             contentContainerStyle={[
               styles.scrollContainer,
               {
-                paddingTop: Math.max(insets.top, 10),
-                paddingBottom: Math.max(insets.bottom, 14),
+                paddingTop: Math.max(insets.top, 8),
+                paddingBottom: Math.max(insets.bottom, 18),
               },
             ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
-              <View style={[styles.brandingRow, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
+              <View style={[styles.brandingRow, { borderColor: colors.accent30, backgroundColor: colors.surface }]}>
+                <View style={[styles.brandOrb, styles.brandOrbTop, { borderColor: colors.accent18, backgroundColor: colors.accent12 }]} />
+                <View style={[styles.brandOrb, styles.brandOrbBottom, { borderColor: colors.white10, backgroundColor: colors.white08 }]} />
                 <View style={[styles.brandingLogoWrap, { borderColor: colors.accent30, backgroundColor: colors.accent18 }]}>
                   <AppLogo size={36} borderRadius={13} />
                 </View>
                 <View style={styles.brandingTextWrap}>
                   <Text style={[styles.brandingTitle, { color: colors.textTitle }]}>Savetime</Text>
-                  <Text style={[styles.brandingSubtitle, { color: colors.textMuted }]}>Il tempo e denaro</Text>
+                  <Text style={[styles.brandingSubtitle, { color: colors.textMuted }]}>{t("common.motto")}</Text>
                 </View>
                 <View style={[styles.brandingBadge, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
                   <Ionicons name="time-outline" size={14} color={colors.textTitle} />
@@ -122,9 +131,25 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
               </Text>
             </View>
 
-            <Card style={{ backgroundColor: colors.surface2 }}>
+            <View style={[styles.scheduleCard, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
+              <View style={styles.scheduleHeaderRow}>
+                <View style={[styles.scheduleIconWrap, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.accent500} />
+                </View>
+                <Text style={[styles.scheduleTitle, { color: colors.textTitle }]}>{t("auth.scheduleCardTitle")}</Text>
+              </View>
+              {scheduleRows.map((item) => (
+                <View key={item} style={styles.scheduleRow}>
+                  <View style={[styles.scheduleDot, { backgroundColor: colors.accent500 }]} />
+                  <Text style={[styles.scheduleRowText, { color: colors.textBody }]}>{item}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Card style={[styles.formCard, { backgroundColor: colors.surface2 }]}>
+            <Text style={[styles.formLegend, { color: colors.textMuted }]}>{t("auth.formLegend")}</Text>
             <TextField
-              label="Email"
+              label={t("auth.emailLabel")}
               value={email}
               onChangeText={(value) => {
                 setEmail(value);
@@ -133,18 +158,22 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
                 }
               }}
               invalid={emailInvalid}
+              errorText={emailError}
+              helperText={t("auth.emailHint")}
               keyboardType="email-address"
               leftIcon="mail-outline"
               placeholder="name@example.com"
               returnKeyType="next"
               blurOnSubmit={false}
               onSubmitEditing={() => passwordInputRef.current?.focus()}
+              autoComplete="email"
+              textContentType="username"
               autoFocus
             />
 
             <TextField
               ref={passwordInputRef}
-              label="Password"
+              label={t("auth.passwordLabel")}
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
@@ -156,12 +185,16 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
                 }
               }}
               invalid={passwordInvalid}
+              errorText={passwordError}
+              helperText={t("auth.passwordHint")}
               secureTextEntry
               showToggleSecure
               leftIcon="lock-closed-outline"
-              placeholder="Min. 6 caratteri"
+              placeholder={t("auth.passwordHint")}
               returnKeyType={isLogin ? "done" : "next"}
               blurOnSubmit={isLogin}
+              autoComplete="password"
+              textContentType="password"
               onSubmitEditing={() => {
                 if (isLogin) {
                   submitHandler();
@@ -174,7 +207,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
             {!isLogin && (
               <TextField
                 ref={confirmPasswordInputRef}
-                label="Conferma password"
+                label={t("auth.confirmPasswordLabel")}
                 value={confirmPassword}
                 onChangeText={(value) => {
                   setConfirmPassword(value);
@@ -183,16 +216,20 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
                   }
                 }}
                 invalid={confirmPasswordInvalid}
+                errorText={confirmPasswordError}
+                helperText={t("auth.confirmPasswordHint")}
                 secureTextEntry
                 showToggleSecure
                 leftIcon="lock-open-outline"
-                placeholder="Ripeti password"
+                placeholder={t("auth.confirmPasswordHint")}
                 returnKeyType="done"
+                autoComplete="password"
+                textContentType="password"
                 onSubmitEditing={submitHandler}
               />
             )}
 
-            <View style={[styles.actions, { marginTop: compactMode ? 8 : 12 }]}>
+            <View style={[styles.actions, { marginTop: compactMode ? 8 : 10 }]}>
               <Button onPress={submitHandler} disabled={isSubmitting}>
                 {isSubmitting
                   ? "Attendere..."
@@ -202,11 +239,11 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
               </Button>
             </View>
 
-            <Pressable onPress={switchModeHandler} style={styles.switchWrap}>
+            <Pressable onPress={switchModeHandler} style={styles.switchWrap} hitSlop={8}>
               <Text style={[styles.switchText, { color: colors.textBody }]}> 
                 {isLogin
-                  ? t("auth.noAccount")
-                  : t("auth.haveAccount")}
+                  ? t("auth.switchToSignup")
+                  : t("auth.switchToLogin")}
               </Text>
             </Pressable>
             </Card>
@@ -225,20 +262,39 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingVertical: 22,
+    paddingVertical: 18,
   },
   header: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   brandingRow: {
+    position: "relative",
+    overflow: "hidden",
     borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: 11,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  brandOrb: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  brandOrbTop: {
+    width: 80,
+    height: 80,
+    right: -20,
+    top: -30,
+  },
+  brandOrbBottom: {
+    width: 56,
+    height: 56,
+    left: 54,
+    bottom: -30,
   },
   brandingLogoWrap: {
     width: 42,
@@ -278,6 +334,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "700",
+  },
+  scheduleCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    marginBottom: 10,
+    gap: 8,
+  },
+  scheduleHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  scheduleIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scheduleTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  scheduleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+  },
+  scheduleRowText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  formCard: {
+    paddingBottom: 12,
+  },
+  formLegend: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   actions: {
     marginTop: 12,
