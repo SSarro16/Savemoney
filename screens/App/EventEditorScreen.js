@@ -10,12 +10,12 @@ import {
   Text,
   View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import DateTimePickerModal from "../../components/ui/DateTimePickerModal";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import TextField from "../../components/ui/TextField";
 import { GlobalStyles } from "../../constants/styles";
@@ -176,14 +176,11 @@ export default function EventEditorScreen() {
     };
   }, [eventId, initialDate, initialEvent, isEditMode, user?.uid]);
 
-  const pickerDate = pickerState?.field === "start" ? startAt : endAt;
-
-  const onPickerChange = (event, value) => {
-    if (event.type === "dismissed" || !value) {
+  const onPickerConfirm = (value) => {
+    if (!pickerState || !value) {
       setPickerState(null);
       return;
     }
-
     const isStartField = pickerState.field === "start";
     const mode = pickerState.mode;
 
@@ -446,14 +443,14 @@ export default function EventEditorScreen() {
           </Card>
         </ScrollView>
 
-        {!!pickerState && (
-          <DateTimePicker
-            value={pickerDate}
-            mode={pickerState.mode}
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={onPickerChange}
-          />
-        )}
+        <DateTimePickerModal
+          visible={!!pickerState}
+          mode={pickerState?.mode || "date"}
+          value={pickerState?.field === "start" ? startAt : endAt}
+          title={pickerState?.field === "start" ? t("eventEditor.start") : t("eventEditor.end")}
+          onCancel={() => setPickerState(null)}
+          onConfirm={onPickerConfirm}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

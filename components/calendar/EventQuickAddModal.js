@@ -10,12 +10,12 @@ import {
   Text,
   View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { GlobalStyles } from "../../constants/styles";
 import { endOfDay, formatDate, formatTime, startOfDay, toDate } from "../../utils/dates";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
+import DateTimePickerModal from "../ui/DateTimePickerModal";
 import TextField from "../ui/TextField";
 
 const CATEGORIES = ["Work", "Personal", "Study", "Health", "Other"];
@@ -104,10 +104,8 @@ export default function EventQuickAddModal({
     setPickerState({ field, mode });
   };
 
-  const pickerDate = pickerState?.field === "start" ? startAt : endAt;
-
-  const onPickerChange = (event, value) => {
-    if (event.type === "dismissed" || !value) {
+  const onPickerConfirm = (value) => {
+    if (!pickerState || !value) {
       setPickerState(null);
       return;
     }
@@ -311,14 +309,14 @@ export default function EventQuickAddModal({
           </ScrollView>
         </Card>
 
-        {!!pickerState && (
-          <DateTimePicker
-            value={pickerDate}
-            mode={pickerState.mode}
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={onPickerChange}
-          />
-        )}
+        <DateTimePickerModal
+          visible={!!pickerState}
+          mode={pickerState?.mode || "date"}
+          value={pickerState?.field === "start" ? startAt : endAt}
+          title={pickerState?.field === "start" ? "Start" : "End"}
+          onCancel={() => setPickerState(null)}
+          onConfirm={onPickerConfirm}
+        />
       </KeyboardAvoidingView>
     </Modal>
   );
