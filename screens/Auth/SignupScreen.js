@@ -1,26 +1,30 @@
-import { useContext } from "react";
-import { StyleSheet, Text } from "react-native";
+import { useContext, useState } from "react";
 
+import { AuthContent } from "../../components/Auth";
+import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { AuthContext } from "../../context/AuthContext";
-import { Button } from "../../components/ui";
-import ScreenContainer from "../ScreenContainer";
-import { GlobalStyles } from "../../constants/styles";
 
 export default function SignupScreen() {
-  const { signup } = useContext(AuthContext);
-  const colors = GlobalStyles.colors;
+  const authContext = useContext(AuthContext);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
-  return (
-    <ScreenContainer title="Create account">
-      <Text style={[styles.text, { color: colors.textBody }]}>Signup screen placeholder for TASK05.</Text>
-      <Button onPress={signup}>Signup (Mock)</Button>
-    </ScreenContainer>
-  );
+  const signupHandler = async ({ email, password }) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await authContext.signup(email, password);
+    } catch (signupError) {
+      setError(signupError.message || "Signup failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (error) {
+    return <ErrorOverlay message={error} onRetry={() => setError(null)} retryLabel="Back" />;
+  }
+
+  return <AuthContent isLogin={false} onAuthenticate={signupHandler} isSubmitting={isSubmitting} />;
 }
-
-const styles = StyleSheet.create({
-  text: {
-    fontSize: 14,
-    marginBottom: 12,
-  },
-});
