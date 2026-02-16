@@ -325,26 +325,20 @@ export default function PlannerScreen() {
         <View style={styles.todayRow}>
           <Pressable
             onPress={resetToToday}
+            accessibilityRole="button"
+            accessibilityLabel={t("planner.resetToTodayA11y")}
             style={[
-              styles.todayButton,
+              styles.todayIconButton,
               isTodaySelected
                 ? { backgroundColor: colors.accent18, borderColor: colors.accent35 }
                 : { backgroundColor: colors.white08, borderColor: colors.white12 },
             ]}
           >
             <Ionicons
-              name="today-outline"
-              size={15}
+              name="refresh-outline"
+              size={16}
               color={isTodaySelected ? colors.accent500 : colors.textBody}
             />
-            <Text
-              style={[
-                styles.todayButtonText,
-                { color: isTodaySelected ? colors.accent500 : colors.textBody },
-              ]}
-            >
-              {t("planner.todayButton")}
-            </Text>
           </Pressable>
         </View>
 
@@ -538,18 +532,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: "flex-end",
   },
-  todayButton: {
+  todayIconButton: {
     borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 11,
-    flexDirection: "row",
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: "center",
-    gap: 6,
-  },
-  todayButtonText: {
-    fontSize: 12,
-    fontWeight: "900",
+    justifyContent: "center",
   },
   calendarCard: {
     marginBottom: 14,
