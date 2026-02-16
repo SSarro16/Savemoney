@@ -25,7 +25,6 @@
   "planner": {
     "loading": "Caricamento planner...",
     "eventsToday": "Oggi",
-    "focusMode": "Modalita focus su un solo giorno.",
     "empty": "Nessun evento pianificato. Tocca + per creare il primo.",
     "todayButton": "Oggi"
   },

@@ -25,7 +25,6 @@
   "planner": {
     "loading": "Loading planner...",
     "eventsToday": "Today",
-    "focusMode": "Focus mode for one day.",
     "empty": "No events planned yet. Tap + to create the first one.",
     "todayButton": "Today"
   },

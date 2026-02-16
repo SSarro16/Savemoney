@@ -394,11 +394,6 @@ export default function PlannerScreen() {
                 })}
               </View>
 
-              {viewMode === "day" && (
-                <Text style={[styles.dayHint, { color: colors.textMuted, fontSize: 12 * textScale }]}>
-                  {t("planner.focusMode")}
-                </Text>
-              )}
             </View>
           )}
         </Card>
@@ -499,7 +494,7 @@ const styles = StyleSheet.create({
   },
   dayWeekWrap: {
     flex: 1,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
   },
   dayStrip: {
     flexDirection: "row",
@@ -530,10 +525,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-  },
-  dayHint: {
-    marginTop: 8,
-    fontWeight: "700",
   },
   eventsHeader: {
     marginBottom: 6,
