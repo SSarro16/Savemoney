@@ -359,6 +359,7 @@ export default function PlannerScreen() {
                       onPress={() => setSelectedDate(date)}
                       style={[
                         styles.dayChip,
+                        { minHeight: compactMode ? 74 : 82 },
                         isSelected
                           ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
                           : { backgroundColor: colors.white08, borderColor: colors.white12 },
@@ -512,7 +513,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 8,
-    minHeight: 82,
   },
   dayChipLabel: {
     fontSize: 10,

@@ -30,6 +30,9 @@ export default function SettingsScreen() {
       edges={["left", "right"]}
     >
       <Text style={[styles.title, { color: colors.textTitle }]}>{t("settings.title")}</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+        {t("settings.subtitle")}
+      </Text>
 
       <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
         <Text style={[styles.label, { color: colors.textMuted }]}>{t("settings.email")}</Text>
@@ -68,6 +71,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: "900",
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 13,
+    fontWeight: "700",
     marginBottom: 12,
   },
   card: {

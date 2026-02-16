@@ -58,6 +58,7 @@
   },
   "settings": {
     "title": "Settings",
+    "subtitle": "Profile and app preferences.",
     "email": "Email",
     "appVersion": "App version",
     "noEmail": "No email available",
