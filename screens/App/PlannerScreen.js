@@ -226,6 +226,7 @@ export default function PlannerScreen() {
   const eventsTitle = isSameDay(selectedDate, new Date())
     ? t("planner.eventsToday")
     : formatDate(selectedDate, "EEEE, MMM d");
+  const isTodaySelected = isSameDay(selectedDate, new Date());
 
   const calendarHeight = viewMode === "month" ? (compactMode ? 346 : 364) : compactMode ? 136 : 156;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
@@ -236,6 +237,10 @@ export default function PlannerScreen() {
       mode: "create",
       initialDate: selectedDate.toISOString(),
     });
+  };
+
+  const resetToToday = () => {
+    setSelectedDate(startOfDay(new Date()));
   };
 
   const openEditEditor = (event) => {
@@ -286,6 +291,32 @@ export default function PlannerScreen() {
       <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}> 
         <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
+        </View>
+
+        <View style={styles.todayRow}>
+          <Pressable
+            onPress={resetToToday}
+            style={[
+              styles.todayButton,
+              isTodaySelected
+                ? { backgroundColor: colors.accent18, borderColor: colors.accent35 }
+                : { backgroundColor: colors.white08, borderColor: colors.white12 },
+            ]}
+          >
+            <Ionicons
+              name="today-outline"
+              size={15}
+              color={isTodaySelected ? colors.accent500 : colors.textBody}
+            />
+            <Text
+              style={[
+                styles.todayButtonText,
+                { color: isTodaySelected ? colors.accent500 : colors.textBody },
+              ]}
+            >
+              {t("planner.todayButton")}
+            </Text>
+          </Pressable>
         </View>
 
         <Card
@@ -433,6 +464,23 @@ const styles = StyleSheet.create({
   topSection: {},
   toggleWrap: {
     marginBottom: 10,
+  },
+  todayRow: {
+    marginBottom: 10,
+    alignItems: "flex-end",
+  },
+  todayButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  todayButtonText: {
+    fontSize: 12,
+    fontWeight: "900",
   },
   calendarCard: {
     marginBottom: 14,
