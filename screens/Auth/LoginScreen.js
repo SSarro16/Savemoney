@@ -1,26 +1,30 @@
-import { useContext } from "react";
-import { StyleSheet, Text } from "react-native";
+import { useContext, useState } from "react";
 
+import { AuthContent } from "../../components/Auth";
+import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { AuthContext } from "../../context/AuthContext";
-import { Button } from "../../components/ui";
-import ScreenContainer from "../ScreenContainer";
-import { GlobalStyles } from "../../constants/styles";
 
 export default function LoginScreen() {
-  const { login } = useContext(AuthContext);
-  const colors = GlobalStyles.colors;
+  const authContext = useContext(AuthContext);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
-  return (
-    <ScreenContainer title="Savetime Login">
-      <Text style={[styles.text, { color: colors.textBody }]}>Navigation auth stack is ready.</Text>
-      <Button onPress={login}>Login (Mock)</Button>
-    </ScreenContainer>
-  );
+  const loginHandler = async ({ email, password }) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await authContext.login(email, password);
+    } catch (loginError) {
+      setError(loginError.message || "Login failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (error) {
+    return <ErrorOverlay message={error} onRetry={() => setError(null)} retryLabel="Back" />;
+  }
+
+  return <AuthContent isLogin onAuthenticate={loginHandler} isSubmitting={isSubmitting} />;
 }
-
-const styles = StyleSheet.create({
-  text: {
-    fontSize: 14,
-    marginBottom: 12,
-  },
-});

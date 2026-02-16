@@ -1,39 +1,59 @@
-import { createContext, useMemo, useState } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+
+import { auth, assertFirebaseConfigured } from "../services/firebase";
 
 export const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
-  isLoading: false,
-  login: async () => {},
-  signup: async () => {},
+  isLoading: true,
+  signup: async (_email, _password) => {},
+  login: async (_email, _password) => {},
   logout: async () => {},
 });
 
 export function AuthContextProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = async () => {
-    setUser({ uid: "mock-user", email: "demo@savetime.app" });
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser || null);
+      setIsLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const signup = async (email, password) => {
+    assertFirebaseConfigured();
+    await createUserWithEmailAndPassword(auth, email, password);
   };
 
-  const signup = async () => {
-    setUser({ uid: "mock-user", email: "demo@savetime.app" });
+  const login = async (email, password) => {
+    assertFirebaseConfigured();
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
   const logout = async () => {
-    setUser(null);
+    await signOut(auth);
   };
 
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: !!user,
-      isLoading: false,
-      login,
+      isLoading,
       signup,
+      login,
       logout,
     }),
-    [user],
+    [user, isLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
