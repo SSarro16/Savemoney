@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Calendar, CalendarProvider, WeekCalendar } from "react-native-calendars";
+import { Calendar } from "react-native-calendars";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
@@ -43,6 +43,14 @@ function fromDateString(dateString) {
   return new Date(`${dateString}T12:00:00`);
 }
 
+function formatMonthHeader(dateValue, fallbackDate) {
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return formatDate(fallbackDate, "MMMM yyyy");
+  }
+  return formatDate(parsed, "MMMM yyyy");
+}
+
 function getRange(viewMode, selectedDate) {
   if (viewMode === "day") {
     return {
@@ -67,7 +75,6 @@ function getRange(viewMode, selectedDate) {
 function isEventOnDate(event, date) {
   const selectedStart = startOfDay(date);
   const selectedEnd = endOfDay(date);
-
   return event.startAt <= selectedEnd && event.endAt >= selectedStart;
 }
 
@@ -112,11 +119,7 @@ export default function PlannerScreen() {
     setError(null);
 
     try {
-      const items = await getEventsByRange(
-        user.uid,
-        new Date(rangeStartMs),
-        new Date(rangeEndMs),
-      );
+      const items = await getEventsByRange(user.uid, new Date(rangeStartMs), new Date(rangeEndMs));
       setEvents(items);
     } catch (loadError) {
       setError(loadError.message || "Unable to load events.");
@@ -168,6 +171,8 @@ export default function PlannerScreen() {
       selected: true,
       selectedColor: colors.accent500,
       selectedTextColor: colors.textOnAccentStrong,
+      marked: true,
+      dotColor: colors.textOnAccentStrong,
     };
 
     return marks;
@@ -184,14 +189,32 @@ export default function PlannerScreen() {
       arrowColor: colors.accent500,
       textDisabledColor: colors.white35,
       textSectionTitleColor: colors.textMuted,
-      textDayFontWeight: "700",
+      textDayFontWeight: "800",
       textMonthFontWeight: "900",
       textDayHeaderFontWeight: "800",
+      textMonthFontSize: 18,
+      textDayHeaderFontSize: 11,
+      textDayFontSize: 14,
     }),
     [colors],
   );
 
   const calendarDate = toDateString(selectedDate);
+  const weekDays = useMemo(
+    () => eachDayBetween(startOfWeek(selectedDate), endOfWeek(selectedDate), 7),
+    [selectedDate],
+  );
+
+  const eventsByDateMap = useMemo(() => {
+    const map = {};
+    events.forEach((event) => {
+      eachDayBetween(event.startAt, event.endAt).forEach((day) => {
+        const key = toDateString(day);
+        map[key] = (map[key] || 0) + 1;
+      });
+    });
+    return map;
+  }, [events]);
 
   const titleLabel =
     viewMode === "week"
@@ -204,7 +227,7 @@ export default function PlannerScreen() {
     ? t("planner.eventsToday")
     : formatDate(selectedDate, "EEEE, MMM d");
 
-  const calendarHeight = viewMode === "month" ? (compactMode ? 320 : 336) : viewMode === "day" ? 152 : 118;
+  const calendarHeight = viewMode === "month" ? (compactMode ? 346 : 364) : compactMode ? 136 : 156;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
   const headerTopPadding = Math.max(insets.top, 8);
 
@@ -253,17 +276,14 @@ export default function PlannerScreen() {
           onPress={() => navigation.getParent()?.openDrawer()}
         />
 
-        <Text
-          style={[styles.headerTitle, { color: colors.textTitle, fontSize: 17 * textScale }]}
-          numberOfLines={1}
-        >
+        <Text style={[styles.headerTitle, { color: colors.textTitle, fontSize: 17 * textScale }]} numberOfLines={1}>
           {titleLabel || "Savetime"}
         </Text>
 
         <IconButton icon="time-outline" size={20} color={colors.textTitle} variant="soft" />
       </View>
 
-      <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
+      <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}> 
         <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
         </View>
@@ -284,28 +304,69 @@ export default function PlannerScreen() {
               onDayPress={(day) => setSelectedDate(fromDateString(day.dateString))}
               markedDates={markedDates}
               enableSwipeMonths
+              hideExtraDays={false}
               firstDay={1}
+              renderHeader={(date) => (
+                <Text style={[styles.monthHeaderText, { color: colors.textTitle }]}>
+                  {formatMonthHeader(date, selectedDate)}
+                </Text>
+              )}
               theme={calendarTheme}
             />
           ) : (
-            <CalendarProvider
-              date={calendarDate}
-              onDateChanged={(dateString) => setSelectedDate(fromDateString(dateString))}
-            >
-              <WeekCalendar
-                style={styles.calendarWidget}
-                onDayPress={(day) => setSelectedDate(fromDateString(day.dateString))}
-                markedDates={markedDates}
-                firstDay={1}
-                theme={calendarTheme}
-              />
-            </CalendarProvider>
-          )}
+            <View style={styles.dayWeekWrap}>
+              <View style={styles.dayStrip}>
+                {weekDays.map((date) => {
+                  const isSelected = isSameDay(date, selectedDate);
+                  const key = toDateString(date);
+                  const dayCount = eventsByDateMap[key] || 0;
 
-          {viewMode === "day" && (
-              <Text style={[styles.dayHint, { color: colors.textMuted, fontSize: 12 * textScale }]}>
-                {t("planner.focusMode")}
-              </Text>
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => setSelectedDate(date)}
+                      style={[
+                        styles.dayChip,
+                        isSelected
+                          ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                          : { backgroundColor: colors.white08, borderColor: colors.white12 },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayChipLabel,
+                          { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                        ]}
+                      >
+                        {formatDate(date, "EEE")}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dayChipDate,
+                          { color: isSelected ? colors.textOnAccentStrong : colors.textBody },
+                        ]}
+                      >
+                        {formatDate(date, "d")}
+                      </Text>
+                      {!!dayCount && (
+                        <View
+                          style={[
+                            styles.dayDot,
+                            { backgroundColor: isSelected ? colors.textOnAccentStrong : colors.accent500 },
+                          ]}
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {viewMode === "day" && (
+                <Text style={[styles.dayHint, { color: colors.textMuted, fontSize: 12 * textScale }]}>
+                  {t("planner.focusMode")}
+                </Text>
+              )}
+            </View>
           )}
         </Card>
 
@@ -330,7 +391,7 @@ export default function PlannerScreen() {
           },
         ]}
         ListEmptyComponent={
-          <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
+          <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}> 
             <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
           </Card>
         }
@@ -360,7 +421,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRow: {
-    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -368,7 +428,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    fontSize: 17,
     fontWeight: "900",
   },
   topSection: {},
@@ -382,16 +441,55 @@ const styles = StyleSheet.create({
   calendarWidget: {
     flex: 1,
   },
-  dayHint: {
+  monthHeaderText: {
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 6,
+    textTransform: "capitalize",
+  },
+  dayWeekWrap: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  dayStrip: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "space-between",
+  },
+  dayChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    minHeight: 82,
+  },
+  dayChipLabel: {
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  dayChipDate: {
+    fontSize: 20,
+    fontWeight: "900",
+    lineHeight: 24,
+  },
+  dayDot: {
     marginTop: 6,
-    fontSize: 12,
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+  },
+  dayHint: {
+    marginTop: 8,
     fontWeight: "700",
   },
   eventsHeader: {
     marginBottom: 6,
   },
   eventsTitle: {
-    fontSize: 19,
     fontWeight: "900",
   },
   eventsList: {
