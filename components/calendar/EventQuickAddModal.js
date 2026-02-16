@@ -154,7 +154,7 @@ export default function EventQuickAddModal({
         location,
       });
     } catch (error) {
-      setFormError(error?.message || "Unable to save event.");
+      setFormError(error?.message || "Impossibile salvare l'evento.");
     }
   };
 
