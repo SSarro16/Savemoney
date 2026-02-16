@@ -25,6 +25,8 @@
   "planner": {
     "loading": "Loading planner...",
     "eventsToday": "Today",
+    "dateLabel": "Active date",
+    "selectDateTitle": "Select a date",
     "empty": "No events planned yet. Tap + to create the first one.",
     "todayButton": "Today"
   },
