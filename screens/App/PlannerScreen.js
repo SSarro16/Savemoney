@@ -35,6 +35,14 @@ const LAYOUT = {
   fabSize: 58,
   fabSpacing: 14,
 };
+const WEEKDAY_LABELS = {
+  it: ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"],
+  en: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+};
+const MONTH_LABELS = {
+  it: ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"],
+  en: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"],
+};
 const DAYS_IN_WEEK = 7;
 const WEEK_PAGER_WINDOW = 120;
 const WEEK_PAGER_CENTER_INDEX = WEEK_PAGER_WINDOW;
@@ -76,6 +84,17 @@ function diffCalendarDays(a, b) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getWeekdayLabel(date, language) {
+  const labels = WEEKDAY_LABELS[language] || WEEKDAY_LABELS.en;
+  const mondayFirstIndex = (date.getDay() + 6) % DAYS_IN_WEEK;
+  return labels[mondayFirstIndex];
+}
+
+function getMonthLabel(date, language) {
+  const labels = MONTH_LABELS[language] || MONTH_LABELS.en;
+  return labels[date.getMonth()];
 }
 
 function getRange(viewMode, selectedDate) {
@@ -125,7 +144,7 @@ export default function PlannerScreen() {
   const colors = GlobalStyles.colors;
   const { user } = useContext(AuthContext);
   const { compactMode, textScale } = useContext(CustomizationContext);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const [viewMode, setViewMode] = useState("week");
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -189,8 +208,13 @@ export default function PlannerScreen() {
 
   const monthWeeks = useMemo(() => buildMonthWeeks(selectedDate), [selectedDate]);
   const monthWeekdayLabels = useMemo(
-    () => (monthWeeks[0] || []).map((date) => formatDate(date, "EEE")),
-    [monthWeeks],
+    () => {
+      const weekStart = startOfWeek(selectedDate);
+      return Array.from({ length: DAYS_IN_WEEK }, (_item, index) =>
+        getWeekdayLabel(shiftDays(weekStart, index), language),
+      );
+    },
+    [language, selectedDate],
   );
   const selectedWeekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
   const selectedWeekdayOffset = useMemo(
@@ -423,7 +447,7 @@ export default function PlannerScreen() {
                   <Ionicons name="chevron-back" size={16} color={colors.textBody} />
                 </Pressable>
                 <Text style={[styles.monthHeaderText, { color: colors.textTitle }]}>
-                  {formatDate(selectedDate, "MMMM yyyy")}
+                  {`${getMonthLabel(selectedDate, language)} ${formatDate(selectedDate, "yyyy")}`}
                 </Text>
                 <Pressable
                   onPress={() => shiftMonth(1)}
@@ -493,7 +517,7 @@ export default function PlannerScreen() {
                                 { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
                               ]}
                             >
-                              {formatDate(date, "MMM")}
+                              {getMonthLabel(date, language)}
                             </Text>
                           )}
                           {!!dayCount && (
@@ -572,7 +596,7 @@ export default function PlannerScreen() {
                                   { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
                                 ]}
                               >
-                                {formatDate(date, "EEE")}
+                                {getWeekdayLabel(date, language)}
                               </Text>
                               <Text
                                 style={[
@@ -582,6 +606,16 @@ export default function PlannerScreen() {
                               >
                                 {formatDate(date, "d")}
                               </Text>
+                              {!isSameMonth(date, selectedDate) && (
+                                <Text
+                                  style={[
+                                    styles.dayChipMonth,
+                                    { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                                  ]}
+                                >
+                                  {getMonthLabel(date, language)}
+                                </Text>
+                              )}
                               {!!dayCount && (
                                 <View
                                   style={[
@@ -846,6 +880,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900",
     lineHeight: 24,
+  },
+  dayChipMonth: {
+    marginTop: 1,
+    fontSize: 9,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.2,
   },
   dayDot: {
     marginTop: 6,
