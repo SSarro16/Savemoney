@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useContext, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text } from "react-native";
 
 import { GlobalStyles } from "../../constants/styles";
+import { CustomizationContext } from "../../context/CustomizationContext";
 
 export default function Button({
   children,
@@ -13,6 +14,7 @@ export default function Button({
   accessibilityHint,
 }) {
   const colors = GlobalStyles.colors;
+  const { reduceMotion, textScale } = useContext(CustomizationContext);
   const text = label ?? children;
 
   const isPrimary = variant === "primary";
@@ -37,6 +39,10 @@ export default function Button({
   });
 
   const animateTo = (value) => {
+    if (reduceMotion) {
+      pressAnim.setValue(value);
+      return;
+    }
     Animated.spring(pressAnim, {
       toValue: value,
       speed: 22,
@@ -67,7 +73,7 @@ export default function Button({
           disabled && styles.disabled,
         ]}
       >
-        <Text style={[styles.label, { color: textColor }]}>{text}</Text>
+        <Text style={[styles.label, { color: textColor, fontSize: 14 * textScale }]}>{text}</Text>
       </Animated.View>
     </Pressable>
   );

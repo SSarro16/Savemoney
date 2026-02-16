@@ -100,7 +100,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.textTitle }]}>
+              <Text style={[styles.title, { color: colors.textTitle, fontSize: 26 * textScale }]}>
                 {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
               </Text>
               <Text style={[styles.subtitle, { color: colors.textMuted, fontSize: 13 * textScale }]}>

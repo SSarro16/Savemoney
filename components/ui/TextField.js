@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useContext, useImperativeHandle, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { CustomizationContext } from "../../context/CustomizationContext";
 
 const TextField = forwardRef(function TextField(
   {
@@ -32,7 +33,8 @@ const TextField = forwardRef(function TextField(
   ref,
 ) {
   const colors = GlobalStyles.colors;
-  const styles = makeStyles(colors);
+  const { compactMode, textScale } = useContext(CustomizationContext);
+  const styles = makeStyles(colors, compactMode, textScale);
 
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -130,7 +132,7 @@ const TextField = forwardRef(function TextField(
 
 export default TextField;
 
-function makeStyles(colors) {
+function makeStyles(colors, compactMode, textScale) {
   return StyleSheet.create({
     inputContainer: {
       marginVertical: 8,
@@ -139,14 +141,14 @@ function makeStyles(colors) {
       color: colors.textBody,
       marginBottom: 6,
       fontWeight: "800",
-      fontSize: 12,
+      fontSize: 12 * textScale,
       letterSpacing: 0.2,
     },
     field: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      paddingVertical: 12,
+      paddingVertical: compactMode ? 9 : 12,
       paddingHorizontal: 12,
       backgroundColor: colors.primary800,
       borderRadius: 14,
@@ -161,7 +163,7 @@ function makeStyles(colors) {
     input: {
       flex: 1,
       color: colors.textTitle,
-      fontSize: 16,
+      fontSize: 16 * textScale,
       fontWeight: "700",
     },
     inputMultiline: {
