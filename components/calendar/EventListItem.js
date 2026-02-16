@@ -82,7 +82,14 @@ function buildActualSummary(event, t) {
   });
 }
 
-export default function EventListItem({ event, onPress, onStartTimer, onStopTimer, timerBusy = false }) {
+export default function EventListItem({
+  event,
+  onPress,
+  onStartTimer,
+  onStopTimer,
+  timerBusy = false,
+  timerDisabled = false,
+}) {
   const colors = GlobalStyles.colors;
   const { t } = useTranslation();
   const tone = resolveCategoryTone(event.category, colors);
@@ -128,32 +135,34 @@ export default function EventListItem({ event, onPress, onStartTimer, onStopTime
                   {isRunning ? t("timer.running") : t("timer.stopped")}
                 </Text>
               </View>
-              <Pressable
-                disabled={timerBusy}
-                onPress={isRunning ? onStopTimer : onStartTimer}
-                style={({ pressed }) => [
-                  styles.timerButton,
-                  isRunning
-                    ? { backgroundColor: colors.danger20, borderColor: colors.danger30 }
-                    : { backgroundColor: colors.accent18, borderColor: colors.accent30 },
-                  timerBusy && { opacity: 0.6 },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name={isRunning ? "stop" : "play"}
-                  size={13}
-                  color={isRunning ? colors.error500 : colors.accent500}
-                />
-                <Text
-                  style={[
-                    styles.timerButtonText,
-                    { color: isRunning ? colors.error500 : colors.accent500 },
+              {!timerDisabled && (
+                <Pressable
+                  disabled={timerBusy}
+                  onPress={isRunning ? onStopTimer : onStartTimer}
+                  style={({ pressed }) => [
+                    styles.timerButton,
+                    isRunning
+                      ? { backgroundColor: colors.danger20, borderColor: colors.danger30 }
+                      : { backgroundColor: colors.accent18, borderColor: colors.accent30 },
+                    timerBusy && { opacity: 0.6 },
+                    pressed && styles.pressed,
                   ]}
                 >
-                  {timerBusy ? t("timer.saving") : isRunning ? t("timer.stop") : t("timer.start")}
-                </Text>
-              </Pressable>
+                  <Ionicons
+                    name={isRunning ? "stop" : "play"}
+                    size={13}
+                    color={isRunning ? colors.error500 : colors.accent500}
+                  />
+                  <Text
+                    style={[
+                      styles.timerButtonText,
+                      { color: isRunning ? colors.error500 : colors.accent500 },
+                    ]}
+                  >
+                    {timerBusy ? t("timer.saving") : isRunning ? t("timer.stop") : t("timer.start")}
+                  </Text>
+                </Pressable>
+              )}
             </View>
 
             {!!event.location && (

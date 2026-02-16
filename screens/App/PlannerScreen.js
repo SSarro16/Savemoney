@@ -142,6 +142,10 @@ function serializeEvent(event) {
     isTimerRunning: Boolean(event.isTimerRunning),
     plannedVsActualMinutes: event.plannedVsActualMinutes ?? 0,
     expectedVsActualMinutes: event.expectedVsActualMinutes ?? null,
+    recurrence: event.recurrence || null,
+    parentRecurringEventId: event.parentRecurringEventId || null,
+    isRecurringOccurrence: Boolean(event.isRecurringOccurrence),
+    occurrenceDateKey: event.occurrenceDateKey || null,
   };
 }
 
@@ -351,6 +355,8 @@ export default function PlannerScreen() {
       mode: "edit",
       eventId: event.id,
       initialEvent: serializeEvent(event),
+      parentRecurringEventId: event.parentRecurringEventId || null,
+      occurrenceDateKey: event.occurrenceDateKey || null,
     });
   };
 
@@ -360,15 +366,15 @@ export default function PlannerScreen() {
     );
   };
 
-  const handleStartTimer = async (eventId) => {
-    if (!user?.uid || timerActionEventId) {
+  const handleStartTimer = async (event) => {
+    if (!user?.uid || timerActionEventId || event?.isRecurringOccurrence) {
       return;
     }
 
-    setTimerActionEventId(eventId);
+    setTimerActionEventId(event.id);
     try {
       setActionError(null);
-      const updatedEvent = await startEventTimer(user.uid, eventId);
+      const updatedEvent = await startEventTimer(user.uid, event.id);
       upsertUpdatedEvent(updatedEvent);
     } catch (timerError) {
       setActionError(timerError?.message || "Unable to start timer.");
@@ -377,15 +383,15 @@ export default function PlannerScreen() {
     }
   };
 
-  const handleStopTimer = async (eventId) => {
-    if (!user?.uid || timerActionEventId) {
+  const handleStopTimer = async (event) => {
+    if (!user?.uid || timerActionEventId || event?.isRecurringOccurrence) {
       return;
     }
 
-    setTimerActionEventId(eventId);
+    setTimerActionEventId(event.id);
     try {
       setActionError(null);
-      const updatedEvent = await stopEventTimer(user.uid, eventId);
+      const updatedEvent = await stopEventTimer(user.uid, event.id);
       upsertUpdatedEvent(updatedEvent);
     } catch (timerError) {
       setActionError(timerError?.message || "Unable to stop timer.");
@@ -724,9 +730,10 @@ export default function PlannerScreen() {
           <EventListItem
             event={item}
             onPress={() => openEditEditor(item)}
-            onStartTimer={() => handleStartTimer(item.id)}
-            onStopTimer={() => handleStopTimer(item.id)}
+            onStartTimer={() => handleStartTimer(item)}
+            onStopTimer={() => handleStopTimer(item)}
             timerBusy={timerActionEventId === item.id}
+            timerDisabled={Boolean(item.isRecurringOccurrence)}
           />
         )}
         showsVerticalScrollIndicator={false}
