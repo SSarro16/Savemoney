@@ -270,7 +270,7 @@ export default function PlannerScreen() {
         {selectedDayEvents.length === 0 ? (
           <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}> 
             <Text style={[styles.emptyText, { color: colors.textBody }]}> 
-              No events planned. Tap + to add one.
+              No events planned yet. Tap + to create the first one.
             </Text>
           </Card>
         ) : (
@@ -282,7 +282,14 @@ export default function PlannerScreen() {
 
       <Pressable
         onPress={openCreateEditor}
-        style={[styles.fab, { backgroundColor: colors.accent500, borderColor: colors.accent30 }]}
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.accent500,
+            borderColor: colors.accent30,
+            shadowColor: colors.overlay72,
+          },
+        ]}
       >
         <Ionicons name="add" size={28} color={colors.textOnAccentStrong} />
       </Pressable>
@@ -349,7 +356,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "black",
     shadowOpacity: 0.24,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },

@@ -12,6 +12,7 @@ export default function Card({ children, style }) {
         {
           backgroundColor: colors.surface,
           borderColor: colors.white10,
+          shadowColor: colors.overlay72,
         },
         style,
       ]}
@@ -27,7 +28,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     overflow: "hidden",
-    shadowColor: "black",
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
