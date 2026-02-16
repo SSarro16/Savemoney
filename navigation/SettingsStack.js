@@ -3,6 +3,7 @@ import { useContext } from "react";
 
 import { GlobalStyles } from "../constants/styles";
 import { LanguageContext } from "../context/LanguageContext";
+import IconButton from "../components/ui/IconButton";
 import CustomizationScreen from "../screens/App/CustomizationScreen";
 import SettingsScreen from "../screens/App/SettingsScreen";
 import UserProfileScreen from "../screens/App/UserProfileScreen";
@@ -28,7 +29,17 @@ export default function SettingsStack() {
       <Stack.Screen
         name="SettingsHome"
         component={SettingsScreen}
-        options={{ title: t("settings.title") }}
+        options={({ navigation }) => ({
+          title: t("settings.title"),
+          headerLeft: () => (
+            <IconButton
+              icon="menu"
+              size={22}
+              color={colors.textTitle}
+              onPress={() => navigation.getParent()?.openDrawer()}
+            />
+          ),
+        })}
       />
       <Stack.Screen
         name="Customization"
