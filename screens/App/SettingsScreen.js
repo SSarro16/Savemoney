@@ -5,7 +5,6 @@ import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
-import Button from "../../components/ui/Button";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { CustomizationContext } from "../../context/CustomizationContext";
@@ -55,7 +54,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
-  const { user, logout } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
   const { language, setLanguage, t } = useTranslation();
   const { compactMode, largeText, reduceMotion, setCompactMode, setLargeText, setReduceMotion } =
@@ -178,10 +177,6 @@ export default function SettingsScreen() {
               <Text style={styles.infoValue}>{Constants.expoConfig?.version || "0.0.0"}</Text>
             </View>
           </View>
-
-          <Button variant="danger" onPress={logout}>
-            {t("common.logout")}
-          </Button>
         </SectionGroup>
       </ScrollView>
     </SafeAreaView>
