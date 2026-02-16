@@ -434,7 +434,7 @@ export default function EventEditorScreen() {
       const updatedEvent = await startEventTimer(user.uid, eventId);
       syncTimerFromEvent(updatedEvent);
     } catch (error) {
-      setFormError(error?.message || "Unable to start timer.");
+      setFormError(error?.message || "Impossibile avviare il timer.");
     } finally {
       setIsTimerUpdating(false);
     }
@@ -450,7 +450,7 @@ export default function EventEditorScreen() {
       const updatedEvent = await stopEventTimer(user.uid, eventId);
       syncTimerFromEvent(updatedEvent);
     } catch (error) {
-      setFormError(error?.message || "Unable to stop timer.");
+      setFormError(error?.message || "Impossibile fermare il timer.");
     } finally {
       setIsTimerUpdating(false);
     }
@@ -481,7 +481,7 @@ export default function EventEditorScreen() {
     try {
       if (isRecurringOccurrence) {
         if (!parentRecurringEventId || !occurrenceDateKey) {
-          throw new Error("Missing recurring occurrence reference.");
+          throw new Error("Riferimento occorrenza ricorrente mancante.");
         }
         await saveRecurringOccurrenceOverride(
           user?.uid,
@@ -514,7 +514,7 @@ export default function EventEditorScreen() {
     try {
       if (isRecurringOccurrence) {
         if (!parentRecurringEventId || !occurrenceDateKey) {
-          throw new Error("Missing recurring occurrence reference.");
+          throw new Error("Riferimento occorrenza ricorrente mancante.");
         }
         await skipRecurringOccurrence(user?.uid, parentRecurringEventId, occurrenceDateKey);
       } else {

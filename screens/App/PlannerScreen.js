@@ -230,7 +230,7 @@ export default function PlannerScreen() {
       if (requestId !== eventsRequestIdRef.current) {
         return;
       }
-      setError(loadError.message || "Unable to load events.");
+      setError(loadError.message || "Impossibile caricare gli eventi.");
     } finally {
       if (requestId !== eventsRequestIdRef.current) {
         return;
@@ -453,7 +453,7 @@ export default function PlannerScreen() {
       const updatedEvent = await startEventTimer(user.uid, event.id);
       upsertUpdatedEvent(updatedEvent);
     } catch (timerError) {
-      setActionError(timerError?.message || "Unable to start timer.");
+      setActionError(timerError?.message || "Impossibile avviare il timer.");
     } finally {
       setTimerActionEventId(null);
     }
@@ -470,7 +470,7 @@ export default function PlannerScreen() {
       const updatedEvent = await stopEventTimer(user.uid, event.id);
       upsertUpdatedEvent(updatedEvent);
     } catch (timerError) {
-      setActionError(timerError?.message || "Unable to stop timer.");
+      setActionError(timerError?.message || "Impossibile fermare il timer.");
     } finally {
       setTimerActionEventId(null);
     }
