@@ -11,10 +11,35 @@
   },
   "drawer": {
     "planner": "Planner",
+    "insights": "Insights",
     "settings": "Settings",
     "customization": "Customization",
     "sectionMain": "Workspace",
     "sectionAccount": "Account"
+  },
+  "insights": {
+    "title": "Time insights",
+    "subtitle": "Measure how well you execute your plan.",
+    "loading": "Loading insights...",
+    "loadError": "Unable to load insights.",
+    "periodTitle": "Period",
+    "period": {
+      "week": "Week",
+      "month": "Month",
+      "30d": "30 days"
+    },
+    "kpi": {
+      "planned": "Planned time",
+      "actual": "Actual time",
+      "lost": "Lost time",
+      "delta": "Delta"
+    },
+    "trendTitle": "Last 7 days trend",
+    "trendSubtitle": "Actual minutes completed per day.",
+    "categoriesTitle": "Category breakdown",
+    "eventsCount": "{{count}} events",
+    "emptyCategories": "No category data for the selected period.",
+    "categoryMeta": "{{events}} ev • Actual {{actual}}m • Plan {{planned}}m"
   },
   "auth": {
     "welcomeBack": "Welcome back to Savetime",

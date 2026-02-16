@@ -11,10 +11,35 @@
   },
   "drawer": {
     "planner": "Planner",
+    "insights": "Insights",
     "settings": "Impostazioni",
     "customization": "Personalizzazione",
     "sectionMain": "Workspace",
     "sectionAccount": "Account"
+  },
+  "insights": {
+    "title": "Insights tempo",
+    "subtitle": "Misura quanto stai rispettando il piano.",
+    "loading": "Caricamento insights...",
+    "loadError": "Impossibile caricare gli insights.",
+    "periodTitle": "Periodo",
+    "period": {
+      "week": "Settimana",
+      "month": "Mese",
+      "30d": "30 giorni"
+    },
+    "kpi": {
+      "planned": "Tempo previsto",
+      "actual": "Tempo reale",
+      "lost": "Tempo perso",
+      "delta": "Delta"
+    },
+    "trendTitle": "Trend ultimi 7 giorni",
+    "trendSubtitle": "Minuti reali completati al giorno.",
+    "categoriesTitle": "Breakdown categorie",
+    "eventsCount": "{{count}} eventi",
+    "emptyCategories": "Nessun dato categoria per il periodo selezionato.",
+    "categoryMeta": "{{events}} ev • Reale {{actual}}m • Prev {{planned}}m"
   },
   "auth": {
     "welcomeBack": "Bentornato su Savetime",
