@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -264,6 +265,8 @@ export default function EventEditorScreen() {
     };
   }, [startAt, endAt, expectedDurationMinutes]);
 
+  const scheduleWindowLabel = `${formatDate(startAt, "dd MMM")} ${formatTime(startAt)} - ${formatDate(endAt, "dd MMM")} ${formatTime(endAt)}`;
+
   const saveHandler = async () => {
     if (!payload.title) {
       setFormError(t("eventEditor.titleRequired"));
@@ -340,6 +343,18 @@ export default function EventEditorScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
+          <View style={[styles.editorHero, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+            <View style={[styles.editorHeroIcon, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
+              <Ionicons name="time-outline" size={16} color={colors.accent500} />
+            </View>
+            <View style={styles.editorHeroTextWrap}>
+              <Text style={[styles.editorHeroTitle, { color: colors.textTitle }]}>{t("eventEditor.planningHint")}</Text>
+              <Text style={[styles.editorHeroSub, { color: colors.textMuted }]} numberOfLines={1}>
+                {scheduleWindowLabel}
+              </Text>
+            </View>
+          </View>
+
           <TextField
             label={t("eventEditor.title")}
             value={title}
@@ -550,6 +565,36 @@ const styles = StyleSheet.create({
   },
   card: {
     paddingBottom: 18,
+  },
+  editorHero: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  editorHeroIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editorHeroTextWrap: {
+    flex: 1,
+  },
+  editorHeroTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  editorHeroSub: {
+    marginTop: 1,
+    fontSize: 11,
+    fontWeight: "700",
   },
   switchRow: {
     marginTop: 8,
