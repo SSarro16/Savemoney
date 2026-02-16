@@ -8,6 +8,7 @@ import {
   getDocs,
   orderBy,
   query,
+  runTransaction,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -36,6 +37,24 @@ function toExpectedDuration(value) {
     return null;
   }
   return Math.round(numeric);
+}
+
+function toTrackedDurationSeconds(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+  return Math.round(numeric);
+}
+
+function calculateElapsedSeconds(startedAt, now = new Date()) {
+  const safeStart = toDate(startedAt, now);
+  const safeNow = toDate(now, safeStart);
+  const diffMs = safeNow.getTime() - safeStart.getTime();
+  if (!Number.isFinite(diffMs) || diffMs <= 0) {
+    return 0;
+  }
+  return Math.floor(diffMs / 1000);
 }
 
 function calculateDerivedDurations(startAt, endAt, expectedDurationMinutes) {
@@ -89,6 +108,11 @@ function fromEventDoc(snapshot) {
   const startAt = data.startAt?.toDate?.() || null;
   const endAt = data.endAt?.toDate?.() || null;
   const expectedDurationMinutes = toExpectedDuration(data.expectedDurationMinutes);
+  const timerStartedAt = data.timerStartedAt?.toDate?.() || null;
+  const trackedDurationSeconds = toTrackedDurationSeconds(data.trackedDurationSeconds);
+  const liveTrackedDurationSeconds =
+    trackedDurationSeconds + (timerStartedAt ? calculateElapsedSeconds(timerStartedAt) : 0);
+  const actualDurationMinutes = Math.round(liveTrackedDurationSeconds / 60);
   const derived = calculateDerivedDurations(startAt, endAt, expectedDurationMinutes);
 
   return {
@@ -100,6 +124,14 @@ function fromEventDoc(snapshot) {
     scheduledDurationMinutes: derived.scheduledDurationMinutes,
     expectedEndAt: derived.expectedEndAt,
     timeLostMinutes: derived.timeLostMinutes,
+    trackedDurationSeconds,
+    liveTrackedDurationSeconds,
+    actualDurationMinutes,
+    isTimerRunning: Boolean(timerStartedAt),
+    timerStartedAt,
+    plannedVsActualMinutes: actualDurationMinutes - derived.scheduledDurationMinutes,
+    expectedVsActualMinutes:
+      expectedDurationMinutes === null ? null : actualDurationMinutes - expectedDurationMinutes,
     allDay: Boolean(data.allDay),
     category: data.category || "General",
     notes: data.notes || "",
@@ -131,6 +163,8 @@ export async function createEvent(uid, payload) {
   const now = Timestamp.now();
   const docRef = await addDoc(eventsCollection(uid), {
     ...eventPayload,
+    trackedDurationSeconds: 0,
+    timerStartedAt: null,
     createdAt: now,
     updatedAt: now,
   });
@@ -144,6 +178,14 @@ export async function createEvent(uid, payload) {
     scheduledDurationMinutes: derived.scheduledDurationMinutes,
     expectedEndAt: derived.expectedEndAt,
     timeLostMinutes: derived.timeLostMinutes,
+    trackedDurationSeconds: 0,
+    liveTrackedDurationSeconds: 0,
+    actualDurationMinutes: 0,
+    isTimerRunning: false,
+    timerStartedAt: null,
+    plannedVsActualMinutes: -derived.scheduledDurationMinutes,
+    expectedVsActualMinutes:
+      eventPayload.expectedDurationMinutes === null ? null : -eventPayload.expectedDurationMinutes,
     createdAt: now.toDate(),
     updatedAt: now.toDate(),
   };
@@ -221,4 +263,59 @@ export async function getEventsByRange(uid, startDate, endDate) {
 
       return event.endAt >= rangeStartTimestamp.toDate();
     });
+}
+
+export async function startEventTimer(uid, eventId) {
+  const docRef = eventDocument(uid, eventId);
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+
+    if (!snapshot.exists()) {
+      throw new Error("Event not found.");
+    }
+
+    const data = snapshot.data();
+    if (data.timerStartedAt?.toDate?.()) {
+      return;
+    }
+
+    const now = Timestamp.now();
+    transaction.update(docRef, {
+      timerStartedAt: now,
+      updatedAt: now,
+    });
+  });
+
+  return getEventById(uid, eventId);
+}
+
+export async function stopEventTimer(uid, eventId) {
+  const docRef = eventDocument(uid, eventId);
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(docRef);
+
+    if (!snapshot.exists()) {
+      throw new Error("Event not found.");
+    }
+
+    const data = snapshot.data();
+    const startedAt = data.timerStartedAt?.toDate?.();
+    if (!startedAt) {
+      return;
+    }
+
+    const baseSeconds = toTrackedDurationSeconds(data.trackedDurationSeconds);
+    const elapsedSeconds = calculateElapsedSeconds(startedAt);
+    const now = Timestamp.now();
+
+    transaction.update(docRef, {
+      trackedDurationSeconds: baseSeconds + elapsedSeconds,
+      timerStartedAt: null,
+      updatedAt: now,
+    });
+  });
+
+  return getEventById(uid, eventId);
 }

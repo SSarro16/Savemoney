@@ -34,6 +34,16 @@
     "resetToTodayA11y": "Torna a oggi",
     "empty": "Nessun evento pianificato. Tocca + per creare il primo."
   },
+  "timer": {
+    "start": "Avvia",
+    "stop": "Ferma",
+    "saving": "Salvataggio...",
+    "running": "Timer attivo",
+    "stopped": "Timer fermo",
+    "comparison": "Reale: {{actual}} min | Previsto: {{planned}} min | Delta: {{diff}} min",
+    "actualOnly": "Tempo reale: {{minutes}} min",
+    "detailsTitle": "Tracking tempo reale"
+  },
   "eventEditor": {
     "newTitle": "Nuovo evento",
     "editTitle": "Modifica evento",

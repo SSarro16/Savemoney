@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import Card from "../ui/Card";
 import { GlobalStyles } from "../../constants/styles";
@@ -54,12 +55,41 @@ function buildExpectedSummary(event, t) {
   return `${t("eventEditor.scheduledSummary", { minutes: safeScheduled })} | ${t("eventEditor.timeLostSummary", { minutes: safeLost })}`;
 }
 
-export default function EventListItem({ event, onPress }) {
+function buildActualSummary(event, t) {
+  const trackedSeconds = Number(event?.trackedDurationSeconds);
+  const startedAt = event?.timerStartedAt ? new Date(event.timerStartedAt) : null;
+  const safeTrackedSeconds = Number.isFinite(trackedSeconds) ? trackedSeconds : 0;
+  const runningSeconds = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000)) : 0;
+  const actualMinutes = Math.max(0, Math.round((safeTrackedSeconds + runningSeconds) / 60));
+
+  const targetMinutesRaw = Number(event?.expectedDurationMinutes);
+  const fallbackMinutesRaw = Number(event?.scheduledDurationMinutes);
+  const targetMinutes = Number.isFinite(targetMinutesRaw) && targetMinutesRaw > 0
+    ? targetMinutesRaw
+    : Number.isFinite(fallbackMinutesRaw)
+      ? fallbackMinutesRaw
+      : null;
+
+  if (targetMinutes === null) {
+    return t("timer.actualOnly", { minutes: actualMinutes });
+  }
+
+  const diffMinutes = actualMinutes - targetMinutes;
+  return t("timer.comparison", {
+    actual: actualMinutes,
+    planned: targetMinutes,
+    diff: diffMinutes,
+  });
+}
+
+export default function EventListItem({ event, onPress, onStartTimer, onStopTimer, timerBusy = false }) {
   const colors = GlobalStyles.colors;
   const { t } = useTranslation();
   const tone = resolveCategoryTone(event.category, colors);
   const scheduleLabel = buildScheduleLabel(event, t);
   const expectedSummary = buildExpectedSummary(event, t);
+  const actualSummary = buildActualSummary(event, t);
+  const isRunning = Boolean(event?.isTimerRunning);
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
@@ -89,6 +119,42 @@ export default function EventListItem({ event, onPress }) {
                 {expectedSummary}
               </Text>
             )}
+            <View style={[styles.timerRow, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
+              <View style={styles.timerInfo}>
+                <Text style={[styles.timerLabel, { color: colors.textBody }]} numberOfLines={2}>
+                  {actualSummary}
+                </Text>
+                <Text style={[styles.timerStatus, { color: isRunning ? colors.accent500 : colors.textMuted }]}>
+                  {isRunning ? t("timer.running") : t("timer.stopped")}
+                </Text>
+              </View>
+              <Pressable
+                disabled={timerBusy}
+                onPress={isRunning ? onStopTimer : onStartTimer}
+                style={({ pressed }) => [
+                  styles.timerButton,
+                  isRunning
+                    ? { backgroundColor: colors.danger20, borderColor: colors.danger30 }
+                    : { backgroundColor: colors.accent18, borderColor: colors.accent30 },
+                  timerBusy && { opacity: 0.6 },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  name={isRunning ? "stop" : "play"}
+                  size={13}
+                  color={isRunning ? colors.error500 : colors.accent500}
+                />
+                <Text
+                  style={[
+                    styles.timerButtonText,
+                    { color: isRunning ? colors.error500 : colors.accent500 },
+                  ]}
+                >
+                  {timerBusy ? t("timer.saving") : isRunning ? t("timer.stop") : t("timer.start")}
+                </Text>
+              </Pressable>
+            </View>
 
             {!!event.location && (
               <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={1}>
@@ -144,6 +210,42 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  timerRow: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  timerInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  timerLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  timerStatus: {
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  timerButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  timerButtonText: {
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
   },
   categoryPill: {
     borderWidth: 1,

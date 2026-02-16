@@ -34,6 +34,16 @@
     "resetToTodayA11y": "Reset to today",
     "empty": "No events planned yet. Tap + to create the first one."
   },
+  "timer": {
+    "start": "Start",
+    "stop": "Stop",
+    "saving": "Saving...",
+    "running": "Timer running",
+    "stopped": "Timer stopped",
+    "comparison": "Actual: {{actual}} min | Planned: {{planned}} min | Delta: {{diff}} min",
+    "actualOnly": "Actual time: {{minutes}} min",
+    "detailsTitle": "Real-time tracking"
+  },
   "eventEditor": {
     "newTitle": "New Event",
     "editTitle": "Edit Event",
