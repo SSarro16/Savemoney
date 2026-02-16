@@ -44,6 +44,20 @@
     "actualOnly": "Tempo reale: {{minutes}} min",
     "detailsTitle": "Tracking tempo reale"
   },
+  "recurrence": {
+    "title": "Ricorrenza",
+    "none": "Nessuna",
+    "daily": "Giornaliera",
+    "weekly": "Settimanale",
+    "monthly": "Mensile",
+    "interval": "Intervallo",
+    "untilTitle": "Ripeti fino a",
+    "untilNone": "Senza data di fine",
+    "untilValue": "Fino al {{date}}",
+    "skipOccurrence": "Salta occorrenza",
+    "editSingleHint": "Stai modificando solo questa occorrenza. Salva = override; Elimina = salta occorrenza.",
+    "editSingleTitle": "Modifica occorrenza"
+  },
   "eventEditor": {
     "newTitle": "Nuovo evento",
     "editTitle": "Modifica evento",
