@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -90,6 +92,7 @@ function parseInitialEvent(initialEvent, fallbackDate) {
 export default function EventEditorScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const colors = GlobalStyles.colors;
   const { user } = useContext(AuthContext);
 
@@ -275,16 +278,23 @@ export default function EventEditorScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.root, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={["left", "right"]}>
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: Math.max(insets.top, 8),
+              paddingBottom: Math.max(insets.bottom, 18),
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
           <TextField
             label="Title"
             value={title}
@@ -431,18 +441,19 @@ export default function EventEditorScreen() {
               </Button>
             )}
           </View>
-        </Card>
-      </ScrollView>
+          </Card>
+        </ScrollView>
 
-      {!!pickerState && (
-        <DateTimePicker
-          value={pickerDate}
-          mode={pickerState.mode}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={onPickerChange}
-        />
-      )}
-    </KeyboardAvoidingView>
+        {!!pickerState && (
+          <DateTimePicker
+            value={pickerDate}
+            mode={pickerState.mode}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={onPickerChange}
+          />
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
