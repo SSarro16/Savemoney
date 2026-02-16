@@ -1,0 +1,75 @@
+{
+  "common": {
+    "today": "Today",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "logout": "Logout",
+    "retry": "Retry"
+  },
+  "drawer": {
+    "planner": "Planner",
+    "settings": "Settings",
+    "customization": "Customization"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back to Savetime",
+    "createAccount": "Create your account",
+    "loginSubtitle": "Sign in to manage your time/event planner.",
+    "signupSubtitle": "Create an account to start planning.",
+    "login": "Login",
+    "signup": "Create account",
+    "noAccount": "No account yet? Sign up",
+    "haveAccount": "Already have an account? Login"
+  },
+  "planner": {
+    "loading": "Loading planner...",
+    "eventsToday": "Today",
+    "focusMode": "Focus mode for one day.",
+    "empty": "No events planned yet. Tap + to create the first one.",
+    "todayButton": "Today"
+  },
+  "eventEditor": {
+    "newTitle": "New Event",
+    "editTitle": "Edit Event",
+    "title": "Title",
+    "allDay": "All day",
+    "start": "Start",
+    "end": "End",
+    "category": "Category",
+    "location": "Location (optional)",
+    "notes": "Notes (optional)",
+    "save": "Save",
+    "saving": "Saving...",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "cancel": "Cancel",
+    "titleRequired": "Title is required.",
+    "invalidRange": "End must be after start.",
+    "loadError": "Unable to load event.",
+    "saveError": "Unable to save event.",
+    "deleteError": "Unable to delete event."
+  },
+  "settings": {
+    "title": "Settings",
+    "email": "Email",
+    "appVersion": "App version",
+    "noEmail": "No email available",
+    "openCustomization": "Open customization"
+  },
+  "customization": {
+    "title": "Customization",
+    "subtitle": "Theme, language, and accessibility preferences.",
+    "theme": "Theme",
+    "ui": "UI Preferences",
+    "compactMode": "Compact mode",
+    "largeText": "Large text",
+    "reduceMotion": "Reduce motion",
+    "language": "Language",
+    "italian": "Italian",
+    "english": "English"
+  },
+  "errors": {
+    "somethingWrong": "Something went wrong"
+  }
+}
