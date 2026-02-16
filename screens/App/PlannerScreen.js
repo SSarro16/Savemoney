@@ -162,11 +162,28 @@ function serializeEvent(event) {
   };
 }
 
+function buildGreeting(profile, t) {
+  const firstName = String(profile?.firstName || "").trim();
+  if (!firstName) {
+    return t("planner.greetingNeutral");
+  }
+
+  if (profile?.gender === "female") {
+    return t("planner.greetingFemale", { name: firstName });
+  }
+
+  if (profile?.gender === "male") {
+    return t("planner.greetingMale", { name: firstName });
+  }
+
+  return t("planner.greetingNeutral");
+}
+
 export default function PlannerScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const colors = GlobalStyles.colors;
-  const { user } = useContext(AuthContext);
+  const { user, profile } = useContext(AuthContext);
   const { compactMode, textScale } = useContext(CustomizationContext);
   const { t, language } = useTranslation();
 
@@ -356,6 +373,10 @@ export default function PlannerScreen() {
     viewMode === "week"
       ? formatWeekRangeLabel(selectedDate)
       : formatDate(selectedDate, "EEEE, d MMMM");
+  const greetingLabel = useMemo(
+    () => buildGreeting(profile, t),
+    [profile, t],
+  );
 
   const monthRows = monthWeeks.length || 5;
   const monthCalendarHeight =
@@ -525,7 +546,7 @@ export default function PlannerScreen() {
               <Ionicons name="time-outline" size={15} color={colors.accent500} />
             </View>
             <View style={styles.heroTextWrap}>
-              <Text style={[styles.heroTitle, { color: colors.textTitle }]}>{t("planner.homePanelTitle")}</Text>
+              <Text style={[styles.heroTitle, { color: colors.textTitle }]}>{greetingLabel}</Text>
               <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>{t("planner.homePanelSubtitle")}</Text>
             </View>
             <View style={[styles.heroStatusPill, { borderColor: colors.accent30, backgroundColor: colors.accent12 }]}>

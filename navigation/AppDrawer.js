@@ -21,15 +21,14 @@ const Drawer = createDrawerNavigator();
 function AppDrawerContent(props) {
   const insets = useSafeAreaInsets();
   const colors = GlobalStyles.colors;
-  const { user, logout } = useContext(AuthContext);
+  const { user, profile, logout } = useContext(AuthContext);
   const { t } = useContext(LanguageContext);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const styles = makeDrawerStyles(colors);
   const state = props.state;
-  const fullName = String(user?.email || "")
-    .split("@")[0]
-    ?.trim();
-  const drawerDisplayName = fullName || "Savetime";
+  const profileFullName = `${String(profile?.firstName || "").trim()} ${String(profile?.lastName || "").trim()}`.trim();
+  const fullName = String(user?.email || "").split("@")[0]?.trim();
+  const drawerDisplayName = profileFullName || fullName || "Savetime";
   const drawerSubtitle = user?.email || t("common.motto");
 
   const handleLogout = async () => {

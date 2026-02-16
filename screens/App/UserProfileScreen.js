@@ -1,14 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useContext, useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
+import DateTimePickerModal from "../../components/ui/DateTimePickerModal";
+import Button from "../../components/ui/Button";
+import TextField from "../../components/ui/TextField";
 import { GlobalStyles, THEMES } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { CustomizationContext } from "../../context/CustomizationContext";
 import { useTranslation } from "../../context/LanguageContext";
 import { ThemeContext } from "../../context/ThemeContext";
+import { getMissingProfileFields } from "../../services/userProfileService";
+import { formatDate } from "../../utils/dates";
 
 function MetricCard({ icon, title, value, subtitle, styles }) {
   const colors = GlobalStyles.colors;
@@ -45,7 +50,12 @@ function InfoRow({ icon, label, value, styles }) {
   );
 }
 
-function toDisplayName(user, t) {
+function toDisplayName(user, profile, t) {
+  const fullName = `${String(profile?.firstName || "").trim()} ${String(profile?.lastName || "").trim()}`.trim();
+  if (fullName) {
+    return fullName;
+  }
+
   if (user?.displayName) {
     return String(user.displayName);
   }
@@ -71,21 +81,122 @@ function toInitials(name) {
   return parts.map((part) => part.slice(0, 1).toUpperCase()).join("");
 }
 
+function toGenderLabel(gender, t) {
+  if (gender === "female") {
+    return t("profile.genderFemale");
+  }
+
+  if (gender === "male") {
+    return t("profile.genderMale");
+  }
+
+  return t("profile.genderUnknown");
+}
+
+function toMissingLabel(field, t) {
+  const keyMap = {
+    firstName: "profile.firstNameLabel",
+    lastName: "profile.lastNameLabel",
+    gender: "profile.genderLabel",
+    dateOfBirth: "profile.dateOfBirthLabel",
+  };
+
+  return t(keyMap[field] || "profile.title");
+}
+
 export default function UserProfileScreen() {
   const colors = GlobalStyles.colors;
   const styles = makeStyles(colors);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { user } = useContext(AuthContext);
+  const {
+    user,
+    profile,
+    saveProfile,
+    isProfileLoading,
+  } = useContext(AuthContext);
   const { compactMode, largeText, reduceMotion } = useContext(CustomizationContext);
   const { language, t } = useTranslation();
   const { themeKey } = useContext(ThemeContext);
 
-  const displayName = useMemo(() => toDisplayName(user, t), [user, t]);
+  const [firstNameInput, setFirstNameInput] = useState("");
+  const [lastNameInput, setLastNameInput] = useState("");
+  const [genderInput, setGenderInput] = useState("");
+  const [dateOfBirthInput, setDateOfBirthInput] = useState(null);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    setFirstNameInput(String(profile?.firstName || ""));
+    setLastNameInput(String(profile?.lastName || ""));
+    setGenderInput(String(profile?.gender || ""));
+    setDateOfBirthInput(profile?.dateOfBirth || null);
+  }, [profile?.dateOfBirth, profile?.firstName, profile?.gender, profile?.lastName]);
+
+  const displayName = useMemo(() => toDisplayName(user, profile, t), [profile, t, user]);
   const initials = useMemo(() => toInitials(displayName), [displayName]);
   const email = user?.email || t("profile.noEmail");
   const userId = user?.uid ? String(user.uid).slice(0, 10) : t("profile.noId");
   const themeName = THEMES[themeKey]?.label || themeKey;
+  const missingFields = useMemo(() => getMissingProfileFields(profile), [profile]);
+  const showCompleteProfileCard = missingFields.length > 0;
+  const missingFieldsLabel = useMemo(
+    () => missingFields.map((field) => toMissingLabel(field, t)).join(", "),
+    [missingFields, t],
+  );
+  const profileDateLabel = profile?.dateOfBirth
+    ? formatDate(profile.dateOfBirth, "dd/MM/yyyy")
+    : t("profile.notProvided");
+  const formDateLabel = dateOfBirthInput
+    ? dateOfBirthInput.toLocaleDateString(language === "it" ? "it-IT" : "en-US")
+    : t("profile.dateOfBirthPlaceholder");
+
+  const validateProfileInput = () => {
+    const firstName = String(firstNameInput || "").trim();
+    const lastName = String(lastNameInput || "").trim();
+    const gender = String(genderInput || "").trim().toLowerCase();
+    const birthDate = dateOfBirthInput instanceof Date ? dateOfBirthInput : null;
+    const maxBirthDate = new Date();
+    const minBirthDate = new Date("1900-01-01T00:00:00.000Z");
+
+    if (!firstName || !lastName) {
+      return t("profile.completeProfileValidation");
+    }
+
+    if (!(gender === "male" || gender === "female")) {
+      return t("profile.completeProfileValidation");
+    }
+
+    if (!birthDate || Number.isNaN(birthDate.getTime()) || birthDate > maxBirthDate || birthDate < minBirthDate) {
+      return t("profile.completeProfileValidation");
+    }
+
+    return "";
+  };
+
+  const saveCompletionHandler = async () => {
+    const validationError = validateProfileInput();
+    if (validationError) {
+      setSaveError(validationError);
+      return;
+    }
+
+    setSaveError("");
+    setIsSavingProfile(true);
+    try {
+      await saveProfile({
+        firstName: String(firstNameInput || "").trim(),
+        lastName: String(lastNameInput || "").trim(),
+        gender: String(genderInput || "").trim().toLowerCase(),
+        dateOfBirth: dateOfBirthInput,
+      });
+    } catch (error) {
+      setSaveError(error?.message || t("errors.somethingWrong"));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   return (
     <SafeAreaView
@@ -118,12 +229,124 @@ export default function UserProfileScreen() {
         </View>
 
         <View style={styles.infoCard}>
-          <InfoRow icon="person-outline" label={t("profile.nameLabel")} value={displayName} styles={styles} />
+          <InfoRow icon="person-outline" label={t("profile.firstNameLabel")} value={profile?.firstName || t("profile.notProvided")} styles={styles} />
+          <InfoRow icon="people-outline" label={t("profile.lastNameLabel")} value={profile?.lastName || t("profile.notProvided")} styles={styles} />
+          <InfoRow icon="transgender-outline" label={t("profile.genderLabel")} value={toGenderLabel(profile?.gender, t)} styles={styles} />
+          <InfoRow icon="calendar-outline" label={t("profile.dateOfBirthLabel")} value={profileDateLabel} styles={styles} />
           <InfoRow icon="mail-outline" label={t("profile.emailLabel")} value={email} styles={styles} />
           <InfoRow icon="id-card-outline" label={t("profile.idLabel")} value={userId} styles={styles} />
           <InfoRow icon="language-outline" label={t("profile.languageLabel")} value={language.toUpperCase()} styles={styles} />
           <InfoRow icon="color-palette-outline" label={t("profile.themeLabel")} value={themeName} styles={styles} />
         </View>
+
+        {showCompleteProfileCard && (
+          <View style={styles.completeCard}>
+            <View style={styles.completeHeader}>
+              <View style={styles.completeIconWrap}>
+                <Ionicons name="alert-circle-outline" size={16} color={colors.accent500} />
+              </View>
+              <View style={styles.completeTextWrap}>
+                <Text style={styles.completeTitle}>{t("profile.completeProfileTitle")}</Text>
+                <Text style={styles.completeSubtitle}>
+                  {t("profile.completeProfileSubtitle", { fields: missingFieldsLabel })}
+                </Text>
+              </View>
+            </View>
+
+            <TextField
+              label={t("profile.firstNameLabel")}
+              value={firstNameInput}
+              onChangeText={(value) => {
+                setFirstNameInput(value);
+                if (saveError) {
+                  setSaveError("");
+                }
+              }}
+              leftIcon="person-outline"
+              placeholder={t("auth.firstNamePlaceholder")}
+              autoCapitalize="words"
+              textContentType="givenName"
+            />
+
+            <TextField
+              label={t("profile.lastNameLabel")}
+              value={lastNameInput}
+              onChangeText={(value) => {
+                setLastNameInput(value);
+                if (saveError) {
+                  setSaveError("");
+                }
+              }}
+              leftIcon="people-outline"
+              placeholder={t("auth.lastNamePlaceholder")}
+              autoCapitalize="words"
+              textContentType="familyName"
+            />
+
+            <Text style={styles.genderLabel}>{t("profile.genderLabel")}</Text>
+            <View style={styles.genderRow}>
+              {["male", "female"].map((option) => {
+                const isSelected = genderInput === option;
+                const label = option === "male" ? t("profile.genderMale") : t("profile.genderFemale");
+
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => {
+                      setGenderInput(option);
+                      if (saveError) {
+                        setSaveError("");
+                      }
+                    }}
+                    style={[
+                      styles.genderChip,
+                      isSelected
+                        ? { borderColor: colors.accent35, backgroundColor: colors.accent12 }
+                        : { borderColor: colors.white12, backgroundColor: colors.primary800 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.genderChipText,
+                        { color: isSelected ? colors.textTitle : colors.textBody },
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.genderLabel}>{t("profile.dateOfBirthLabel")}</Text>
+            <Pressable
+              onPress={() => setIsDatePickerOpen(true)}
+              style={[
+                styles.dateField,
+                { borderColor: colors.white12, backgroundColor: colors.primary800 },
+              ]}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+              <Text style={[styles.dateFieldText, { color: dateOfBirthInput ? colors.textTitle : colors.textMuted }]}>
+                {formDateLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+            </Pressable>
+
+            {!!saveError && (
+              <Text style={styles.errorText}>{saveError}</Text>
+            )}
+
+            <View style={styles.completeActions}>
+              <Button
+                onPress={saveCompletionHandler}
+                disabled={isSavingProfile || isProfileLoading}
+              >
+                {isSavingProfile ? t("profile.savingProfile") : t("profile.completeProfileCta")}
+              </Button>
+            </View>
+          </View>
+        )}
 
         <Text style={styles.sectionTitle}>{t("profile.preferencesTitle")}</Text>
         <View style={styles.metricsWrap}>
@@ -171,6 +394,19 @@ export default function UserProfileScreen() {
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </Pressable>
       </ScrollView>
+
+      <DateTimePickerModal
+        visible={isDatePickerOpen}
+        mode="date"
+        value={dateOfBirthInput || new Date("2000-01-01T00:00:00.000Z")}
+        title={t("profile.dateOfBirthTitle")}
+        onCancel={() => setIsDatePickerOpen(false)}
+        onConfirm={(date) => {
+          setDateOfBirthInput(date);
+          setSaveError("");
+          setIsDatePickerOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -272,6 +508,94 @@ function makeStyles(colors) {
       fontWeight: "900",
       fontSize: 12,
     },
+    completeCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.accent30,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      gap: 4,
+    },
+    completeHeader: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 2,
+    },
+    completeIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    completeTextWrap: {
+      flex: 1,
+    },
+    completeTitle: {
+      color: colors.textTitle,
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    completeSubtitle: {
+      marginTop: 2,
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+      lineHeight: 15,
+    },
+    genderLabel: {
+      marginTop: 6,
+      marginBottom: 5,
+      color: colors.textBody,
+      fontWeight: "900",
+      fontSize: 11,
+      letterSpacing: 0.3,
+      textTransform: "uppercase",
+    },
+    genderRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 2,
+    },
+    genderChip: {
+      flex: 1,
+      borderWidth: 1.5,
+      borderRadius: 14,
+      paddingVertical: 11,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    genderChipText: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    dateField: {
+      borderWidth: 1.5,
+      borderRadius: 14,
+      paddingVertical: 11,
+      paddingHorizontal: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    dateFieldText: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    completeActions: {
+      marginTop: 8,
+    },
+    errorText: {
+      color: colors.error500,
+      marginTop: 6,
+      fontSize: 11,
+      fontWeight: "800",
+    },
     sectionTitle: {
       color: colors.textMuted,
       fontWeight: "900",
@@ -362,3 +686,4 @@ function makeStyles(colors) {
     },
   });
 }
+
