@@ -69,6 +69,7 @@ function parseInitialEvent(initialEvent, fallbackDate) {
       title: "",
       allDay: false,
       category: CATEGORIES[0],
+      expectedDurationMinutes: "",
       notes: "",
       location: "",
       startAt: defaultRange.startAt,
@@ -83,6 +84,11 @@ function parseInitialEvent(initialEvent, fallbackDate) {
     title: String(initialEvent.title || ""),
     allDay: Boolean(initialEvent.allDay),
     category: String(initialEvent.category || CATEGORIES[0]),
+    expectedDurationMinutes:
+      initialEvent.expectedDurationMinutes === null ||
+      initialEvent.expectedDurationMinutes === undefined
+        ? ""
+        : String(initialEvent.expectedDurationMinutes),
     notes: String(initialEvent.notes || ""),
     location: String(initialEvent.location || ""),
     startAt,
@@ -104,6 +110,7 @@ export default function EventEditorScreen() {
   const [title, setTitle] = useState("");
   const [allDay, setAllDay] = useState(false);
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [expectedDurationMinutes, setExpectedDurationMinutes] = useState("");
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState("");
   const [startAt, setStartAt] = useState(new Date());
@@ -129,6 +136,7 @@ export default function EventEditorScreen() {
       setTitle(parsed.title);
       setAllDay(parsed.allDay);
       setCategory(parsed.category);
+      setExpectedDurationMinutes(parsed.expectedDurationMinutes);
       setNotes(parsed.notes);
       setLocation(parsed.location);
       setStartAt(parsed.startAt);
@@ -218,13 +226,43 @@ export default function EventEditorScreen() {
       title: String(title || "").trim(),
       startAt,
       endAt,
+      expectedDurationMinutes:
+        String(expectedDurationMinutes || "").trim().length > 0
+          ? Number(expectedDurationMinutes)
+          : null,
       allDay,
       category,
       notes,
       location,
     }),
-    [title, startAt, endAt, allDay, category, notes, location],
+    [title, startAt, endAt, expectedDurationMinutes, allDay, category, notes, location],
   );
+
+  const expectedPreview = useMemo(() => {
+    const scheduledMinutes = Math.max(
+      0,
+      Math.round((endAt.getTime() - startAt.getTime()) / (1000 * 60)),
+    );
+    const expectedMinutes = Number(expectedDurationMinutes);
+
+    if (!Number.isFinite(expectedMinutes) || expectedMinutes <= 0) {
+      return {
+        scheduledMinutes,
+        expectedMinutes: null,
+        expectedEndAt: null,
+        timeLostMinutes: null,
+      };
+    }
+
+    const safeExpectedMinutes = Math.round(expectedMinutes);
+    const expectedEndAt = new Date(startAt.getTime() + safeExpectedMinutes * 60 * 1000);
+    return {
+      scheduledMinutes,
+      expectedMinutes: safeExpectedMinutes,
+      expectedEndAt,
+      timeLostMinutes: scheduledMinutes - safeExpectedMinutes,
+    };
+  }, [startAt, endAt, expectedDurationMinutes]);
 
   const saveHandler = async () => {
     if (!payload.title) {
@@ -234,6 +272,14 @@ export default function EventEditorScreen() {
 
     if (payload.endAt < payload.startAt) {
       setFormError(t("eventEditor.invalidRange"));
+      return;
+    }
+
+    if (
+      payload.expectedDurationMinutes !== null &&
+      (!Number.isFinite(payload.expectedDurationMinutes) || payload.expectedDurationMinutes <= 0)
+    ) {
+      setFormError(t("eventEditor.invalidExpected"));
       return;
     }
 
@@ -399,6 +445,44 @@ export default function EventEditorScreen() {
             </View>
           </View>
 
+          {!allDay && (
+            <View style={styles.expectedWrap}>
+              <TextField
+                label={t("eventEditor.expectedDuration")}
+                value={expectedDurationMinutes}
+                onChangeText={(value) => {
+                  const sanitized = String(value || "").replace(/[^0-9]/g, "");
+                  setExpectedDurationMinutes(sanitized);
+                }}
+                keyboardType="number-pad"
+                placeholder={t("eventEditor.expectedDurationHint")}
+                leftIcon="timer-outline"
+              />
+
+              <View style={[styles.expectedSummary, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
+                <Text style={[styles.expectedSummaryText, { color: colors.textBody }]}>
+                  {t("eventEditor.scheduledSummary", {
+                    minutes: expectedPreview.scheduledMinutes,
+                  })}
+                </Text>
+                {expectedPreview.expectedMinutes !== null && (
+                  <>
+                    <Text style={[styles.expectedSummaryText, { color: colors.textBody }]}>
+                      {t("eventEditor.expectedEndSummary", {
+                        time: formatTime(expectedPreview.expectedEndAt),
+                      })}
+                    </Text>
+                    <Text style={[styles.expectedSummaryText, { color: colors.textBody }]}>
+                      {t("eventEditor.timeLostSummary", {
+                        minutes: expectedPreview.timeLostMinutes,
+                      })}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
+
           <TextField
             label={t("eventEditor.location")}
             value={location}
@@ -527,5 +611,19 @@ const styles = StyleSheet.create({
   actionColumn: {
     marginTop: 14,
     gap: 10,
+  },
+  expectedWrap: {
+    marginTop: 8,
+  },
+  expectedSummary: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 3,
+  },
+  expectedSummaryText: {
+    fontSize: 12,
+    fontWeight: "800",
   },
 });

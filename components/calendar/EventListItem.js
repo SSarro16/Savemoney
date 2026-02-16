@@ -39,11 +39,27 @@ function buildScheduleLabel(event, t) {
   return `${formatDate(event.startAt, "dd MMM HH:mm")} - ${formatDate(event.endAt, "dd MMM HH:mm")}`;
 }
 
+function buildExpectedSummary(event, t) {
+  const scheduled = Number(event?.scheduledDurationMinutes);
+  const expected = Number(event?.expectedDurationMinutes);
+  const lost = Number(event?.timeLostMinutes);
+
+  if (!Number.isFinite(expected) || expected <= 0) {
+    return null;
+  }
+
+  const safeScheduled = Number.isFinite(scheduled) ? scheduled : 0;
+  const safeLost = Number.isFinite(lost) ? lost : safeScheduled - expected;
+
+  return `${t("eventEditor.scheduledSummary", { minutes: safeScheduled })} | ${t("eventEditor.timeLostSummary", { minutes: safeLost })}`;
+}
+
 export default function EventListItem({ event, onPress }) {
   const colors = GlobalStyles.colors;
   const { t } = useTranslation();
   const tone = resolveCategoryTone(event.category, colors);
   const scheduleLabel = buildScheduleLabel(event, t);
+  const expectedSummary = buildExpectedSummary(event, t);
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
@@ -66,6 +82,12 @@ export default function EventListItem({ event, onPress }) {
               <View style={[styles.timePill, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
                 <Text style={[styles.time, { color: colors.textMuted }]}>{scheduleLabel}</Text>
               </View>
+            )}
+
+            {!!expectedSummary && (
+              <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={2}>
+                {expectedSummary}
+              </Text>
             )}
 
             {!!event.location && (

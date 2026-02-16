@@ -30,17 +30,53 @@ function toDate(value, fallback) {
   return parsed;
 }
 
+function toExpectedDuration(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null;
+  }
+  return Math.round(numeric);
+}
+
+function calculateDerivedDurations(startAt, endAt, expectedDurationMinutes) {
+  const safeStart = toDate(startAt, new Date());
+  const safeEnd = toDate(endAt, safeStart);
+  const scheduledDurationMinutes = Math.max(
+    0,
+    Math.round((safeEnd.getTime() - safeStart.getTime()) / (1000 * 60)),
+  );
+
+  if (!expectedDurationMinutes) {
+    return {
+      scheduledDurationMinutes,
+      expectedEndAt: null,
+      timeLostMinutes: null,
+    };
+  }
+
+  const expectedEndAt = new Date(safeStart.getTime() + expectedDurationMinutes * 60 * 1000);
+  const timeLostMinutes = scheduledDurationMinutes - expectedDurationMinutes;
+
+  return {
+    scheduledDurationMinutes,
+    expectedEndAt,
+    timeLostMinutes,
+  };
+}
+
 function toEventPayload(payload = {}) {
   const now = new Date();
   const startDate = toDate(payload.startAt || payload.startDate, now);
   const endDate = toDate(payload.endAt || payload.endDate, startDate);
 
   const safeEndDate = endDate < startDate ? startDate : endDate;
+  const expectedDurationMinutes = toExpectedDuration(payload.expectedDurationMinutes);
 
   return {
     title: String(payload.title || "").trim(),
     startAt: Timestamp.fromDate(startDate),
     endAt: Timestamp.fromDate(safeEndDate),
+    expectedDurationMinutes,
     allDay: Boolean(payload.allDay),
     category: String(payload.category || "General").trim() || "General",
     notes: String(payload.notes || "").trim(),
@@ -50,12 +86,20 @@ function toEventPayload(payload = {}) {
 
 function fromEventDoc(snapshot) {
   const data = snapshot.data();
+  const startAt = data.startAt?.toDate?.() || null;
+  const endAt = data.endAt?.toDate?.() || null;
+  const expectedDurationMinutes = toExpectedDuration(data.expectedDurationMinutes);
+  const derived = calculateDerivedDurations(startAt, endAt, expectedDurationMinutes);
 
   return {
     id: snapshot.id,
     title: data.title,
-    startAt: data.startAt?.toDate?.() || null,
-    endAt: data.endAt?.toDate?.() || null,
+    startAt,
+    endAt,
+    expectedDurationMinutes,
+    scheduledDurationMinutes: derived.scheduledDurationMinutes,
+    expectedEndAt: derived.expectedEndAt,
+    timeLostMinutes: derived.timeLostMinutes,
     allDay: Boolean(data.allDay),
     category: data.category || "General",
     notes: data.notes || "",
@@ -78,6 +122,11 @@ export async function createEvent(uid, payload) {
   if (!eventPayload.title) {
     throw new Error("Event title is required.");
   }
+  const derived = calculateDerivedDurations(
+    eventPayload.startAt.toDate(),
+    eventPayload.endAt.toDate(),
+    eventPayload.expectedDurationMinutes,
+  );
 
   const now = Timestamp.now();
   const docRef = await addDoc(eventsCollection(uid), {
@@ -92,6 +141,9 @@ export async function createEvent(uid, payload) {
     ...eventPayload,
     startAt: eventPayload.startAt.toDate(),
     endAt: eventPayload.endAt.toDate(),
+    scheduledDurationMinutes: derived.scheduledDurationMinutes,
+    expectedEndAt: derived.expectedEndAt,
+    timeLostMinutes: derived.timeLostMinutes,
     createdAt: now.toDate(),
     updatedAt: now.toDate(),
   };
@@ -102,6 +154,11 @@ export async function updateEvent(uid, eventId, payload) {
   if (!eventPayload.title) {
     throw new Error("Event title is required.");
   }
+  const derived = calculateDerivedDurations(
+    eventPayload.startAt.toDate(),
+    eventPayload.endAt.toDate(),
+    eventPayload.expectedDurationMinutes,
+  );
 
   const docRef = eventDocument(uid, eventId);
   await updateDoc(docRef, {
@@ -115,6 +172,9 @@ export async function updateEvent(uid, eventId, payload) {
     ...eventPayload,
     startAt: eventPayload.startAt.toDate(),
     endAt: eventPayload.endAt.toDate(),
+    scheduledDurationMinutes: derived.scheduledDurationMinutes,
+    expectedEndAt: derived.expectedEndAt,
+    timeLostMinutes: derived.timeLostMinutes,
   };
 }
 
