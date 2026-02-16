@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../ui";
 import { GlobalStyles } from "../../constants/styles";
-import { formatTime } from "../../utils/dates";
+import { formatDate, formatTime, isSameDay } from "../../utils/dates";
 
 const CATEGORY_TONE = {
   work: "accent500",
@@ -19,9 +19,29 @@ function resolveCategoryTone(category, colors) {
   return colors[colorToken] || colors.accent500;
 }
 
+function buildScheduleLabel(event) {
+  if (!event?.startAt || !event?.endAt) {
+    return "";
+  }
+
+  if (event.allDay) {
+    if (isSameDay(event.startAt, event.endAt)) {
+      return "All day";
+    }
+    return `All day | ${formatDate(event.startAt, "dd MMM")} - ${formatDate(event.endAt, "dd MMM")}`;
+  }
+
+  if (isSameDay(event.startAt, event.endAt)) {
+    return `${formatTime(event.startAt)} - ${formatTime(event.endAt)}`;
+  }
+
+  return `${formatDate(event.startAt, "dd MMM HH:mm")} - ${formatDate(event.endAt, "dd MMM HH:mm")}`;
+}
+
 export default function EventListItem({ event, onPress }) {
   const colors = GlobalStyles.colors;
   const tone = resolveCategoryTone(event.category, colors);
+  const scheduleLabel = buildScheduleLabel(event);
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
@@ -40,11 +60,11 @@ export default function EventListItem({ event, onPress }) {
               </View>
             </View>
 
-            <Text style={[styles.time, { color: colors.textMuted }]}> 
-              {event.allDay
-                ? "All day"
-                : `${formatTime(event.startAt)} - ${formatTime(event.endAt)}`}
-            </Text>
+            {!!scheduleLabel && (
+              <View style={[styles.timePill, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
+                <Text style={[styles.time, { color: colors.textMuted }]}>{scheduleLabel}</Text>
+              </View>
+            )}
 
             {!!event.location && (
               <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={1}>
@@ -89,6 +109,13 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  timePill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
   },
   meta: {
     fontSize: 12,
