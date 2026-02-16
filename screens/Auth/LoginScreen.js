@@ -3,9 +3,11 @@ import { useContext, useState } from "react";
 import AuthContent from "../../components/Auth/AuthContent";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { AuthContext } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LanguageContext";
 
 export default function LoginScreen() {
   const authContext = useContext(AuthContext);
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -16,7 +18,7 @@ export default function LoginScreen() {
     try {
       await authContext.login(email, password);
     } catch (loginError) {
-      setError(loginError.message || "Login failed.");
+      setError(loginError.message || t("errors.somethingWrong"));
     } finally {
       setIsSubmitting(false);
     }

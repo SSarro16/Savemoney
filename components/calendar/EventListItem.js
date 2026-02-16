@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import Card from "../ui/Card";
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../context/LanguageContext";
 import { formatDate, formatTime, isSameDay } from "../../utils/dates";
 
 const CATEGORY_TONE = {
@@ -19,16 +20,16 @@ function resolveCategoryTone(category, colors) {
   return colors[colorToken] || colors.accent500;
 }
 
-function buildScheduleLabel(event) {
+function buildScheduleLabel(event, t) {
   if (!event?.startAt || !event?.endAt) {
     return "";
   }
 
   if (event.allDay) {
     if (isSameDay(event.startAt, event.endAt)) {
-      return "All day";
+      return t("eventEditor.allDay");
     }
-    return `All day | ${formatDate(event.startAt, "dd MMM")} - ${formatDate(event.endAt, "dd MMM")}`;
+    return `${t("eventEditor.allDay")} | ${formatDate(event.startAt, "dd MMM")} - ${formatDate(event.endAt, "dd MMM")}`;
   }
 
   if (isSameDay(event.startAt, event.endAt)) {
@@ -40,8 +41,9 @@ function buildScheduleLabel(event) {
 
 export default function EventListItem({ event, onPress }) {
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
   const tone = resolveCategoryTone(event.category, colors);
-  const scheduleLabel = buildScheduleLabel(event);
+  const scheduleLabel = buildScheduleLabel(event, t);
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>

@@ -12,25 +12,29 @@ import {
   CustomizationContextProvider,
 } from "./context/CustomizationContext";
 import { ThemeContext, ThemeContextProvider } from "./context/ThemeContext";
+import { LanguageContext, LanguageContextProvider } from "./context/LanguageContext";
 import RootNavigator from "./navigation/RootNavigator";
 
 export default function App() {
   return (
     <ThemeContextProvider>
-      <CustomizationContextProvider>
-        <AppShell />
-      </CustomizationContextProvider>
+      <LanguageContextProvider>
+        <CustomizationContextProvider>
+          <AppShell />
+        </CustomizationContextProvider>
+      </LanguageContextProvider>
     </ThemeContextProvider>
   );
 }
 
 function AppShell() {
   const { ready: themeReady, version } = useContext(ThemeContext);
+  const { ready: languageReady, language } = useContext(LanguageContext);
   const { ready: customizationReady } = useContext(CustomizationContext);
   const colors = GlobalStyles.colors;
   const statusBarStyle = colors.textTitle === "#ffffff" ? "light" : "dark";
 
-  if (!themeReady || !customizationReady) {
+  if (!themeReady || !languageReady || !customizationReady) {
     return <LoadingOverlay message="Applying preferences..." />;
   }
 
@@ -39,7 +43,7 @@ function AppShell() {
       <SafeAreaProvider>
         <AuthContextProvider>
           <StatusBar style={statusBarStyle} />
-          <RootNavigator key={`nav-${version}`} />
+          <RootNavigator key={`nav-${version}-${language}`} />
         </AuthContextProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

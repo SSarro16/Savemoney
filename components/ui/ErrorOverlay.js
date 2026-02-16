@@ -3,14 +3,16 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
+import { useTranslation } from "../../context/LanguageContext";
 
 export default function ErrorOverlay({
   message,
   onRetry,
-  retryLabel = "Retry",
+  retryLabel,
   retryDelayMs = 0,
 }) {
   const colors = GlobalStyles.colors;
+  const { t } = useTranslation();
   const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function ErrorOverlay({
           <Ionicons name="alert-circle-outline" size={26} color={colors.textTitle} />
         </View>
 
-        <Text style={[styles.title, { color: colors.textTitle }]}>Something went wrong</Text>
+        <Text style={[styles.title, { color: colors.textTitle }]}>{t("errors.somethingWrong")}</Text>
         <Text style={[styles.message, { color: colors.textBody }]}>{message}</Text>
 
         {!!onRetry && (
@@ -82,7 +84,7 @@ export default function ErrorOverlay({
               color={colors.textOnAccent}
             />
             <Text style={[styles.retryText, { color: colors.textOnAccent }]}>
-              {isRetrying ? "Retrying..." : retryLabel}
+              {isRetrying ? `${t("common.retry")}...` : retryLabel || t("common.retry")}
             </Text>
           </Pressable>
         )}

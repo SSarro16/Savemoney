@@ -20,6 +20,7 @@ import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import TextField from "../../components/ui/TextField";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LanguageContext";
 import {
   createEvent,
   deleteEvent,
@@ -95,6 +96,7 @@ export default function EventEditorScreen() {
   const insets = useSafeAreaInsets();
   const colors = GlobalStyles.colors;
   const { user } = useContext(AuthContext);
+  const { t } = useTranslation();
 
   const { mode = "create", eventId, initialDate, initialEvent } = route.params || {};
   const isEditMode = mode === "edit" && !!eventId;
@@ -115,9 +117,9 @@ export default function EventEditorScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isEditMode ? "Edit Event" : "New Event",
+      title: isEditMode ? t("eventEditor.editTitle") : t("eventEditor.newTitle"),
     });
-  }, [isEditMode, navigation]);
+  }, [isEditMode, navigation, t]);
 
   useEffect(() => {
     const fallbackDate = toDate(initialDate, new Date());
@@ -159,7 +161,7 @@ export default function EventEditorScreen() {
         if (!isMounted) {
           return;
         }
-        setFormError(error?.message || "Unable to load event.");
+        setFormError(error?.message || t("eventEditor.loadError"));
       } finally {
         if (isMounted) {
           setIsBootstrapping(false);
@@ -229,12 +231,12 @@ export default function EventEditorScreen() {
 
   const saveHandler = async () => {
     if (!payload.title) {
-      setFormError("Title is required.");
+      setFormError(t("eventEditor.titleRequired"));
       return;
     }
 
     if (payload.endAt < payload.startAt) {
-      setFormError("End date/time must be after start date/time.");
+      setFormError(t("eventEditor.invalidRange"));
       return;
     }
 
@@ -250,7 +252,7 @@ export default function EventEditorScreen() {
 
       navigation.goBack();
     } catch (error) {
-      setFormError(error?.message || "Unable to save event.");
+      setFormError(error?.message || t("eventEditor.saveError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -268,13 +270,13 @@ export default function EventEditorScreen() {
       await deleteEvent(user?.uid, eventId);
       navigation.goBack();
     } catch (error) {
-      setFormError(error?.message || "Unable to delete event.");
+      setFormError(error?.message || t("eventEditor.deleteError"));
       setIsDeleting(false);
     }
   };
 
   if (isBootstrapping) {
-    return <LoadingOverlay message="Loading event..." />;
+    return <LoadingOverlay message={t("eventEditor.loadError")} />;
   }
 
   return (
@@ -296,7 +298,7 @@ export default function EventEditorScreen() {
         >
           <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
           <TextField
-            label="Title"
+            label={t("eventEditor.title")}
             value={title}
             onChangeText={(value) => {
               setTitle(value);
@@ -304,12 +306,12 @@ export default function EventEditorScreen() {
                 setFormError(null);
               }
             }}
-            placeholder="Event title"
+            placeholder={t("eventEditor.title")}
             leftIcon="create-outline"
           />
 
           <View style={styles.switchRow}>
-            <Text style={[styles.switchLabel, { color: colors.textBody }]}>All day</Text>
+            <Text style={[styles.switchLabel, { color: colors.textBody }]}>{t("eventEditor.allDay")}</Text>
             <Switch
               value={allDay}
               onValueChange={toggleAllDay}
@@ -319,7 +321,7 @@ export default function EventEditorScreen() {
           </View>
 
           <View style={styles.datetimeBlock}>
-            <Text style={[styles.blockLabel, { color: colors.textBody }]}>Start</Text>
+            <Text style={[styles.blockLabel, { color: colors.textBody }]}>{t("eventEditor.start")}</Text>
             <View style={styles.datetimeRow}>
               <Pressable
                 onPress={() => setPickerState({ field: "start", mode: "date" })}
@@ -344,7 +346,7 @@ export default function EventEditorScreen() {
           </View>
 
           <View style={styles.datetimeBlock}>
-            <Text style={[styles.blockLabel, { color: colors.textBody }]}>End</Text>
+            <Text style={[styles.blockLabel, { color: colors.textBody }]}>{t("eventEditor.end")}</Text>
             <View style={styles.datetimeRow}>
               <Pressable
                 onPress={() => setPickerState({ field: "end", mode: "date" })}
@@ -369,7 +371,7 @@ export default function EventEditorScreen() {
           </View>
 
           <View style={styles.categoryWrap}>
-            <Text style={[styles.blockLabel, { color: colors.textBody }]}>Category</Text>
+            <Text style={[styles.blockLabel, { color: colors.textBody }]}>{t("eventEditor.category")}</Text>
             <View style={styles.categoryRow}>
               {CATEGORIES.map((item) => {
                 const selected = category === item;
@@ -401,18 +403,18 @@ export default function EventEditorScreen() {
           </View>
 
           <TextField
-            label="Location (optional)"
+            label={t("eventEditor.location")}
             value={location}
             onChangeText={setLocation}
-            placeholder="Office, home, online..."
+            placeholder={t("eventEditor.location")}
             leftIcon="location-outline"
           />
 
           <TextField
-            label="Notes (optional)"
+            label={t("eventEditor.notes")}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Add details"
+            placeholder={t("eventEditor.notes")}
             leftIcon="document-text-outline"
             multiline
             numberOfLines={4}
@@ -422,14 +424,14 @@ export default function EventEditorScreen() {
 
           <View style={styles.actionColumn}>
             <Button onPress={saveHandler} disabled={isSubmitting || isDeleting}>
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? t("eventEditor.saving") : t("eventEditor.save")}
             </Button>
             <Button
               variant="secondary"
               onPress={() => navigation.goBack()}
               disabled={isSubmitting || isDeleting}
             >
-              Cancel
+              {t("eventEditor.cancel")}
             </Button>
             {isEditMode && (
               <Button
@@ -437,7 +439,7 @@ export default function EventEditorScreen() {
                 onPress={deleteHandler}
                 disabled={isSubmitting || isDeleting}
               >
-                {isDeleting ? "Deleting..." : "Delete"}
+                {isDeleting ? t("eventEditor.deleting") : t("eventEditor.delete")}
               </Button>
             )}
           </View>

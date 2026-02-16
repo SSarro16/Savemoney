@@ -14,6 +14,7 @@ import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { CustomizationContext } from "../../context/CustomizationContext";
+import { useTranslation } from "../../context/LanguageContext";
 import { getEventsByRange } from "../../services/eventsService";
 import {
   eachDayBetween,
@@ -89,6 +90,7 @@ export default function PlannerScreen() {
   const colors = GlobalStyles.colors;
   const { user } = useContext(AuthContext);
   const { compactMode, textScale } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
   const [viewMode, setViewMode] = useState("week");
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -199,7 +201,7 @@ export default function PlannerScreen() {
         : formatDate(selectedDate, "EEE, MMM d");
 
   const eventsTitle = isSameDay(selectedDate, new Date())
-    ? "Today"
+    ? t("planner.eventsToday")
     : formatDate(selectedDate, "EEEE, MMM d");
 
   const calendarHeight = viewMode === "month" ? (compactMode ? 320 : 336) : viewMode === "day" ? 152 : 118;
@@ -222,7 +224,7 @@ export default function PlannerScreen() {
   };
 
   if (isLoading) {
-    return <LoadingOverlay message="Loading planner..." />;
+    return <LoadingOverlay message={t("planner.loading")} />;
   }
 
   if (error) {
@@ -302,7 +304,7 @@ export default function PlannerScreen() {
 
           {viewMode === "day" && (
               <Text style={[styles.dayHint, { color: colors.textMuted, fontSize: 12 * textScale }]}>
-                Focus mode for one day.
+                {t("planner.focusMode")}
               </Text>
           )}
         </Card>
@@ -329,7 +331,7 @@ export default function PlannerScreen() {
         ]}
         ListEmptyComponent={
           <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
-            <Text style={[styles.emptyText, { color: colors.textBody }]}>No events planned yet. Tap + to create the first one.</Text>
+            <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
           </Card>
         }
       />
