@@ -25,6 +25,8 @@ import {
   createEvent,
   deleteEvent,
   getEventById,
+  startEventTimer,
+  stopEventTimer,
   updateEvent,
 } from "../../services/eventsService";
 import { endOfDay, formatDate, formatTime, startOfDay, toDate } from "../../utils/dates";
@@ -61,6 +63,17 @@ function buildDefaultRange(dateLike) {
   return { startAt, endAt };
 }
 
+function toNullableDate(value) {
+  if (!value) {
+    return null;
+  }
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
 function parseInitialEvent(initialEvent, fallbackDate) {
   const defaultRange = buildDefaultRange(fallbackDate);
 
@@ -74,6 +87,9 @@ function parseInitialEvent(initialEvent, fallbackDate) {
       location: "",
       startAt: defaultRange.startAt,
       endAt: defaultRange.endAt,
+      trackedDurationSeconds: 0,
+      timerStartedAt: null,
+      isTimerRunning: false,
     };
   }
 
@@ -93,6 +109,9 @@ function parseInitialEvent(initialEvent, fallbackDate) {
     location: String(initialEvent.location || ""),
     startAt,
     endAt,
+    trackedDurationSeconds: Number(initialEvent.trackedDurationSeconds) || 0,
+    timerStartedAt: toNullableDate(initialEvent.timerStartedAt),
+    isTimerRunning: Boolean(initialEvent.isTimerRunning),
   };
 }
 
@@ -115,12 +134,17 @@ export default function EventEditorScreen() {
   const [location, setLocation] = useState("");
   const [startAt, setStartAt] = useState(new Date());
   const [endAt, setEndAt] = useState(new Date());
+  const [trackedDurationSeconds, setTrackedDurationSeconds] = useState(0);
+  const [timerStartedAt, setTimerStartedAt] = useState(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   const [pickerState, setPickerState] = useState(null);
   const [formError, setFormError] = useState(null);
   const [isBootstrapping, setIsBootstrapping] = useState(isEditMode && !initialEvent);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isTimerUpdating, setIsTimerUpdating] = useState(false);
+  const [liveTick, setLiveTick] = useState(Date.now());
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -141,6 +165,9 @@ export default function EventEditorScreen() {
       setLocation(parsed.location);
       setStartAt(parsed.startAt);
       setEndAt(parsed.endAt);
+      setTrackedDurationSeconds(parsed.trackedDurationSeconds);
+      setTimerStartedAt(parsed.timerStartedAt);
+      setIsTimerRunning(parsed.isTimerRunning);
       setFormError(null);
     };
 
@@ -183,6 +210,18 @@ export default function EventEditorScreen() {
       isMounted = false;
     };
   }, [eventId, initialDate, initialEvent, isEditMode, user?.uid]);
+
+  useEffect(() => {
+    if (!isTimerRunning || !timerStartedAt) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      setLiveTick(Date.now());
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [isTimerRunning, timerStartedAt]);
 
   const onPickerConfirm = (value) => {
     if (!pickerState || !value) {
@@ -265,6 +304,62 @@ export default function EventEditorScreen() {
   }, [startAt, endAt, expectedDurationMinutes]);
 
   const scheduleWindowLabel = `${formatDate(startAt, "dd MMM")} ${formatTime(startAt)} - ${formatDate(endAt, "dd MMM")} ${formatTime(endAt)}`;
+  const actualTracking = useMemo(() => {
+    const runningSeconds = timerStartedAt
+      ? Math.max(0, Math.floor((liveTick - timerStartedAt.getTime()) / 1000))
+      : 0;
+    const totalSeconds = Math.max(0, Number(trackedDurationSeconds) || 0) + runningSeconds;
+    const actualMinutes = Math.round(totalSeconds / 60);
+    const plannedMinutes = Number(expectedDurationMinutes) > 0
+      ? Number(expectedDurationMinutes)
+      : Math.max(0, Math.round((endAt.getTime() - startAt.getTime()) / (1000 * 60)));
+
+    return {
+      actualMinutes,
+      plannedMinutes,
+      diffMinutes: actualMinutes - plannedMinutes,
+    };
+  }, [endAt, expectedDurationMinutes, liveTick, startAt, timerStartedAt, trackedDurationSeconds]);
+
+  const syncTimerFromEvent = (eventData) => {
+    const nextTracked = Number(eventData?.trackedDurationSeconds) || 0;
+    const nextStartedAt = toNullableDate(eventData?.timerStartedAt);
+    setTrackedDurationSeconds(nextTracked);
+    setTimerStartedAt(nextStartedAt);
+    setIsTimerRunning(Boolean(eventData?.isTimerRunning));
+  };
+
+  const handleStartTimer = async () => {
+    if (!isEditMode || !user?.uid || !eventId || isTimerUpdating) {
+      return;
+    }
+    setIsTimerUpdating(true);
+    setFormError(null);
+    try {
+      const updatedEvent = await startEventTimer(user.uid, eventId);
+      syncTimerFromEvent(updatedEvent);
+    } catch (error) {
+      setFormError(error?.message || "Unable to start timer.");
+    } finally {
+      setIsTimerUpdating(false);
+    }
+  };
+
+  const handleStopTimer = async () => {
+    if (!isEditMode || !user?.uid || !eventId || isTimerUpdating) {
+      return;
+    }
+    setIsTimerUpdating(true);
+    setFormError(null);
+    try {
+      const updatedEvent = await stopEventTimer(user.uid, eventId);
+      syncTimerFromEvent(updatedEvent);
+    } catch (error) {
+      setFormError(error?.message || "Unable to stop timer.");
+    } finally {
+      setIsTimerUpdating(false);
+    }
+  };
 
   const saveHandler = async () => {
     if (!payload.title) {
@@ -497,6 +592,56 @@ export default function EventEditorScreen() {
             </View>
           )}
 
+          {isEditMode && (
+            <View style={[styles.trackingCard, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
+              <View style={styles.trackingHeaderRow}>
+                <Text style={[styles.blockLabel, { color: colors.textBody, marginBottom: 0 }]}>
+                  {t("timer.detailsTitle")}
+                </Text>
+                <Text style={[styles.trackingState, { color: isTimerRunning ? colors.accent500 : colors.textMuted }]}>
+                  {isTimerRunning ? t("timer.running") : t("timer.stopped")}
+                </Text>
+              </View>
+              <Text style={[styles.trackingSummary, { color: colors.textBody }]}>
+                {t("timer.comparison", {
+                  actual: actualTracking.actualMinutes,
+                  planned: actualTracking.plannedMinutes,
+                  diff: actualTracking.diffMinutes,
+                })}
+              </Text>
+              <Pressable
+                disabled={isTimerUpdating || isSubmitting || isDeleting}
+                onPress={isTimerRunning ? handleStopTimer : handleStartTimer}
+                style={({ pressed }) => [
+                  styles.trackingButton,
+                  isTimerRunning
+                    ? { backgroundColor: colors.danger20, borderColor: colors.danger30 }
+                    : { backgroundColor: colors.accent18, borderColor: colors.accent30 },
+                  (isTimerUpdating || isSubmitting || isDeleting) && { opacity: 0.6 },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  name={isTimerRunning ? "stop" : "play"}
+                  size={14}
+                  color={isTimerRunning ? colors.error500 : colors.accent500}
+                />
+                <Text
+                  style={[
+                    styles.trackingButtonText,
+                    { color: isTimerRunning ? colors.error500 : colors.accent500 },
+                  ]}
+                >
+                  {isTimerUpdating
+                    ? t("timer.saving")
+                    : isTimerRunning
+                      ? t("timer.stop")
+                      : t("timer.start")}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <TextField
             label={t("eventEditor.location")}
             value={location}
@@ -669,5 +814,46 @@ const styles = StyleSheet.create({
   expectedSummaryText: {
     fontSize: 12,
     fontWeight: "800",
+  },
+  trackingCard: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  trackingHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  trackingState: {
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  trackingSummary: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  trackingButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    alignSelf: "flex-start",
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  trackingButtonText: {
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  pressed: {
+    opacity: 0.9,
   },
 });
