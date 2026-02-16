@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -10,9 +11,20 @@ import { AuthContext } from "../../context/AuthContext";
 export default function SettingsScreen() {
   const colors = GlobalStyles.colors;
   const { user, logout } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bg }]}> 
+    <SafeAreaView
+      style={[
+        styles.root,
+        {
+          backgroundColor: colors.bg,
+          paddingTop: Math.max(insets.top, 10),
+          paddingBottom: Math.max(insets.bottom, 12),
+        },
+      ]}
+      edges={["left", "right"]}
+    >
       <Text style={[styles.title, { color: colors.textTitle }]}>Settings</Text>
 
       <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
@@ -32,7 +44,7 @@ export default function SettingsScreen() {
           </Button>
         </View>
       </Card>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -4,12 +4,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
 import Button from "../ui/Button";
@@ -19,6 +21,7 @@ import TextField from "../ui/TextField";
 export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = false }) {
   const colors = GlobalStyles.colors;
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,24 +78,31 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <Pressable onPress={Keyboard.dismiss} style={styles.flex}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.textTitle }]}>
-              {isLogin ? "Bentornato su Savetime" : "Crea il tuo account"}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
-          </View>
+    <SafeAreaView style={[styles.flex, { backgroundColor: colors.bg }]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Pressable onPress={Keyboard.dismiss} style={styles.flex}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContainer,
+              {
+                paddingTop: Math.max(insets.top, 10),
+                paddingBottom: Math.max(insets.bottom, 14),
+              },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: colors.textTitle }]}>
+                {isLogin ? "Bentornato su Savetime" : "Crea il tuo account"}
+              </Text>
+              <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
+            </View>
 
-          <Card style={{ backgroundColor: colors.surface2 }}>
+            <Card style={{ backgroundColor: colors.surface2 }}>
             <TextField
               label="Email"
               value={email}
@@ -179,10 +189,11 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
                   : "Hai gia un account? Accedi"}
               </Text>
             </Pressable>
-          </Card>
-        </ScrollView>
-      </Pressable>
-    </KeyboardAvoidingView>
+            </Card>
+          </ScrollView>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

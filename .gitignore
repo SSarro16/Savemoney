@@ -42,3 +42,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+# private docs (local only)
+docs_private/
+docs/
+SAVETIME_IMPLEMENTATION_LOG.md
