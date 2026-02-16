@@ -1,15 +1,9 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  Calendar,
-  CalendarProvider,
-  WeekCalendar,
-} from "react-native-calendars";
-import {
-  useFocusEffect,
-  useNavigation,
-} from "@react-navigation/native";
+import { Calendar, CalendarProvider, WeekCalendar } from "react-native-calendars";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import EventListItem from "../../components/calendar/EventListItem";
 import ViewToggle from "../../components/calendar/ViewToggle";
@@ -32,6 +26,12 @@ import {
   startOfMonth,
   startOfWeek,
 } from "../../utils/dates";
+
+const LAYOUT = {
+  horizontalPadding: 16,
+  fabSize: 58,
+  fabSpacing: 14,
+};
 
 function toDateString(date) {
   return formatDate(date, "yyyy-MM-dd");
@@ -84,6 +84,7 @@ function serializeEvent(event) {
 
 export default function PlannerScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const colors = GlobalStyles.colors;
   const { user } = useContext(AuthContext);
 
@@ -138,11 +139,6 @@ export default function PlannerScreen() {
         .sort((a, b) => a.startAt - b.startAt),
     [events, selectedDate],
   );
-
-  const selectedCountLabel = `${selectedDayEvents.length} ${
-    selectedDayEvents.length === 1 ? "event" : "events"
-  }`;
-  const activeViewLabel = viewMode === "day" ? "Day focus" : viewMode === "week" ? "Week" : "Month";
 
   const markedDates = useMemo(() => {
     const marks = {};
@@ -204,6 +200,10 @@ export default function PlannerScreen() {
     ? "Today"
     : formatDate(selectedDate, "EEEE, MMM d");
 
+  const calendarHeight = viewMode === "month" ? 336 : viewMode === "day" ? 152 : 118;
+  const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
+  const headerTopPadding = Math.max(insets.top, 8);
+
   const openCreateEditor = () => {
     navigation.navigate("EventEditor", {
       mode: "create",
@@ -228,8 +228,11 @@ export default function PlannerScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <View style={styles.headerRow}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.bg, paddingTop: headerTopPadding }]}
+      edges={["left", "right"]}
+    >
+      <View style={[styles.headerRow, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
         <IconButton
           icon="menu"
           size={22}
@@ -245,23 +248,23 @@ export default function PlannerScreen() {
         <IconButton icon="time-outline" size={20} color={colors.textTitle} variant="soft" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
         <View style={styles.toggleWrap}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
         </View>
 
-        <View style={styles.badgesRow}>
-          <View style={[styles.badge, { backgroundColor: colors.white08, borderColor: colors.white12 }]}>
-            <Text style={[styles.badgeText, { color: colors.textBody }]}>{activeViewLabel}</Text>
-          </View>
-          <View style={[styles.badge, { backgroundColor: colors.accent18, borderColor: colors.accent35 }]}>
-            <Text style={[styles.badgeText, { color: colors.textOnAccent }]}>{selectedCountLabel}</Text>
-          </View>
-        </View>
-
-        <Card style={[styles.calendarCard, { backgroundColor: colors.surface2 }]}> 
+        <Card
+          style={[
+            styles.calendarCard,
+            {
+              backgroundColor: colors.surface2,
+              height: calendarHeight,
+            },
+          ]}
+        >
           {viewMode === "month" ? (
             <Calendar
+              style={styles.calendarWidget}
               current={calendarDate}
               onDayPress={(day) => setSelectedDate(fromDateString(day.dateString))}
               markedDates={markedDates}
@@ -275,6 +278,7 @@ export default function PlannerScreen() {
               onDateChanged={(dateString) => setSelectedDate(fromDateString(dateString))}
             >
               <WeekCalendar
+                style={styles.calendarWidget}
                 onDayPress={(day) => setSelectedDate(fromDateString(day.dateString))}
                 markedDates={markedDates}
                 firstDay={1}
@@ -291,19 +295,27 @@ export default function PlannerScreen() {
         <View style={styles.eventsHeader}>
           <Text style={[styles.eventsTitle, { color: colors.textTitle }]}>{eventsTitle}</Text>
         </View>
+      </View>
 
-        {selectedDayEvents.length === 0 ? (
-          <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}> 
-            <Text style={[styles.emptyText, { color: colors.textBody }]}> 
-              No events planned yet. Tap + to create the first one.
-            </Text>
+      <FlatList
+        style={styles.eventsList}
+        data={selectedDayEvents}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <EventListItem event={item} onPress={() => openEditEditor(item)} />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.eventsListContent,
+          {
+            paddingHorizontal: LAYOUT.horizontalPadding,
+            paddingBottom: listBottomPadding,
+          },
+        ]}
+        ListEmptyComponent={
+          <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
+            <Text style={[styles.emptyText, { color: colors.textBody }]}>No events planned yet. Tap + to create the first one.</Text>
           </Card>
-        ) : (
-          selectedDayEvents.map((event) => (
-            <EventListItem key={event.id} event={event} onPress={() => openEditEditor(event)} />
-          ))
-        )}
-      </ScrollView>
+        }
+      />
 
       <Pressable
         onPress={openCreateEditor}
@@ -313,22 +325,22 @@ export default function PlannerScreen() {
             backgroundColor: colors.accent500,
             borderColor: colors.accent30,
             shadowColor: colors.overlay72,
+            right: LAYOUT.horizontalPadding,
+            bottom: insets.bottom + LAYOUT.fabSpacing,
           },
         ]}
       >
         <Ionicons name="add" size={28} color={colors.textOnAccentStrong} />
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  safeArea: {
     flex: 1,
   },
   headerRow: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
     paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
@@ -340,44 +352,34 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
   },
-  content: {
-    paddingHorizontal: 16,
-    paddingBottom: 120,
-  },
+  topSection: {},
   toggleWrap: {
     marginBottom: 10,
   },
-  badgesRow: {
-    marginBottom: 10,
-    flexDirection: "row",
-    gap: 8,
-  },
-  badge: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.2,
-  },
   calendarCard: {
     marginBottom: 14,
-    padding: 10,
+    padding: 8,
+  },
+  calendarWidget: {
+    flex: 1,
   },
   dayHint: {
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 12,
     fontWeight: "700",
   },
   eventsHeader: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   eventsTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "900",
+  },
+  eventsList: {
+    flex: 1,
+  },
+  eventsListContent: {
+    flexGrow: 1,
   },
   emptyCard: {
     paddingVertical: 18,
@@ -389,8 +391,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    right: 18,
-    bottom: 26,
     width: 58,
     height: 58,
     borderRadius: 999,
