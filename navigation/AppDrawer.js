@@ -9,6 +9,7 @@ import {
 } from "@react-navigation/drawer";
 
 import AppLogo from "../components/ui/AppLogo";
+import InsightsScreen from "../screens/App/InsightsScreen";
 import PlannerStack from "./PlannerStack";
 import SettingsStack from "./SettingsStack";
 import { GlobalStyles } from "../constants/styles";
@@ -128,6 +129,7 @@ function AppDrawerContent(props) {
         <Text style={styles.sectionLabel}>{t("drawer.sectionMain")}</Text>
         <View style={styles.sectionBody}>
           {renderRouteItem("Planner")}
+          {renderRouteItem("Insights")}
           {renderRouteItem("Settings")}
         </View>
       </View>
@@ -197,6 +199,17 @@ export default function AppDrawer() {
           headerShown: false,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Insights"
+        component={InsightsScreen}
+        options={{
+          title: t("drawer.insights"),
+          headerShown: false,
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="analytics-outline" color={color} size={size} />
           ),
         }}
       />
