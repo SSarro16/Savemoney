@@ -6,6 +6,7 @@
     "delete": "Delete",
     "logout": "Logout",
     "loggingOut": "Logging out...",
+    "motto": "Time is money",
     "retry": "Retry"
   },
   "drawer": {
@@ -56,7 +57,8 @@
     "timeLostSummary": "Time lost: {{minutes}} min",
     "loadError": "Unable to load event.",
     "saveError": "Unable to save event.",
-    "deleteError": "Unable to delete event."
+    "deleteError": "Unable to delete event.",
+    "planningHint": "Plan with intention"
   },
   "settings": {
     "title": "Settings",

@@ -6,6 +6,7 @@
     "delete": "Elimina",
     "logout": "Logout",
     "loggingOut": "Uscita...",
+    "motto": "Il tempo e denaro",
     "retry": "Riprova"
   },
   "drawer": {
@@ -56,7 +57,8 @@
     "timeLostSummary": "Tempo perso: {{minutes}} min",
     "loadError": "Impossibile caricare l'evento.",
     "saveError": "Impossibile salvare l'evento.",
-    "deleteError": "Impossibile eliminare l'evento."
+    "deleteError": "Impossibile eliminare l'evento.",
+    "planningHint": "Pianifica con intenzione"
   },
   "settings": {
     "title": "Impostazioni",

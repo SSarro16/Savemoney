@@ -299,6 +299,13 @@ export default function PlannerScreen() {
       </View>
 
       <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}> 
+        <View style={styles.mottoRow}>
+          <View style={[styles.mottoChip, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
+            <Ionicons name="hourglass-outline" size={14} color={colors.accent500} />
+            <Text style={[styles.mottoText, { color: colors.textMuted }]}>{t("common.motto")}</Text>
+          </View>
+        </View>
+
         <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
         </View>
@@ -499,6 +506,23 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  mottoRow: {
+    marginBottom: 10,
+  },
+  mottoChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  mottoText: {
+    fontSize: 11,
+    fontWeight: "800",
   },
   topSection: {},
   toggleWrap: {
