@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -120,6 +121,17 @@ export async function updateEvent(uid, eventId, payload) {
 export async function deleteEvent(uid, eventId) {
   const docRef = eventDocument(uid, eventId);
   await deleteDoc(docRef);
+}
+
+export async function getEventById(uid, eventId) {
+  const docRef = eventDocument(uid, eventId);
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) {
+    throw new Error("Event not found.");
+  }
+
+  return fromEventDoc(snapshot);
 }
 
 export async function getEventsByRange(uid, startDate, endDate) {

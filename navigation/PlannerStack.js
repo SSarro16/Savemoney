@@ -1,7 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import PlannerScreen from "../screens/App/PlannerScreen";
 import { GlobalStyles } from "../constants/styles";
+import EventEditorScreen from "../screens/App/EventEditorScreen";
+import PlannerScreen from "../screens/App/PlannerScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,21 @@ export default function PlannerStack() {
       }}
     >
       <Stack.Screen name="PlannerHome" component={PlannerScreen} />
+      <Stack.Screen
+        name="EventEditor"
+        component={EventEditorScreen}
+        options={{
+          headerShown: true,
+          presentation: "modal",
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.textTitle,
+          contentStyle: {
+            backgroundColor: colors.bg,
+          },
+        }}
+      />
     </Stack.Navigator>
   );
 }

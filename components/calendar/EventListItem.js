@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../ui";
 import { GlobalStyles } from "../../constants/styles";
@@ -19,40 +19,42 @@ function resolveCategoryTone(category, colors) {
   return colors[colorToken] || colors.accent500;
 }
 
-export default function EventListItem({ event }) {
+export default function EventListItem({ event, onPress }) {
   const colors = GlobalStyles.colors;
   const tone = resolveCategoryTone(event.category, colors);
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.row}>
-        <View style={[styles.categoryBar, { backgroundColor: tone }]} />
-        <View style={styles.content}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: colors.textTitle }]} numberOfLines={1}>
-              {event.title}
-            </Text>
-            <View style={[styles.categoryPill, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
-              <Text style={[styles.categoryText, { color: colors.textBody }]}> 
-                {event.category || "General"}
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      <Card style={styles.card}>
+        <View style={styles.row}>
+          <View style={[styles.categoryBar, { backgroundColor: tone }]} />
+          <View style={styles.content}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: colors.textTitle }]} numberOfLines={1}>
+                {event.title}
               </Text>
+              <View style={[styles.categoryPill, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
+                <Text style={[styles.categoryText, { color: colors.textBody }]}> 
+                  {event.category || "General"}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          <Text style={[styles.time, { color: colors.textMuted }]}> 
-            {event.allDay
-              ? "All day"
-              : `${formatTime(event.startAt)} - ${formatTime(event.endAt)}`}
-          </Text>
-
-          {!!event.location && (
-            <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={1}>
-              {event.location}
+            <Text style={[styles.time, { color: colors.textMuted }]}> 
+              {event.allDay
+                ? "All day"
+                : `${formatTime(event.startAt)} - ${formatTime(event.endAt)}`}
             </Text>
-          )}
+
+            {!!event.location && (
+              <Text style={[styles.meta, { color: colors.textMuted }]} numberOfLines={1}>
+                {event.location}
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
-    </Card>
+      </Card>
+    </Pressable>
   );
 }
 
@@ -102,5 +104,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
     textTransform: "uppercase",
+  },
+  pressed: {
+    opacity: 0.86,
   },
 });

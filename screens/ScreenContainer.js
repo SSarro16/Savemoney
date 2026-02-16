@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { GlobalStyles } from "../../constants/styles";
+import { GlobalStyles } from "../constants/styles";
 
 export default function ScreenContainer({ title, children }) {
   const colors = GlobalStyles.colors;

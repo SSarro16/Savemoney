@@ -1,0 +1,518 @@
+import { useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useNavigation, useRoute } from "@react-navigation/native";
+
+import { Button, Card, LoadingOverlay, TextField } from "../../components/ui";
+import { GlobalStyles } from "../../constants/styles";
+import { AuthContext } from "../../context/AuthContext";
+import {
+  createEvent,
+  deleteEvent,
+  getEventById,
+  updateEvent,
+} from "../../services/eventsService";
+import { endOfDay, formatDate, formatTime, startOfDay, toDate } from "../../utils/dates";
+
+const CATEGORIES = ["Work", "Personal", "Study", "Health", "Other"];
+
+function mergeDatePart(baseDate, selectedDate) {
+  const base = toDate(baseDate);
+  const selected = toDate(selectedDate, base);
+
+  const next = new Date(base);
+  next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+  return next;
+}
+
+function mergeTimePart(baseDate, selectedTime) {
+  const base = toDate(baseDate);
+  const selected = toDate(selectedTime, base);
+
+  const next = new Date(base);
+  next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+  return next;
+}
+
+function buildDefaultRange(dateLike) {
+  const baseDate = toDate(dateLike);
+
+  const startAt = new Date(baseDate);
+  startAt.setHours(9, 0, 0, 0);
+
+  const endAt = new Date(baseDate);
+  endAt.setHours(10, 0, 0, 0);
+
+  return { startAt, endAt };
+}
+
+function parseInitialEvent(initialEvent, fallbackDate) {
+  const defaultRange = buildDefaultRange(fallbackDate);
+
+  if (!initialEvent) {
+    return {
+      title: "",
+      allDay: false,
+      category: CATEGORIES[0],
+      notes: "",
+      location: "",
+      startAt: defaultRange.startAt,
+      endAt: defaultRange.endAt,
+    };
+  }
+
+  const startAt = toDate(initialEvent.startAt, defaultRange.startAt);
+  const endAt = toDate(initialEvent.endAt, defaultRange.endAt);
+
+  return {
+    title: String(initialEvent.title || ""),
+    allDay: Boolean(initialEvent.allDay),
+    category: String(initialEvent.category || CATEGORIES[0]),
+    notes: String(initialEvent.notes || ""),
+    location: String(initialEvent.location || ""),
+    startAt,
+    endAt,
+  };
+}
+
+export default function EventEditorScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const colors = GlobalStyles.colors;
+  const { user } = useContext(AuthContext);
+
+  const { mode = "create", eventId, initialDate, initialEvent } = route.params || {};
+  const isEditMode = mode === "edit" && !!eventId;
+
+  const [title, setTitle] = useState("");
+  const [allDay, setAllDay] = useState(false);
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [notes, setNotes] = useState("");
+  const [location, setLocation] = useState("");
+  const [startAt, setStartAt] = useState(new Date());
+  const [endAt, setEndAt] = useState(new Date());
+
+  const [pickerState, setPickerState] = useState(null);
+  const [formError, setFormError] = useState(null);
+  const [isBootstrapping, setIsBootstrapping] = useState(isEditMode && !initialEvent);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: isEditMode ? "Edit Event" : "New Event",
+    });
+  }, [isEditMode, navigation]);
+
+  useEffect(() => {
+    const fallbackDate = toDate(initialDate, new Date());
+
+    const applyState = (eventData) => {
+      const parsed = parseInitialEvent(eventData, fallbackDate);
+      setTitle(parsed.title);
+      setAllDay(parsed.allDay);
+      setCategory(parsed.category);
+      setNotes(parsed.notes);
+      setLocation(parsed.location);
+      setStartAt(parsed.startAt);
+      setEndAt(parsed.endAt);
+      setFormError(null);
+    };
+
+    if (initialEvent) {
+      applyState(initialEvent);
+      setIsBootstrapping(false);
+      return;
+    }
+
+    if (!isEditMode) {
+      applyState(null);
+      setIsBootstrapping(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const bootstrap = async () => {
+      try {
+        const remoteEvent = await getEventById(user?.uid, eventId);
+        if (!isMounted) {
+          return;
+        }
+        applyState(remoteEvent);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        setFormError(error?.message || "Unable to load event.");
+      } finally {
+        if (isMounted) {
+          setIsBootstrapping(false);
+        }
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, initialDate, initialEvent, isEditMode, user?.uid]);
+
+  const pickerDate = pickerState?.field === "start" ? startAt : endAt;
+
+  const onPickerChange = (event, value) => {
+    if (event.type === "dismissed" || !value) {
+      setPickerState(null);
+      return;
+    }
+
+    const isStartField = pickerState.field === "start";
+    const mode = pickerState.mode;
+
+    const currentValue = isStartField ? startAt : endAt;
+    const mergedValue = mode === "date" ? mergeDatePart(currentValue, value) : mergeTimePart(currentValue, value);
+
+    if (isStartField) {
+      setStartAt(mergedValue);
+      if (endAt < mergedValue) {
+        setEndAt(new Date(mergedValue));
+      }
+    } else {
+      setEndAt(mergedValue);
+    }
+
+    setPickerState(null);
+  };
+
+  const toggleAllDay = (value) => {
+    setAllDay(value);
+
+    if (value) {
+      setStartAt(startOfDay(startAt));
+      setEndAt(endOfDay(startAt));
+      return;
+    }
+
+    const range = buildDefaultRange(startAt);
+    setStartAt(range.startAt);
+    setEndAt(range.endAt);
+  };
+
+  const payload = useMemo(
+    () => ({
+      title: String(title || "").trim(),
+      startAt,
+      endAt,
+      allDay,
+      category,
+      notes,
+      location,
+    }),
+    [title, startAt, endAt, allDay, category, notes, location],
+  );
+
+  const saveHandler = async () => {
+    if (!payload.title) {
+      setFormError("Title is required.");
+      return;
+    }
+
+    if (payload.endAt < payload.startAt) {
+      setFormError("End date/time must be after start date/time.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFormError(null);
+
+    try {
+      if (isEditMode) {
+        await updateEvent(user?.uid, eventId, payload);
+      } else {
+        await createEvent(user?.uid, payload);
+      }
+
+      navigation.goBack();
+    } catch (error) {
+      setFormError(error?.message || "Unable to save event.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const deleteHandler = async () => {
+    if (!isEditMode) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setFormError(null);
+
+    try {
+      await deleteEvent(user?.uid, eventId);
+      navigation.goBack();
+    } catch (error) {
+      setFormError(error?.message || "Unable to delete event.");
+      setIsDeleting(false);
+    }
+  };
+
+  if (isBootstrapping) {
+    return <LoadingOverlay message="Loading event..." />;
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={[styles.root, { backgroundColor: colors.bg }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
+          <TextField
+            label="Title"
+            value={title}
+            onChangeText={(value) => {
+              setTitle(value);
+              if (formError) {
+                setFormError(null);
+              }
+            }}
+            placeholder="Event title"
+            leftIcon="create-outline"
+          />
+
+          <View style={styles.switchRow}>
+            <Text style={[styles.switchLabel, { color: colors.textBody }]}>All day</Text>
+            <Switch
+              value={allDay}
+              onValueChange={toggleAllDay}
+              trackColor={{ false: colors.white20, true: colors.accent35 }}
+              thumbColor={allDay ? colors.accent500 : colors.white88}
+            />
+          </View>
+
+          <View style={styles.datetimeBlock}>
+            <Text style={[styles.blockLabel, { color: colors.textBody }]}>Start</Text>
+            <View style={styles.datetimeRow}>
+              <Pressable
+                onPress={() => setPickerState({ field: "start", mode: "date" })}
+                style={[styles.datetimeButton, { borderColor: colors.white12, backgroundColor: colors.white08 }]}
+              >
+                <Text style={[styles.datetimeText, { color: colors.textTitle }]}> 
+                  {formatDate(startAt, "dd MMM yyyy")}
+                </Text>
+              </Pressable>
+
+              {!allDay && (
+                <Pressable
+                  onPress={() => setPickerState({ field: "start", mode: "time" })}
+                  style={[styles.datetimeButton, { borderColor: colors.white12, backgroundColor: colors.white08 }]}
+                >
+                  <Text style={[styles.datetimeText, { color: colors.textTitle }]}> 
+                    {formatTime(startAt)}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.datetimeBlock}>
+            <Text style={[styles.blockLabel, { color: colors.textBody }]}>End</Text>
+            <View style={styles.datetimeRow}>
+              <Pressable
+                onPress={() => setPickerState({ field: "end", mode: "date" })}
+                style={[styles.datetimeButton, { borderColor: colors.white12, backgroundColor: colors.white08 }]}
+              >
+                <Text style={[styles.datetimeText, { color: colors.textTitle }]}> 
+                  {formatDate(endAt, "dd MMM yyyy")}
+                </Text>
+              </Pressable>
+
+              {!allDay && (
+                <Pressable
+                  onPress={() => setPickerState({ field: "end", mode: "time" })}
+                  style={[styles.datetimeButton, { borderColor: colors.white12, backgroundColor: colors.white08 }]}
+                >
+                  <Text style={[styles.datetimeText, { color: colors.textTitle }]}> 
+                    {formatTime(endAt)}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.categoryWrap}>
+            <Text style={[styles.blockLabel, { color: colors.textBody }]}>Category</Text>
+            <View style={styles.categoryRow}>
+              {CATEGORIES.map((item) => {
+                const selected = category === item;
+                return (
+                  <Pressable
+                    key={item}
+                    onPress={() => setCategory(item)}
+                    style={[
+                      styles.categoryButton,
+                      selected
+                        ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                        : { backgroundColor: colors.white08, borderColor: colors.white12 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryLabel,
+                        {
+                          color: selected ? colors.textOnAccentStrong : colors.textBody,
+                        },
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <TextField
+            label="Location (optional)"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Office, home, online..."
+            leftIcon="location-outline"
+          />
+
+          <TextField
+            label="Notes (optional)"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add details"
+            leftIcon="document-text-outline"
+            multiline
+            numberOfLines={4}
+          />
+
+          {!!formError && <Text style={[styles.errorText, { color: colors.error500 }]}>{formError}</Text>}
+
+          <View style={styles.actionColumn}>
+            <Button onPress={saveHandler} disabled={isSubmitting || isDeleting}>
+              {isSubmitting ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              variant="secondary"
+              onPress={() => navigation.goBack()}
+              disabled={isSubmitting || isDeleting}
+            >
+              Cancel
+            </Button>
+            {isEditMode && (
+              <Button
+                variant="danger"
+                onPress={deleteHandler}
+                disabled={isSubmitting || isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+          </View>
+        </Card>
+      </ScrollView>
+
+      {!!pickerState && (
+        <DateTimePicker
+          value={pickerDate}
+          mode={pickerState.mode}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={onPickerChange}
+        />
+      )}
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  card: {
+    paddingBottom: 18,
+  },
+  switchRow: {
+    marginTop: 8,
+    marginBottom: 6,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  switchLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  datetimeBlock: {
+    marginTop: 10,
+  },
+  blockLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  datetimeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  datetimeButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  datetimeText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  categoryWrap: {
+    marginTop: 12,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  errorText: {
+    marginTop: 10,
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  actionColumn: {
+    marginTop: 14,
+    gap: 10,
+  },
+});
