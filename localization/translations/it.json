@@ -12,7 +12,9 @@
   "drawer": {
     "planner": "Planner",
     "settings": "Impostazioni",
-    "customization": "Personalizzazione"
+    "customization": "Personalizzazione",
+    "sectionMain": "Workspace",
+    "sectionAccount": "Account"
   },
   "auth": {
     "welcomeBack": "Bentornato su Savetime",
