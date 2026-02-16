@@ -5,6 +5,7 @@
     "save": "Save",
     "delete": "Delete",
     "logout": "Logout",
+    "loggingOut": "Logging out...",
     "retry": "Retry"
   },
   "drawer": {
