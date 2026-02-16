@@ -1,209 +1,330 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useContext, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Card from "../../components/ui/Card";
 import { GlobalStyles, THEMES } from "../../constants/styles";
-import { CustomizationContext } from "../../context/CustomizationContext";
 import { useTranslation } from "../../context/LanguageContext";
 import { ThemeContext } from "../../context/ThemeContext";
 
-function themeEntries() {
-  return Object.values(THEMES).map((theme) => ({
-    key: theme.key,
-    label: theme.label,
-    accent: theme.accent500,
-  }));
+const BASE_THEMES = ["DARK", "OBSIDIAN", "LIGHT", "BLUE", "GREEN", "RED", "YELLOW", "MINT", "SAND"];
+const CREATIVE_THEMES = [
+  "PURPLE_GOLD",
+  "OCEAN",
+  "ROSE",
+  "FOREST",
+  "SUNSET",
+  "SLATE",
+  "MIDNIGHT_TEAL",
+  "GRAPHITE_LIME",
+  "BORDEAUX",
+  "NIGHT_COPPER",
+  "AURORA",
+  "CHERRY_NIGHT",
+];
+
+function buildThemes(keys) {
+  return keys
+    .filter((key) => THEMES[key])
+    .map((key) => ({
+      key,
+      label: THEMES[key].label,
+      accent: THEMES[key].accent500,
+    }));
+}
+
+function ThemeChip({ theme, selected, onPress, styles }) {
+  const colors = GlobalStyles.colors;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.themeChip,
+        selected ? styles.themeChipActive : styles.themeChipIdle,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={[styles.themeDot, { backgroundColor: theme.accent }]} />
+      <Text style={styles.themeLabel}>{theme.label}</Text>
+      {selected ? <Ionicons name="checkmark-circle" size={16} color={colors.textTitle} /> : null}
+    </Pressable>
+  );
 }
 
 export default function CustomizationScreen() {
   const colors = GlobalStyles.colors;
   const insets = useSafeAreaInsets();
+  const styles = makeStyles(colors);
   const { themeKey, setThemeKey } = useContext(ThemeContext);
-  const { language, setLanguage, t } = useTranslation();
-  const {
-    compactMode,
-    largeText,
-    reduceMotion,
-    setCompactMode,
-    setLargeText,
-    setReduceMotion,
-  } = useContext(CustomizationContext);
+  const { t } = useTranslation();
 
-  const themes = useMemo(themeEntries, []);
+  const baseThemes = useMemo(() => buildThemes(BASE_THEMES), []);
+  const creativeThemes = useMemo(() => buildThemes(CREATIVE_THEMES), []);
 
   return (
     <SafeAreaView
       style={[
         styles.root,
         {
-          backgroundColor: colors.bg,
           paddingTop: Math.max(insets.top, 10),
           paddingBottom: Math.max(insets.bottom, 12),
         },
       ]}
       edges={["left", "right"]}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={[styles.title, { color: colors.textTitle }]}>{t("customization.title")}</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t("customization.subtitle")}</Text>
-
-        <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>{t("customization.theme")}</Text>
-          <View style={styles.themeGrid}>
-            {themes.map((theme) => {
-              const selected = theme.key === themeKey;
-              return (
-                <Pressable
-                  key={theme.key}
-                  onPress={() => setThemeKey(theme.key)}
-                  style={[
-                    styles.themeChip,
-                    selected
-                      ? { borderColor: colors.accent500, backgroundColor: colors.accent18 }
-                      : { borderColor: colors.white12, backgroundColor: colors.white08 },
-                  ]}
-                >
-                  <View style={[styles.dot, { backgroundColor: theme.accent }]} />
-                  <Text
-                    style={[
-                      styles.themeLabel,
-                      { color: selected ? colors.textTitle : colors.textBody },
-                    ]}
-                  >
-                    {theme.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <View style={[styles.heroBubble, styles.heroBubbleTop]} />
+          <View style={[styles.heroBubble, styles.heroBubbleBottom]} />
+          <View style={styles.heroIcon}>
+            <Ionicons name="color-palette-outline" size={18} color={colors.textTitle} />
           </View>
-        </Card>
-
-        <Card style={[styles.card, { backgroundColor: colors.surface2 }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>{t("customization.ui")}</Text>
-
-          <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: colors.textBody }]}>{t("customization.compactMode")}</Text>
-            <Switch
-              value={compactMode}
-              onValueChange={setCompactMode}
-              trackColor={{ false: colors.white20, true: colors.accent35 }}
-              thumbColor={compactMode ? colors.accent500 : colors.white88}
-            />
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>{t("customization.title")}</Text>
+            <Text style={styles.heroSubtitle}>{t("customization.subtitle")}</Text>
           </View>
+        </View>
 
-          <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: colors.textBody }]}>{t("customization.largeText")}</Text>
-            <Switch
-              value={largeText}
-              onValueChange={setLargeText}
-              trackColor={{ false: colors.white20, true: colors.accent35 }}
-              thumbColor={largeText ? colors.accent500 : colors.white88}
-            />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("customization.baseThemes")}</Text>
+          <View style={styles.themeList}>
+            {baseThemes.map((theme) => (
+              <ThemeChip
+                key={theme.key}
+                theme={theme}
+                selected={theme.key === themeKey}
+                onPress={() => setThemeKey(theme.key)}
+                styles={styles}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("customization.creativeThemes")}</Text>
+          <View style={styles.themeList}>
+            {creativeThemes.map((theme) => (
+              <ThemeChip
+                key={theme.key}
+                theme={theme}
+                selected={theme.key === themeKey}
+                onPress={() => setThemeKey(theme.key)}
+                styles={styles}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.previewTitle}>{t("customization.preview")}</Text>
+          <Text style={styles.previewSubtitle}>{t("customization.previewSubtitle")}</Text>
+
+          <View style={styles.previewHeader}>
+            <View style={styles.previewBadge}>
+              <Ionicons name="time-outline" size={14} color={colors.textTitle} />
+            </View>
+            <View style={styles.previewTextWrap}>
+              <Text style={styles.previewHeading}>Savetime</Text>
+              <Text style={styles.previewBody}>Il tempo e denaro</Text>
+            </View>
           </View>
 
-          <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: colors.textBody }]}>{t("customization.reduceMotion")}</Text>
-            <Switch
-              value={reduceMotion}
-              onValueChange={setReduceMotion}
-              trackColor={{ false: colors.white20, true: colors.accent35 }}
-              thumbColor={reduceMotion ? colors.accent500 : colors.white88}
-            />
+          <View style={styles.swatchRow}>
+            <View style={[styles.swatch, { backgroundColor: colors.primary800 }]} />
+            <View style={[styles.swatch, { backgroundColor: colors.primary700 }]} />
+            <View style={[styles.swatch, { backgroundColor: colors.primary500 }]} />
+            <View style={[styles.swatch, { backgroundColor: colors.accent500 }]} />
           </View>
-
-          <Text style={[styles.sectionTitle, { color: colors.textTitle, marginTop: 8 }]}>
-            {t("customization.language")}
-          </Text>
-          <View style={styles.themeGrid}>
-            <Pressable
-              onPress={() => setLanguage("it")}
-              style={[
-                styles.themeChip,
-                language === "it"
-                  ? { borderColor: colors.accent500, backgroundColor: colors.accent18 }
-                  : { borderColor: colors.white12, backgroundColor: colors.white08 },
-              ]}
-            >
-              <Text style={[styles.themeLabel, { color: colors.textBody }]}>{t("customization.italian")}</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setLanguage("en")}
-              style={[
-                styles.themeChip,
-                language === "en"
-                  ? { borderColor: colors.accent500, backgroundColor: colors.accent18 }
-                  : { borderColor: colors.white12, backgroundColor: colors.white08 },
-              ]}
-            >
-              <Text style={[styles.themeLabel, { color: colors.textBody }]}>{t("customization.english")}</Text>
-            </Pressable>
-          </View>
-        </Card>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "900",
-  },
-  subtitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  card: {
-    padding: 14,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    marginBottom: 10,
-  },
-  themeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  themeChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 11,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  dot: {
-    width: 9,
-    height: 9,
-    borderRadius: 999,
-  },
-  themeLabel: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  prefRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  prefLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-  },
-});
+function makeStyles(colors) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      gap: 12,
+    },
+    hero: {
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 14,
+      position: "relative",
+      overflow: "hidden",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    heroBubble: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.accent18,
+      backgroundColor: colors.accent12,
+    },
+    heroBubbleTop: {
+      width: 108,
+      height: 108,
+      right: -30,
+      top: -30,
+    },
+    heroBubbleBottom: {
+      width: 58,
+      height: 58,
+      right: 35,
+      bottom: -24,
+    },
+    heroIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+    },
+    heroContent: {
+      flex: 1,
+    },
+    heroTitle: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 18,
+    },
+    heroSubtitle: {
+      marginTop: 2,
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 12,
+      lineHeight: 17,
+    },
+    section: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white06,
+      padding: 10,
+      gap: 8,
+    },
+    sectionTitle: {
+      color: colors.textMuted,
+      fontWeight: "900",
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: 0.35,
+      marginBottom: 2,
+    },
+    themeList: {
+      gap: 8,
+    },
+    themeChip: {
+      borderWidth: 1,
+      borderRadius: 14,
+      paddingVertical: 10,
+      paddingHorizontal: 11,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    themeChipActive: {
+      borderColor: colors.accent35,
+      backgroundColor: colors.accent18,
+    },
+    themeChipIdle: {
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+    },
+    themeDot: {
+      width: 11,
+      height: 11,
+      borderRadius: 999,
+    },
+    themeLabel: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 12,
+      flex: 1,
+    },
+    previewCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface,
+      padding: 12,
+      gap: 8,
+    },
+    previewTitle: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 14,
+    },
+    previewSubtitle: {
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 11,
+      marginTop: -1,
+    },
+    previewHeader: {
+      marginTop: 4,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 9,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.surface2,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+    },
+    previewBadge: {
+      width: 30,
+      height: 30,
+      borderRadius: 11,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.white10,
+      backgroundColor: colors.white08,
+    },
+    previewTextWrap: {
+      flex: 1,
+    },
+    previewHeading: {
+      color: colors.textTitle,
+      fontWeight: "900",
+      fontSize: 13,
+    },
+    previewBody: {
+      color: colors.textMuted,
+      fontWeight: "700",
+      fontSize: 11,
+      marginTop: 1,
+    },
+    swatchRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 2,
+    },
+    swatch: {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.white12,
+    },
+    pressed: {
+      opacity: 0.88,
+    },
+  });
+}
