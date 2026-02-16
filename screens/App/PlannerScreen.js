@@ -8,6 +8,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import EventListItem from "../../components/calendar/EventListItem";
 import ViewToggle from "../../components/calendar/ViewToggle";
 import Card from "../../components/ui/Card";
+import DateTimePickerModal from "../../components/ui/DateTimePickerModal";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import IconButton from "../../components/ui/IconButton";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
@@ -105,6 +106,7 @@ export default function PlannerScreen() {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const range = useMemo(() => getRange(viewMode, selectedDate), [selectedDate, viewMode]);
   const rangeStartMs = range.start.getTime();
@@ -228,6 +230,10 @@ export default function PlannerScreen() {
     ? t("planner.eventsToday")
     : formatDate(selectedDate, "EEEE, MMM d");
   const isTodaySelected = isSameDay(selectedDate, new Date());
+  const selectedDateLabel =
+    viewMode === "week"
+      ? formatWeekRangeLabel(selectedDate)
+      : formatDate(selectedDate, "EEEE, d MMMM");
 
   const calendarHeight = viewMode === "month" ? (compactMode ? 346 : 364) : compactMode ? 136 : 156;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
@@ -292,6 +298,25 @@ export default function PlannerScreen() {
       <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}> 
         <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
+        </View>
+
+        <View style={styles.datePickerWrap}>
+          <Text style={[styles.datePickerLabel, { color: colors.textMuted }]}>
+            {t("planner.dateLabel")}
+          </Text>
+          <Pressable
+            onPress={() => setIsDatePickerOpen(true)}
+            style={[
+              styles.datePickerField,
+              { backgroundColor: colors.surface, borderColor: colors.white10 },
+            ]}
+          >
+            <Ionicons name="calendar-outline" size={16} color={colors.accent500} />
+            <Text style={[styles.datePickerText, { color: colors.textTitle }]} numberOfLines={1}>
+              {selectedDateLabel}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+          </Pressable>
         </View>
 
         <View style={styles.todayRow}>
@@ -440,6 +465,18 @@ export default function PlannerScreen() {
       >
         <Ionicons name="add" size={28} color={colors.textOnAccentStrong} />
       </Pressable>
+
+      <DateTimePickerModal
+        visible={isDatePickerOpen}
+        mode="date"
+        value={selectedDate}
+        title={t("planner.selectDateTitle")}
+        onCancel={() => setIsDatePickerOpen(false)}
+        onConfirm={(date) => {
+          setSelectedDate(startOfDay(date));
+          setIsDatePickerOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -461,6 +498,30 @@ const styles = StyleSheet.create({
   topSection: {},
   toggleWrap: {
     marginBottom: 10,
+  },
+  datePickerWrap: {
+    marginBottom: 10,
+    gap: 6,
+  },
+  datePickerLabel: {
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  datePickerField: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "900",
   },
   todayRow: {
     marginBottom: 10,
