@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "buildNumber": "26"
+      "buildNumber": "27"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "versionCode": 26
+      "versionCode": 27
     },
     "web": {
       "favicon": "./assets/favicon.png"
