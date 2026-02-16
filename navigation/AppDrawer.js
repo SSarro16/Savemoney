@@ -3,8 +3,7 @@ import { useContext } from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import PlannerStack from "./PlannerStack";
-import CustomizationScreen from "../screens/App/CustomizationScreen";
-import SettingsScreen from "../screens/App/SettingsScreen";
+import SettingsStack from "./SettingsStack";
 import { GlobalStyles } from "../constants/styles";
 import { LanguageContext } from "../context/LanguageContext";
 
@@ -44,20 +43,11 @@ export default function AppDrawer() {
         }}
       />
       <Drawer.Screen
-        name="Customization"
-        component={CustomizationScreen}
-        options={{
-          title: t("drawer.customization"),
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="color-palette-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Drawer.Screen
         name="Settings"
-        component={SettingsScreen}
+        component={SettingsStack}
         options={{
           title: t("drawer.settings"),
+          headerShown: false,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" color={color} size={size} />
           ),
