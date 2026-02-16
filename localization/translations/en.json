@@ -48,7 +48,15 @@
     "dateLabel": "Active date",
     "selectDateTitle": "Select a date",
     "resetToTodayA11y": "Reset to today",
-    "empty": "No events planned yet. Tap + to create the first one."
+    "empty": "No events planned yet. Tap + to create the first one.",
+    "homePanelTitle": "Time cockpit",
+    "homePanelSubtitle": "Plan, execute, measure",
+    "focusRunning": "Focus active",
+    "focusIdle": "Ready to plan",
+    "metricEvents": "Events",
+    "metricPlanned": "Planned",
+    "metricTracked": "Actual",
+    "eventsCount": "{{count}} events"
   },
   "timer": {
     "start": "Start",
