@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth, initializeAuth } from "firebase/auth";
-import { getReactNativePersistence } from "firebase/auth/react-native";
+import {
+  getAuth,
+  getReactNativePersistence,
+  initializeAuth,
+} from "@firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // TODO(TASK05): Replace placeholders with your real Firebase Web App config.

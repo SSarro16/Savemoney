@@ -1,18 +1,21 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Calendar, CalendarProvider, WeekCalendar } from "react-native-calendars";
-import { useNavigation } from "@react-navigation/native";
-
 import {
-  EventListItem,
-  EventQuickAddModal,
-  ViewToggle,
-} from "../../components/calendar";
+  Calendar,
+  CalendarProvider,
+  WeekCalendar,
+} from "react-native-calendars";
+import {
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
+
+import { EventListItem, ViewToggle } from "../../components/calendar";
 import { Card, ErrorOverlay, IconButton, LoadingOverlay } from "../../components/ui";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
-import { createEvent, getEventsByRange } from "../../services/eventsService";
+import { getEventsByRange } from "../../services/eventsService";
 import {
   endOfDay,
   endOfMonth,
@@ -23,7 +26,6 @@ import {
   startOfDay,
   startOfMonth,
   startOfWeek,
-  toDate,
 } from "../../utils/dates";
 
 function toDateString(date) {
@@ -62,6 +64,19 @@ function isEventOnDate(event, date) {
   return event.startAt <= selectedEnd && event.endAt >= selectedStart;
 }
 
+function serializeEvent(event) {
+  return {
+    id: event.id,
+    title: event.title,
+    startAt: event.startAt?.toISOString?.() || null,
+    endAt: event.endAt?.toISOString?.() || null,
+    allDay: Boolean(event.allDay),
+    category: event.category || "General",
+    notes: event.notes || "",
+    location: event.location || "",
+  };
+}
+
 export default function PlannerScreen() {
   const navigation = useNavigation();
   const colors = GlobalStyles.colors;
@@ -71,12 +86,11 @@ export default function PlannerScreen() {
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [refreshTick, setRefreshTick] = useState(0);
 
   const range = useMemo(() => getRange(viewMode, selectedDate), [selectedDate, viewMode]);
+  const rangeStartMs = range.start.getTime();
+  const rangeEndMs = range.end.getTime();
 
   const loadEvents = useCallback(async () => {
     if (!user?.uid) {
@@ -88,33 +102,29 @@ export default function PlannerScreen() {
     setError(null);
 
     try {
-      const items = await getEventsByRange(user.uid, range.start, range.end);
+      const items = await getEventsByRange(
+        user.uid,
+        new Date(rangeStartMs),
+        new Date(rangeEndMs),
+      );
       setEvents(items);
     } catch (loadError) {
       setError(loadError.message || "Unable to load events.");
     } finally {
       setIsLoading(false);
     }
-  }, [user?.uid, range.start, range.end]);
+  }, [rangeEndMs, rangeStartMs, user?.uid]);
 
   useEffect(() => {
     loadEvents();
-  }, [loadEvents, refreshTick]);
+  }, [loadEvents]);
 
-  const saveEventHandler = async (payload) => {
-    if (!user?.uid) {
-      throw new Error("You must be authenticated.");
-    }
-
-    setIsSaving(true);
-    try {
-      await createEvent(user.uid, payload);
-      setRefreshTick((value) => value + 1);
-      setIsQuickAddOpen(false);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+      return undefined;
+    }, [loadEvents]),
+  );
 
   const selectedDayEvents = useMemo(
     () =>
@@ -178,6 +188,21 @@ export default function PlannerScreen() {
     ? "Today"
     : formatDate(selectedDate, "EEEE, MMM d");
 
+  const openCreateEditor = () => {
+    navigation.navigate("EventEditor", {
+      mode: "create",
+      initialDate: selectedDate.toISOString(),
+    });
+  };
+
+  const openEditEditor = (event) => {
+    navigation.navigate("EventEditor", {
+      mode: "edit",
+      eventId: event.id,
+      initialEvent: serializeEvent(event),
+    });
+  };
+
   if (isLoading) {
     return <LoadingOverlay message="Loading planner..." />;
   }
@@ -209,7 +234,7 @@ export default function PlannerScreen() {
           <ViewToggle value={viewMode} onChange={setViewMode} />
         </View>
 
-        <Card style={[styles.calendarCard, { backgroundColor: colors.surface2 }]}>
+        <Card style={[styles.calendarCard, { backgroundColor: colors.surface2 }]}> 
           {viewMode === "month" ? (
             <Calendar
               current={calendarDate}
@@ -249,24 +274,18 @@ export default function PlannerScreen() {
             </Text>
           </Card>
         ) : (
-          selectedDayEvents.map((event) => <EventListItem key={event.id} event={event} />)
+          selectedDayEvents.map((event) => (
+            <EventListItem key={event.id} event={event} onPress={() => openEditEditor(event)} />
+          ))
         )}
       </ScrollView>
 
       <Pressable
-        onPress={() => setIsQuickAddOpen(true)}
+        onPress={openCreateEditor}
         style={[styles.fab, { backgroundColor: colors.accent500, borderColor: colors.accent30 }]}
       >
         <Ionicons name="add" size={28} color={colors.textOnAccentStrong} />
       </Pressable>
-
-      <EventQuickAddModal
-        visible={isQuickAddOpen}
-        selectedDate={toDate(selectedDate)}
-        onClose={() => setIsQuickAddOpen(false)}
-        onSave={saveEventHandler}
-        isSaving={isSaving}
-      />
     </View>
   );
 }
