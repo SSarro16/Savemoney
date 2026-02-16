@@ -1,7 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Calendar } from "react-native-calendars";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
@@ -41,16 +40,23 @@ function toDateString(date) {
   return formatDate(date, "yyyy-MM-dd");
 }
 
-function fromDateString(dateString) {
-  return new Date(`${dateString}T12:00:00`);
+function buildMonthWeeks(monthDate) {
+  const monthStart = startOfMonth(monthDate);
+  const monthEnd = endOfMonth(monthDate);
+  const gridStart = startOfWeek(monthStart);
+  const gridEnd = endOfWeek(monthEnd);
+  const days = eachDayBetween(gridStart, gridEnd, 42);
+  const weeks = [];
+
+  for (let index = 0; index < days.length; index += 7) {
+    weeks.push(days.slice(index, index + 7));
+  }
+
+  return weeks;
 }
 
-function formatMonthHeader(dateValue, fallbackDate) {
-  const parsed = new Date(dateValue);
-  if (Number.isNaN(parsed.getTime())) {
-    return formatDate(fallbackDate, "MMMM yyyy");
-  }
-  return formatDate(parsed, "MMMM yyyy");
+function isSameMonth(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
 function getRange(viewMode, selectedDate) {
@@ -151,59 +157,12 @@ export default function PlannerScreen() {
     [events, selectedDate],
   );
 
-  const markedDates = useMemo(() => {
-    const marks = {};
-
-    events.forEach((event) => {
-      if (!event?.startAt || !event?.endAt) {
-        return;
-      }
-
-      eachDayBetween(event.startAt, event.endAt).forEach((date) => {
-        const key = toDateString(date);
-        marks[key] = {
-          ...(marks[key] || {}),
-          marked: true,
-          dotColor: colors.accent500,
-        };
-      });
-    });
-
-    const selectedKey = toDateString(selectedDate);
-    marks[selectedKey] = {
-      ...(marks[selectedKey] || {}),
-      selected: true,
-      selectedColor: colors.accent500,
-      selectedTextColor: colors.textOnAccentStrong,
-      marked: true,
-      dotColor: colors.textOnAccentStrong,
-    };
-
-    return marks;
-  }, [events, selectedDate, colors.accent500, colors.textOnAccentStrong]);
-
-  const calendarTheme = useMemo(
-    () => ({
-      calendarBackground: colors.surface2,
-      selectedDayBackgroundColor: colors.accent500,
-      selectedDayTextColor: colors.textOnAccentStrong,
-      todayTextColor: colors.accent500,
-      dayTextColor: colors.textBody,
-      monthTextColor: colors.textTitle,
-      arrowColor: colors.accent500,
-      textDisabledColor: colors.white35,
-      textSectionTitleColor: colors.textMuted,
-      textDayFontWeight: "800",
-      textMonthFontWeight: "900",
-      textDayHeaderFontWeight: "800",
-      textMonthFontSize: 18,
-      textDayHeaderFontSize: 11,
-      textDayFontSize: 14,
-    }),
-    [colors],
+  const monthWeeks = useMemo(() => buildMonthWeeks(selectedDate), [selectedDate]);
+  const monthWeekdayLabels = useMemo(
+    () => (monthWeeks[0] || []).map((date) => formatDate(date, "EEE")),
+    [monthWeeks],
   );
 
-  const calendarDate = toDateString(selectedDate);
   const weekDays = useMemo(
     () => eachDayBetween(startOfWeek(selectedDate), endOfWeek(selectedDate), 7),
     [selectedDate],
@@ -236,7 +195,10 @@ export default function PlannerScreen() {
       ? formatWeekRangeLabel(selectedDate)
       : formatDate(selectedDate, "EEEE, d MMMM");
 
-  const calendarHeight = viewMode === "month" ? (compactMode ? 346 : 364) : compactMode ? 136 : 156;
+  const monthRows = monthWeeks.length || 5;
+  const monthCalendarHeight =
+    (compactMode ? 56 : 62) * monthRows + (compactMode ? 94 : 108);
+  const calendarHeight = viewMode === "month" ? monthCalendarHeight : compactMode ? 136 : 156;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
   const headerTopPadding = Math.max(insets.top, 8);
 
@@ -249,6 +211,13 @@ export default function PlannerScreen() {
 
   const resetToToday = () => {
     setSelectedDate(startOfDay(new Date()));
+  };
+
+  const shiftMonth = (delta) => {
+    const monthAnchor = startOfMonth(selectedDate);
+    const nextMonth = new Date(monthAnchor);
+    nextMonth.setMonth(monthAnchor.getMonth() + delta);
+    setSelectedDate(startOfDay(nextMonth));
   };
 
   const openEditEditor = (event) => {
@@ -359,21 +328,114 @@ export default function PlannerScreen() {
           ]}
         >
           {viewMode === "month" ? (
-            <Calendar
-              style={styles.calendarWidget}
-              current={calendarDate}
-              onDayPress={(day) => setSelectedDate(fromDateString(day.dateString))}
-              markedDates={markedDates}
-              enableSwipeMonths
-              hideExtraDays={false}
-              firstDay={1}
-              renderHeader={(date) => (
+            <View style={styles.monthWrap}>
+              <View style={styles.monthNavRow}>
+                <Pressable
+                  onPress={() => shiftMonth(-1)}
+                  style={({ pressed }) => [
+                    styles.monthNavButton,
+                    {
+                      borderColor: colors.white10,
+                      backgroundColor: colors.white08,
+                    },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="chevron-back" size={16} color={colors.textBody} />
+                </Pressable>
                 <Text style={[styles.monthHeaderText, { color: colors.textTitle }]}>
-                  {formatMonthHeader(date, selectedDate)}
+                  {formatDate(selectedDate, "MMMM yyyy")}
                 </Text>
-              )}
-              theme={calendarTheme}
-            />
+                <Pressable
+                  onPress={() => shiftMonth(1)}
+                  style={({ pressed }) => [
+                    styles.monthNavButton,
+                    {
+                      borderColor: colors.white10,
+                      backgroundColor: colors.white08,
+                    },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="chevron-forward" size={16} color={colors.textBody} />
+                </Pressable>
+              </View>
+
+              <View style={styles.monthWeekHeaderRow}>
+                {monthWeekdayLabels.map((label, index) => (
+                  <View key={`${label}-${index}`} style={styles.monthWeekHeaderCell}>
+                    <Text style={[styles.monthWeekHeaderText, { color: colors.textMuted }]}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.monthGrid}>
+                {monthWeeks.map((week, rowIndex) => (
+                  <View key={`week-${rowIndex}`} style={styles.monthWeekRow}>
+                    {week.map((date) => {
+                      const key = toDateString(date);
+                      const isSelected = isSameDay(date, selectedDate);
+                      const isCurrentMonth = isSameMonth(date, selectedDate);
+                      const dayCount = eventsByDateMap[key] || 0;
+
+                      return (
+                        <Pressable
+                          key={key}
+                          onPress={() => setSelectedDate(startOfDay(date))}
+                          style={({ pressed }) => [
+                            styles.monthDayCell,
+                            isSelected
+                              ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                              : {
+                                  backgroundColor: isCurrentMonth ? colors.white08 : colors.white06,
+                                  borderColor: colors.white10,
+                                },
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.monthDayNumber,
+                              {
+                                color: isSelected
+                                  ? colors.textOnAccentStrong
+                                  : isCurrentMonth
+                                    ? colors.textBody
+                                    : colors.textMuted,
+                              },
+                            ]}
+                          >
+                            {formatDate(date, "d")}
+                          </Text>
+                          {!isCurrentMonth && (
+                            <Text
+                              style={[
+                                styles.monthOutsideHint,
+                                { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                              ]}
+                            >
+                              {formatDate(date, "MMM")}
+                            </Text>
+                          )}
+                          {!!dayCount && (
+                            <View
+                              style={[
+                                styles.monthDayDot,
+                                {
+                                  backgroundColor: isSelected
+                                    ? colors.textOnAccentStrong
+                                    : colors.accent500,
+                                },
+                              ]}
+                            />
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </View>
           ) : (
             <View style={styles.dayWeekWrap}>
               <View style={styles.dayStrip}>
@@ -568,14 +630,74 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 8,
   },
-  calendarWidget: {
+  monthWrap: {
     flex: 1,
   },
+  monthNavRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  monthNavButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   monthHeaderText: {
+    fontSize: 17,
+    fontWeight: "900",
+    textTransform: "capitalize",
+  },
+  monthWeekHeaderRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+  monthWeekHeaderCell: {
+    flex: 1,
+    alignItems: "center",
+  },
+  monthWeekHeaderText: {
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  monthGrid: {
+    flex: 1,
+    gap: 6,
+  },
+  monthWeekRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  monthDayCell: {
+    flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    gap: 1,
+  },
+  monthDayNumber: {
     fontSize: 18,
     fontWeight: "900",
-    marginBottom: 6,
-    textTransform: "capitalize",
+    lineHeight: 22,
+  },
+  monthOutsideHint: {
+    fontSize: 9,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  monthDayDot: {
+    marginTop: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 999,
   },
   dayWeekWrap: {
     flex: 1,
@@ -630,6 +752,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     textAlign: "center",
+  },
+  pressed: {
+    opacity: 0.9,
   },
   fab: {
     position: "absolute",
