@@ -21,6 +21,7 @@ import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { getEventsByRange } from "../../services/eventsService";
 import {
+  eachDayBetween,
   endOfDay,
   endOfMonth,
   endOfWeek,
@@ -138,16 +139,27 @@ export default function PlannerScreen() {
     [events, selectedDate],
   );
 
+  const selectedCountLabel = `${selectedDayEvents.length} ${
+    selectedDayEvents.length === 1 ? "event" : "events"
+  }`;
+  const activeViewLabel = viewMode === "day" ? "Day focus" : viewMode === "week" ? "Week" : "Month";
+
   const markedDates = useMemo(() => {
     const marks = {};
 
     events.forEach((event) => {
-      const key = toDateString(event.startAt);
-      marks[key] = {
-        ...(marks[key] || {}),
-        marked: true,
-        dotColor: colors.accent500,
-      };
+      if (!event?.startAt || !event?.endAt) {
+        return;
+      }
+
+      eachDayBetween(event.startAt, event.endAt).forEach((date) => {
+        const key = toDateString(date);
+        marks[key] = {
+          ...(marks[key] || {}),
+          marked: true,
+          dotColor: colors.accent500,
+        };
+      });
     });
 
     const selectedKey = toDateString(selectedDate);
@@ -238,6 +250,15 @@ export default function PlannerScreen() {
           <ViewToggle value={viewMode} onChange={setViewMode} />
         </View>
 
+        <View style={styles.badgesRow}>
+          <View style={[styles.badge, { backgroundColor: colors.white08, borderColor: colors.white12 }]}>
+            <Text style={[styles.badgeText, { color: colors.textBody }]}>{activeViewLabel}</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: colors.accent18, borderColor: colors.accent35 }]}>
+            <Text style={[styles.badgeText, { color: colors.textOnAccent }]}>{selectedCountLabel}</Text>
+          </View>
+        </View>
+
         <Card style={[styles.calendarCard, { backgroundColor: colors.surface2 }]}> 
           {viewMode === "month" ? (
             <Calendar
@@ -325,6 +346,22 @@ const styles = StyleSheet.create({
   },
   toggleWrap: {
     marginBottom: 10,
+  },
+  badgesRow: {
+    marginBottom: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  badge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
   calendarCard: {
     marginBottom: 14,

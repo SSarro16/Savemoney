@@ -1,4 +1,5 @@
 import {
+  addDays,
   endOfDay as dateFnsEndOfDay,
   endOfMonth as dateFnsEndOfMonth,
   endOfWeek as dateFnsEndOfWeek,
@@ -63,4 +64,22 @@ export function formatWeekRangeLabel(value) {
 
 export function isSameDay(a, b) {
   return dateFnsIsSameDay(toDate(a), toDate(b));
+}
+
+export function eachDayBetween(startValue, endValue, maxDays = 120) {
+  const start = startOfDay(startValue);
+  const end = startOfDay(toDate(endValue, start));
+
+  const rangeStart = start <= end ? start : end;
+  const rangeEnd = end >= start ? end : start;
+
+  const days = [];
+  let cursor = new Date(rangeStart);
+
+  while (cursor <= rangeEnd && days.length < maxDays) {
+    days.push(new Date(cursor));
+    cursor = addDays(cursor, 1);
+  }
+
+  return days;
 }
