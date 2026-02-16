@@ -11,8 +11,12 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 
-import { EventListItem, ViewToggle } from "../../components/calendar";
-import { Card, ErrorOverlay, IconButton, LoadingOverlay } from "../../components/ui";
+import EventListItem from "../../components/calendar/EventListItem";
+import ViewToggle from "../../components/calendar/ViewToggle";
+import Card from "../../components/ui/Card";
+import ErrorOverlay from "../../components/ui/ErrorOverlay";
+import IconButton from "../../components/ui/IconButton";
+import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { getEventsByRange } from "../../services/eventsService";

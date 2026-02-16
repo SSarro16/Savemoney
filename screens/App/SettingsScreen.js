@@ -2,7 +2,8 @@ import { useContext } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
 
-import { Button, Card } from "../../components/ui";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 

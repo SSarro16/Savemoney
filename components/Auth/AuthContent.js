@@ -12,7 +12,9 @@ import {
 import { useNavigation } from "@react-navigation/native";
 
 import { GlobalStyles } from "../../constants/styles";
-import { Button, Card, TextField } from "../ui";
+import Button from "../ui/Button";
+import Card from "../ui/Card";
+import TextField from "../ui/TextField";
 
 export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = false }) {
   const colors = GlobalStyles.colors;

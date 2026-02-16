@@ -12,7 +12,10 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import { Button, Card, LoadingOverlay, TextField } from "../../components/ui";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import LoadingOverlay from "../../components/ui/LoadingOverlay";
+import TextField from "../../components/ui/TextField";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import {
