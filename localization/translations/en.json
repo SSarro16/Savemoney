@@ -28,8 +28,8 @@
     "eventsToday": "Today",
     "dateLabel": "Active date",
     "selectDateTitle": "Select a date",
-    "empty": "No events planned yet. Tap + to create the first one.",
-    "todayButton": "Today"
+    "resetToTodayA11y": "Reset to today",
+    "empty": "No events planned yet. Tap + to create the first one."
   },
   "eventEditor": {
     "newTitle": "New Event",
