@@ -44,6 +44,20 @@
     "actualOnly": "Actual time: {{minutes}} min",
     "detailsTitle": "Real-time tracking"
   },
+  "recurrence": {
+    "title": "Recurrence",
+    "none": "None",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "interval": "Interval",
+    "untilTitle": "Repeat until",
+    "untilNone": "No end date",
+    "untilValue": "Until {{date}}",
+    "skipOccurrence": "Skip occurrence",
+    "editSingleHint": "You are editing only this occurrence. Save = override; Delete = skip occurrence.",
+    "editSingleTitle": "Edit occurrence"
+  },
   "eventEditor": {
     "newTitle": "New Event",
     "editTitle": "Edit Event",

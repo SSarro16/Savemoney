@@ -25,6 +25,8 @@ import {
   createEvent,
   deleteEvent,
   getEventById,
+  saveRecurringOccurrenceOverride,
+  skipRecurringOccurrence,
   startEventTimer,
   stopEventTimer,
   updateEvent,
@@ -32,6 +34,12 @@ import {
 import { endOfDay, formatDate, formatTime, startOfDay, toDate } from "../../utils/dates";
 
 const CATEGORIES = ["Work", "Personal", "Study", "Health", "Other"];
+const RECURRENCE_OPTIONS = [
+  { key: "none", icon: "close-outline" },
+  { key: "daily", icon: "sunny-outline" },
+  { key: "weekly", icon: "calendar-outline" },
+  { key: "monthly", icon: "repeat-outline" },
+];
 
 function mergeDatePart(baseDate, selectedDate) {
   const base = toDate(baseDate);
@@ -90,11 +98,28 @@ function parseInitialEvent(initialEvent, fallbackDate) {
       trackedDurationSeconds: 0,
       timerStartedAt: null,
       isTimerRunning: false,
+      recurrenceFrequency: "none",
+      recurrenceInterval: 1,
+      recurrenceUntilAt: null,
+      isRecurringOccurrence: false,
+      parentRecurringEventId: null,
+      occurrenceDateKey: null,
     };
   }
 
   const startAt = toDate(initialEvent.startAt, defaultRange.startAt);
   const endAt = toDate(initialEvent.endAt, defaultRange.endAt);
+
+  const recurrence = initialEvent.recurrence && typeof initialEvent.recurrence === "object"
+    ? initialEvent.recurrence
+    : null;
+  const recurrenceFrequency = String(recurrence?.frequency || "none").toLowerCase();
+  const normalizedRecurrenceFrequency =
+    recurrenceFrequency === "daily" || recurrenceFrequency === "weekly" || recurrenceFrequency === "monthly"
+      ? recurrenceFrequency
+      : "none";
+  const recurrenceInterval = Math.max(1, Math.round(Number(recurrence?.interval) || 1));
+  const recurrenceUntilAt = recurrence?.untilAt ? toNullableDate(recurrence.untilAt) : null;
 
   return {
     title: String(initialEvent.title || ""),
@@ -112,6 +137,12 @@ function parseInitialEvent(initialEvent, fallbackDate) {
     trackedDurationSeconds: Number(initialEvent.trackedDurationSeconds) || 0,
     timerStartedAt: toNullableDate(initialEvent.timerStartedAt),
     isTimerRunning: Boolean(initialEvent.isTimerRunning),
+    recurrenceFrequency: normalizedRecurrenceFrequency,
+    recurrenceInterval,
+    recurrenceUntilAt,
+    isRecurringOccurrence: Boolean(initialEvent.isRecurringOccurrence),
+    parentRecurringEventId: initialEvent.parentRecurringEventId || null,
+    occurrenceDateKey: initialEvent.occurrenceDateKey || null,
   };
 }
 
@@ -123,7 +154,14 @@ export default function EventEditorScreen() {
   const { user } = useContext(AuthContext);
   const { t } = useTranslation();
 
-  const { mode = "create", eventId, initialDate, initialEvent } = route.params || {};
+  const {
+    mode = "create",
+    eventId,
+    initialDate,
+    initialEvent,
+    parentRecurringEventId: routeParentRecurringEventId,
+    occurrenceDateKey: routeOccurrenceDateKey,
+  } = route.params || {};
   const isEditMode = mode === "edit" && !!eventId;
 
   const [title, setTitle] = useState("");
@@ -137,6 +175,16 @@ export default function EventEditorScreen() {
   const [trackedDurationSeconds, setTrackedDurationSeconds] = useState(0);
   const [timerStartedAt, setTimerStartedAt] = useState(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState("none");
+  const [recurrenceInterval, setRecurrenceInterval] = useState("1");
+  const [recurrenceUntilAt, setRecurrenceUntilAt] = useState(null);
+  const [parentRecurringEventId, setParentRecurringEventId] = useState(
+    routeParentRecurringEventId || null,
+  );
+  const [occurrenceDateKey, setOccurrenceDateKey] = useState(routeOccurrenceDateKey || null);
+  const [isRecurringOccurrence, setIsRecurringOccurrence] = useState(
+    Boolean(routeParentRecurringEventId && routeOccurrenceDateKey),
+  );
 
   const [pickerState, setPickerState] = useState(null);
   const [formError, setFormError] = useState(null);
@@ -145,12 +193,17 @@ export default function EventEditorScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTimerUpdating, setIsTimerUpdating] = useState(false);
   const [liveTick, setLiveTick] = useState(Date.now());
+  const [isRecurrenceUntilPickerOpen, setIsRecurrenceUntilPickerOpen] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isEditMode ? t("eventEditor.editTitle") : t("eventEditor.newTitle"),
+      title: isRecurringOccurrence
+        ? t("recurrence.editSingleTitle")
+        : isEditMode
+          ? t("eventEditor.editTitle")
+          : t("eventEditor.newTitle"),
     });
-  }, [isEditMode, navigation, t]);
+  }, [isEditMode, isRecurringOccurrence, navigation, t]);
 
   useEffect(() => {
     const fallbackDate = toDate(initialDate, new Date());
@@ -168,6 +221,19 @@ export default function EventEditorScreen() {
       setTrackedDurationSeconds(parsed.trackedDurationSeconds);
       setTimerStartedAt(parsed.timerStartedAt);
       setIsTimerRunning(parsed.isTimerRunning);
+      setRecurrenceFrequency(parsed.recurrenceFrequency);
+      setRecurrenceInterval(String(parsed.recurrenceInterval));
+      setRecurrenceUntilAt(parsed.recurrenceUntilAt);
+      setIsRecurringOccurrence(
+        Boolean(
+          parsed.isRecurringOccurrence ||
+            (parsed.parentRecurringEventId && parsed.occurrenceDateKey),
+        ),
+      );
+      setParentRecurringEventId(
+        parsed.parentRecurringEventId || routeParentRecurringEventId || null,
+      );
+      setOccurrenceDateKey(parsed.occurrenceDateKey || routeOccurrenceDateKey || null);
       setFormError(null);
     };
 
@@ -209,7 +275,15 @@ export default function EventEditorScreen() {
     return () => {
       isMounted = false;
     };
-  }, [eventId, initialDate, initialEvent, isEditMode, user?.uid]);
+  }, [
+    eventId,
+    initialDate,
+    initialEvent,
+    isEditMode,
+    routeOccurrenceDateKey,
+    routeParentRecurringEventId,
+    user?.uid,
+  ]);
 
   useEffect(() => {
     if (!isTimerRunning || !timerStartedAt) {
@@ -273,8 +347,29 @@ export default function EventEditorScreen() {
       category,
       notes,
       location,
+      recurrence:
+        !isRecurringOccurrence && recurrenceFrequency !== "none"
+          ? {
+              frequency: recurrenceFrequency,
+              interval: Math.max(1, Math.round(Number(recurrenceInterval) || 1)),
+              untilAt: recurrenceUntilAt || null,
+            }
+          : null,
     }),
-    [title, startAt, endAt, expectedDurationMinutes, allDay, category, notes, location],
+    [
+      allDay,
+      category,
+      endAt,
+      expectedDurationMinutes,
+      isRecurringOccurrence,
+      location,
+      notes,
+      recurrenceFrequency,
+      recurrenceInterval,
+      recurrenceUntilAt,
+      startAt,
+      title,
+    ],
   );
 
   const expectedPreview = useMemo(() => {
@@ -330,7 +425,7 @@ export default function EventEditorScreen() {
   };
 
   const handleStartTimer = async () => {
-    if (!isEditMode || !user?.uid || !eventId || isTimerUpdating) {
+    if (!isEditMode || isRecurringOccurrence || !user?.uid || !eventId || isTimerUpdating) {
       return;
     }
     setIsTimerUpdating(true);
@@ -346,7 +441,7 @@ export default function EventEditorScreen() {
   };
 
   const handleStopTimer = async () => {
-    if (!isEditMode || !user?.uid || !eventId || isTimerUpdating) {
+    if (!isEditMode || isRecurringOccurrence || !user?.uid || !eventId || isTimerUpdating) {
       return;
     }
     setIsTimerUpdating(true);
@@ -384,7 +479,17 @@ export default function EventEditorScreen() {
     setFormError(null);
 
     try {
-      if (isEditMode) {
+      if (isRecurringOccurrence) {
+        if (!parentRecurringEventId || !occurrenceDateKey) {
+          throw new Error("Missing recurring occurrence reference.");
+        }
+        await saveRecurringOccurrenceOverride(
+          user?.uid,
+          parentRecurringEventId,
+          occurrenceDateKey,
+          payload,
+        );
+      } else if (isEditMode) {
         await updateEvent(user?.uid, eventId, payload);
       } else {
         await createEvent(user?.uid, payload);
@@ -399,7 +504,7 @@ export default function EventEditorScreen() {
   };
 
   const deleteHandler = async () => {
-    if (!isEditMode) {
+    if (!isEditMode && !isRecurringOccurrence) {
       return;
     }
 
@@ -407,7 +512,14 @@ export default function EventEditorScreen() {
     setFormError(null);
 
     try {
-      await deleteEvent(user?.uid, eventId);
+      if (isRecurringOccurrence) {
+        if (!parentRecurringEventId || !occurrenceDateKey) {
+          throw new Error("Missing recurring occurrence reference.");
+        }
+        await skipRecurringOccurrence(user?.uid, parentRecurringEventId, occurrenceDateKey);
+      } else {
+        await deleteEvent(user?.uid, eventId);
+      }
       navigation.goBack();
     } catch (error) {
       setFormError(error?.message || t("eventEditor.deleteError"));
@@ -554,6 +666,97 @@ export default function EventEditorScreen() {
             </View>
           </View>
 
+          {!isRecurringOccurrence ? (
+            <View style={styles.recurrenceWrap}>
+              <Text style={[styles.blockLabel, { color: colors.textBody }]}>
+                {t("recurrence.title")}
+              </Text>
+              <View style={styles.recurrenceOptionsRow}>
+                {RECURRENCE_OPTIONS.map((option) => {
+                  const selected = recurrenceFrequency === option.key;
+                  return (
+                    <Pressable
+                      key={option.key}
+                      onPress={() => setRecurrenceFrequency(option.key)}
+                      style={[
+                        styles.recurrenceOption,
+                        selected
+                          ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                          : { backgroundColor: colors.white08, borderColor: colors.white12 },
+                      ]}
+                    >
+                      <Ionicons
+                        name={option.icon}
+                        size={13}
+                        color={selected ? colors.textOnAccentStrong : colors.textBody}
+                      />
+                      <Text
+                        style={[
+                          styles.recurrenceOptionText,
+                          { color: selected ? colors.textOnAccentStrong : colors.textBody },
+                        ]}
+                      >
+                        {t(`recurrence.${option.key}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {recurrenceFrequency !== "none" && (
+                <>
+                  <View style={styles.recurrenceDetailRow}>
+                    <TextField
+                      label={t("recurrence.interval")}
+                      value={recurrenceInterval}
+                      onChangeText={(value) => {
+                        const sanitized = String(value || "").replace(/[^0-9]/g, "");
+                        setRecurrenceInterval(sanitized.length ? sanitized : "1");
+                      }}
+                      keyboardType="number-pad"
+                      leftIcon="repeat-outline"
+                    />
+                  </View>
+                  <View style={styles.recurrenceDetailRow}>
+                    <Pressable
+                      onPress={() => setIsRecurrenceUntilPickerOpen(true)}
+                      style={[
+                        styles.datetimeButton,
+                        { borderColor: colors.white12, backgroundColor: colors.white08 },
+                      ]}
+                    >
+                      <Text style={[styles.datetimeText, { color: colors.textTitle }]}>
+                        {recurrenceUntilAt
+                          ? t("recurrence.untilValue", {
+                              date: formatDate(recurrenceUntilAt, "dd MMM yyyy"),
+                            })
+                          : t("recurrence.untilNone")}
+                      </Text>
+                    </Pressable>
+                    {!!recurrenceUntilAt && (
+                      <Pressable
+                        onPress={() => setRecurrenceUntilAt(null)}
+                        style={[
+                          styles.clearUntilButton,
+                          { borderColor: colors.white12, backgroundColor: colors.white08 },
+                        ]}
+                      >
+                        <Ionicons name="close" size={14} color={colors.textMuted} />
+                      </Pressable>
+                    )}
+                  </View>
+                </>
+              )}
+            </View>
+          ) : (
+            <View style={[styles.recurrenceOccurrenceHint, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
+              <Ionicons name="git-branch-outline" size={14} color={colors.accent500} />
+              <Text style={[styles.recurrenceOccurrenceHintText, { color: colors.textBody }]}>
+                {t("recurrence.editSingleHint")}
+              </Text>
+            </View>
+          )}
+
           {!allDay && (
             <View style={styles.expectedWrap}>
               <TextField
@@ -592,7 +795,7 @@ export default function EventEditorScreen() {
             </View>
           )}
 
-          {isEditMode && (
+          {isEditMode && !isRecurringOccurrence && (
             <View style={[styles.trackingCard, { borderColor: colors.white12, backgroundColor: colors.white08 }]}>
               <View style={styles.trackingHeaderRow}>
                 <Text style={[styles.blockLabel, { color: colors.textBody, marginBottom: 0 }]}>
@@ -679,7 +882,11 @@ export default function EventEditorScreen() {
                 onPress={deleteHandler}
                 disabled={isSubmitting || isDeleting}
               >
-                {isDeleting ? t("eventEditor.deleting") : t("eventEditor.delete")}
+                {isDeleting
+                  ? t("eventEditor.deleting")
+                  : isRecurringOccurrence
+                    ? t("recurrence.skipOccurrence")
+                    : t("eventEditor.delete")}
               </Button>
             )}
           </View>
@@ -693,6 +900,17 @@ export default function EventEditorScreen() {
           title={pickerState?.field === "start" ? t("eventEditor.start") : t("eventEditor.end")}
           onCancel={() => setPickerState(null)}
           onConfirm={onPickerConfirm}
+        />
+        <DateTimePickerModal
+          visible={isRecurrenceUntilPickerOpen}
+          mode="date"
+          value={recurrenceUntilAt || startAt}
+          title={t("recurrence.untilTitle")}
+          onCancel={() => setIsRecurrenceUntilPickerOpen(false)}
+          onConfirm={(date) => {
+            setRecurrenceUntilAt(startOfDay(date));
+            setIsRecurrenceUntilPickerOpen(false);
+          }}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -791,6 +1009,57 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 12,
     fontWeight: "900",
+  },
+  recurrenceWrap: {
+    marginTop: 12,
+    gap: 8,
+  },
+  recurrenceOptionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  recurrenceOption: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  recurrenceOptionText: {
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  recurrenceDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  clearUntilButton: {
+    width: 34,
+    height: 34,
+    borderWidth: 1,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recurrenceOccurrenceHint: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  recurrenceOccurrenceHintText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "800",
   },
   errorText: {
     marginTop: 10,
