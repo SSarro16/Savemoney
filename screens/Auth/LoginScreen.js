@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 
-import { AuthContent } from "../../components/Auth";
+import AuthContent from "../../components/Auth/AuthContent";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { AuthContext } from "../../context/AuthContext";
 

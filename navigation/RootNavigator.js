@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 
-import { LoadingOverlay } from "../components/ui";
+import LoadingOverlay from "../components/ui/LoadingOverlay";
 import { GlobalStyles } from "../constants/styles";
 import { AuthContext } from "../context/AuthContext";
 import AppDrawer from "./AppDrawer";
