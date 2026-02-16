@@ -13,6 +13,7 @@ import IconButton from "../../components/ui/IconButton";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
+import { CustomizationContext } from "../../context/CustomizationContext";
 import { getEventsByRange } from "../../services/eventsService";
 import {
   eachDayBetween,
@@ -87,6 +88,7 @@ export default function PlannerScreen() {
   const insets = useSafeAreaInsets();
   const colors = GlobalStyles.colors;
   const { user } = useContext(AuthContext);
+  const { compactMode, textScale } = useContext(CustomizationContext);
 
   const [viewMode, setViewMode] = useState("week");
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -200,7 +202,7 @@ export default function PlannerScreen() {
     ? "Today"
     : formatDate(selectedDate, "EEEE, MMM d");
 
-  const calendarHeight = viewMode === "month" ? 336 : viewMode === "day" ? 152 : 118;
+  const calendarHeight = viewMode === "month" ? (compactMode ? 320 : 336) : viewMode === "day" ? 152 : 118;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
   const headerTopPadding = Math.max(insets.top, 8);
 
@@ -232,7 +234,15 @@ export default function PlannerScreen() {
       style={[styles.safeArea, { backgroundColor: colors.bg, paddingTop: headerTopPadding }]}
       edges={["left", "right"]}
     >
-      <View style={[styles.headerRow, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
+      <View
+        style={[
+          styles.headerRow,
+          {
+            paddingHorizontal: LAYOUT.horizontalPadding,
+            paddingBottom: compactMode ? 8 : 10,
+          },
+        ]}
+      >
         <IconButton
           icon="menu"
           size={22}
@@ -241,7 +251,10 @@ export default function PlannerScreen() {
           onPress={() => navigation.getParent()?.openDrawer()}
         />
 
-        <Text style={[styles.headerTitle, { color: colors.textTitle }]} numberOfLines={1}>
+        <Text
+          style={[styles.headerTitle, { color: colors.textTitle, fontSize: 17 * textScale }]}
+          numberOfLines={1}
+        >
           {titleLabel || "Savetime"}
         </Text>
 
@@ -249,7 +262,7 @@ export default function PlannerScreen() {
       </View>
 
       <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
-        <View style={styles.toggleWrap}>
+        <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
           <ViewToggle value={viewMode} onChange={setViewMode} />
         </View>
 
@@ -288,12 +301,16 @@ export default function PlannerScreen() {
           )}
 
           {viewMode === "day" && (
-            <Text style={[styles.dayHint, { color: colors.textMuted }]}>Focus mode for one day.</Text>
+              <Text style={[styles.dayHint, { color: colors.textMuted, fontSize: 12 * textScale }]}>
+                Focus mode for one day.
+              </Text>
           )}
         </Card>
 
         <View style={styles.eventsHeader}>
-          <Text style={[styles.eventsTitle, { color: colors.textTitle }]}>{eventsTitle}</Text>
+          <Text style={[styles.eventsTitle, { color: colors.textTitle, fontSize: 19 * textScale }]}>
+            {eventsTitle}
+          </Text>
         </View>
       </View>
 

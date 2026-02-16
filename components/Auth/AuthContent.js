@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
+import { CustomizationContext } from "../../context/CustomizationContext";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
 import TextField from "../ui/TextField";
@@ -22,6 +23,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
   const colors = GlobalStyles.colors;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { compactMode, textScale } = useContext(CustomizationContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,7 +101,9 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
               <Text style={[styles.title, { color: colors.textTitle }]}>
                 {isLogin ? "Bentornato su Savetime" : "Crea il tuo account"}
               </Text>
-              <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
+              <Text style={[styles.subtitle, { color: colors.textMuted, fontSize: 13 * textScale }]}>
+                {subtitle}
+              </Text>
             </View>
 
             <Card style={{ backgroundColor: colors.surface2 }}>
@@ -172,7 +176,7 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
               />
             )}
 
-            <View style={styles.actions}>
+            <View style={[styles.actions, { marginTop: compactMode ? 8 : 12 }]}>
               <Button onPress={submitHandler} disabled={isSubmitting}>
                 {isSubmitting
                   ? "Attendere..."
