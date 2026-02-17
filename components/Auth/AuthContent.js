@@ -29,6 +29,7 @@ export default function AuthContent({
   isSubmitting = false,
   isGoogleSubmitting = false,
   isGoogleEnabled = false,
+  googleHintText = null,
 }) {
   const colors = GlobalStyles.colors;
   const navigation = useNavigation();
@@ -450,7 +451,7 @@ export default function AuthContent({
             </Pressable>
             {!isGoogleEnabled && (
               <Text style={[styles.googleHintText, { color: colors.textMuted }]}>
-                {t("auth.googleSetupHint")}
+                {googleHintText || t("auth.googleSetupHint")}
               </Text>
             )}
 

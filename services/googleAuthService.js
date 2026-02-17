@@ -26,6 +26,41 @@ export function isGoogleAuthConfigured(config) {
   );
 }
 
+export function getGoogleAuthPlatformStatus(config, platform) {
+  const safeConfig = config || {};
+  const platformKey = String(platform || "").toLowerCase();
+
+  if (platformKey === "ios") {
+    const enabled = Boolean(safeConfig.iosClientId);
+    return {
+      enabled,
+      reason: enabled ? null : "missing_ios_client_id",
+    };
+  }
+
+  if (platformKey === "android") {
+    const enabled = Boolean(safeConfig.androidClientId);
+    return {
+      enabled,
+      reason: enabled ? null : "missing_android_client_id",
+    };
+  }
+
+  if (platformKey === "web") {
+    const enabled = Boolean(safeConfig.webClientId);
+    return {
+      enabled,
+      reason: enabled ? null : "missing_web_client_id",
+    };
+  }
+
+  const enabled = isGoogleAuthConfigured(safeConfig);
+  return {
+    enabled,
+    reason: enabled ? null : "missing_client_id",
+  };
+}
+
 export function extractGoogleIdToken(result) {
   return String(
     result?.authentication?.idToken
