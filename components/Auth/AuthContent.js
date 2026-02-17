@@ -22,7 +22,14 @@ import Button from "../ui/Button";
 import Card from "../ui/Card";
 import TextField from "../ui/TextField";
 
-export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = false }) {
+export default function AuthContent({
+  isLogin,
+  onAuthenticate,
+  onGoogleAuthenticate = null,
+  isSubmitting = false,
+  isGoogleSubmitting = false,
+  isGoogleEnabled = false,
+}) {
   const colors = GlobalStyles.colors;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -417,6 +424,35 @@ export default function AuthContent({ isLogin, onAuthenticate, isSubmitting = fa
                     : t("auth.signup")}
               </Button>
             </View>
+            <View style={styles.altAuthWrap}>
+              <View style={[styles.altAuthDivider, { backgroundColor: colors.white12 }]} />
+              <Text style={[styles.altAuthLabel, { color: colors.textMuted }]}>{t("auth.orDivider")}</Text>
+              <View style={[styles.altAuthDivider, { backgroundColor: colors.white12 }]} />
+            </View>
+            <Pressable
+              onPress={onGoogleAuthenticate}
+              disabled={!onGoogleAuthenticate || isGoogleSubmitting || !isGoogleEnabled || isSubmitting}
+              style={[
+                styles.googleButton,
+                {
+                  borderColor: colors.white12,
+                  backgroundColor: colors.surface,
+                },
+                (!onGoogleAuthenticate || isGoogleSubmitting || !isGoogleEnabled || isSubmitting)
+                  ? styles.googleButtonDisabled
+                  : null,
+              ]}
+            >
+              <Ionicons name="logo-google" size={16} color={colors.textTitle} />
+              <Text style={[styles.googleButtonText, { color: colors.textTitle }]}>
+                {isGoogleSubmitting ? t("auth.googleSubmitting") : t("auth.googleCta")}
+              </Text>
+            </Pressable>
+            {!isGoogleEnabled && (
+              <Text style={[styles.googleHintText, { color: colors.textMuted }]}>
+                {t("auth.googleSetupHint")}
+              </Text>
+            )}
 
             <Pressable onPress={switchModeHandler} style={styles.switchWrap} hitSlop={8}>
               <Text style={[styles.switchText, { color: colors.textBody }]}> 
@@ -624,6 +660,47 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 12,
+  },
+  altAuthWrap: {
+    marginTop: 12,
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  altAuthDivider: {
+    flex: 1,
+    height: 1,
+  },
+  altAuthLabel: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  googleButton: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  googleButtonText: {
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  googleButtonDisabled: {
+    opacity: 0.55,
+  },
+  googleHintText: {
+    marginTop: 6,
+    textAlign: "center",
+    fontSize: 10.5,
+    fontWeight: "700",
+    lineHeight: 14,
   },
   switchWrap: {
     marginTop: 12,

@@ -2,13 +2,16 @@ import { createContext, useEffect, useMemo, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
 
 import { auth, assertFirebaseConfigured } from "../services/firebase";
 import {
+  ensureUserProfileBase,
   getMissingProfileFields,
   getUserProfile,
   isProfileComplete,
@@ -25,6 +28,7 @@ export const AuthContext = createContext({
   isProfileLoading: false,
   signup: async (_email, _password, _profilePayload) => {},
   login: async (_email, _password) => {},
+  loginWithGoogleIdToken: async (_idToken) => {},
   logout: async () => {},
   refreshProfile: async () => {},
   saveProfile: async (_profilePayload) => {},
@@ -131,6 +135,31 @@ export function AuthContextProvider({ children }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const loginWithGoogleIdToken = async (idToken) => {
+    assertFirebaseConfigured();
+    const safeToken = String(idToken || "").trim();
+    if (!safeToken) {
+      throw new Error("Token Google non valido.");
+    }
+
+    const credential = GoogleAuthProvider.credential(safeToken);
+    const credentials = await signInWithCredential(auth, credential);
+
+    try {
+      const baseProfile = await ensureUserProfileBase(credentials.user.uid, {
+        email: credentials.user.email || "",
+        displayName: credentials.user.displayName || "",
+        photoURL: credentials.user.photoURL || "",
+      });
+      setProfile(baseProfile);
+    } catch {
+      // Keep auth session valid even if profile sync fails.
+      setProfile(null);
+    }
+
+    return credentials.user;
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
@@ -157,6 +186,7 @@ export function AuthContextProvider({ children }) {
       isProfileLoading,
       signup,
       login,
+      loginWithGoogleIdToken,
       logout,
       refreshProfile,
       saveProfile,

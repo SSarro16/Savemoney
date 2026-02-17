@@ -1,18 +1,41 @@
-import { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
 
 import AuthContent from "../../components/Auth/AuthContent";
 import ErrorOverlay from "../../components/ui/ErrorOverlay";
 import { GlobalStyles } from "../../constants/styles";
 import { AuthContext } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LanguageContext";
+import {
+  extractGoogleIdToken,
+  getGoogleAuthRequestConfig,
+  isGoogleAuthConfigured,
+} from "../../services/googleAuthService";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignupScreen() {
   const authContext = useContext(AuthContext);
   const colors = GlobalStyles.colors;
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const googleConfig = useMemo(() => getGoogleAuthRequestConfig(), []);
+  const isGoogleEnabled = useMemo(
+    () => isGoogleAuthConfigured(googleConfig),
+    [googleConfig],
+  );
+  const authRequestConfig = useMemo(
+    () =>
+      isGoogleEnabled
+        ? googleConfig
+        : { webClientId: "missing-google-client-id.apps.googleusercontent.com" },
+    [googleConfig, isGoogleEnabled],
+  );
+  const [googleRequest, _googleResponse, promptGoogleAsync] = Google.useAuthRequest(authRequestConfig);
 
   const signupHandler = async (payload) => {
     setIsSubmitting(true);
@@ -32,6 +55,43 @@ export default function SignupScreen() {
     }
   };
 
+  const signupWithGoogleHandler = async () => {
+    if (!isGoogleEnabled) {
+      setError(t("auth.googleNotConfigured"));
+      return;
+    }
+
+    if (!googleRequest) {
+      setError(t("auth.googleUnavailable"));
+      return;
+    }
+
+    setIsGoogleSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await promptGoogleAsync();
+      if (result?.type === "cancel" || result?.type === "dismiss") {
+        return;
+      }
+
+      if (result?.type !== "success") {
+        throw new Error(t("auth.googleFailed"));
+      }
+
+      const idToken = extractGoogleIdToken(result);
+      if (!idToken) {
+        throw new Error(t("auth.googleMissingToken"));
+      }
+
+      await authContext.loginWithGoogleIdToken(idToken);
+    } catch (googleError) {
+      setError(googleError.message || t("errors.somethingWrong"));
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
+  };
+
   if (error) {
     return <ErrorOverlay message={error} onRetry={() => setError(null)} retryLabel="Back" />;
   }
@@ -46,7 +106,14 @@ export default function SignupScreen() {
       <View style={[styles.bgTrack, styles.bgTrackB, { borderColor: colors.white10 }]} />
       <View style={[styles.bgTrack, styles.bgTrackC, { borderColor: colors.accent18 }]} />
 
-      <AuthContent isLogin={false} onAuthenticate={signupHandler} isSubmitting={isSubmitting} />
+      <AuthContent
+        isLogin={false}
+        onAuthenticate={signupHandler}
+        onGoogleAuthenticate={signupWithGoogleHandler}
+        isSubmitting={isSubmitting}
+        isGoogleSubmitting={isGoogleSubmitting}
+        isGoogleEnabled={isGoogleEnabled}
+      />
     </View>
   );
 }
