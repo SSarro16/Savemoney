@@ -11,7 +11,6 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  updateDoc,
   where,
 } from "firebase/firestore";
 
@@ -20,7 +19,6 @@ import { db } from "./firebase";
 const RECURRENCE_FREQUENCIES = ["daily", "weekly", "monthly"];
 const MAX_OCCURRENCES_PER_RANGE = 400;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
-const OWNER_FIELDS = ["ownerId", "userId", "uid"];
 const EVENTS_ERROR_MESSAGES = {
   fallback: "Operazione sugli eventi non riuscita. Riprova.",
   permission: "Permessi insufficienti per questa operazione sugli eventi.",
@@ -81,45 +79,8 @@ function ensureUid(uid) {
   return normalized;
 }
 
-function resolveOwnerValue(raw = {}) {
-  if (!raw || typeof raw !== "object") {
-    return "";
-  }
-
-  return OWNER_FIELDS
-    .map((field) => String(raw[field] || "").trim())
-    .find((value) => value.length > 0) || "";
-}
-
-function buildOwnershipPayload(uid) {
-  const safeUid = ensureUid(uid);
-  return {
-    ownerId: safeUid,
-    userId: safeUid,
-    uid: safeUid,
-  };
-}
-
-function buildOwnershipPatch(raw = {}, uid) {
-  const safeUid = ensureUid(uid);
-  const patch = {};
-
-  OWNER_FIELDS.forEach((field) => {
-    const currentValue = String(raw?.[field] || "").trim();
-    if (!currentValue) {
-      patch[field] = safeUid;
-    }
-  });
-
-  return patch;
-}
-
-function assertOwnership(raw = {}, uid) {
-  const safeUid = ensureUid(uid);
-  const ownerValue = resolveOwnerValue(raw);
-  if (ownerValue && ownerValue !== safeUid) {
-    throw new Error(EVENTS_ERROR_MESSAGES.permission);
-  }
+function assertOwnership(_raw = {}, uid) {
+  ensureUid(uid);
 }
 
 function toDate(value, fallback) {
@@ -536,12 +497,10 @@ export async function createEvent(uid, payload) {
       eventPayload.endAt.toDate(),
       eventPayload.expectedDurationMinutes,
     );
-    const ownershipPayload = buildOwnershipPayload(safeUid);
     const now = new Date();
 
     const docRef = await addDoc(eventsCollection(safeUid), {
       ...eventPayload,
-      ...ownershipPayload,
       recurrenceExceptions: {},
       recurrenceOverrides: {},
       trackedDurationSeconds: 0,
@@ -554,7 +513,6 @@ export async function createEvent(uid, payload) {
       id: docRef.id,
       ...payload,
       ...eventPayload,
-      ...ownershipPayload,
       startAt: eventPayload.startAt.toDate(),
       endAt: eventPayload.endAt.toDate(),
       scheduledDurationMinutes: derived.scheduledDurationMinutes,
@@ -608,11 +566,9 @@ export async function updateEvent(uid, eventId, payload) {
 
       const currentData = snapshot.data();
       assertOwnership(currentData, safeUid);
-      const ownershipPatch = buildOwnershipPatch(currentData, safeUid);
 
       const nextData = {
         ...eventPayload,
-        ...ownershipPatch,
         updatedAt: serverTimestamp(),
       };
 
@@ -629,7 +585,6 @@ export async function updateEvent(uid, eventId, payload) {
       id: eventId,
       ...payload,
       ...eventPayload,
-      ...buildOwnershipPayload(safeUid),
       startAt: eventPayload.startAt.toDate(),
       endAt: eventPayload.endAt.toDate(),
       scheduledDurationMinutes: derived.scheduledDurationMinutes,
@@ -660,14 +615,6 @@ export async function deleteEvent(uid, eventId) {
 
     const currentData = snapshot.data();
     assertOwnership(currentData, safeUid);
-
-    const ownershipPatch = buildOwnershipPatch(currentData, safeUid);
-    if (Object.keys(ownershipPatch).length > 0) {
-      await updateDoc(docRef, {
-        ...ownershipPatch,
-        updatedAt: serverTimestamp(),
-      });
-    }
 
     await deleteDoc(docRef);
   } catch (error) {
@@ -768,9 +715,7 @@ export async function skipRecurringOccurrence(uid, eventId, occurrenceDateKey) {
         throw new Error("L'evento non e ricorrente.");
       }
 
-      const ownershipPatch = buildOwnershipPatch(data, safeUid);
       transaction.update(docRef, {
-        ...ownershipPatch,
         [`recurrenceExceptions.${safeKey}`]: { type: "skip" },
         updatedAt: serverTimestamp(),
       });
@@ -809,9 +754,7 @@ export async function saveRecurringOccurrenceOverride(uid, eventId, occurrenceDa
         throw new Error("L'evento non e ricorrente.");
       }
 
-      const ownershipPatch = buildOwnershipPatch(data, safeUid);
       transaction.update(docRef, {
-        ...ownershipPatch,
         [`recurrenceOverrides.${safeKey}`]: overridePayload,
         [`recurrenceExceptions.${safeKey}`]: deleteField(),
         updatedAt: serverTimestamp(),
@@ -839,21 +782,13 @@ export async function startEventTimer(uid, eventId) {
 
       const data = snapshot.data();
       assertOwnership(data, safeUid);
-      const ownershipPatch = buildOwnershipPatch(data, safeUid);
       const hasRunningTimer = Boolean(data.timerStartedAt?.toDate?.());
 
       if (hasRunningTimer) {
-        if (Object.keys(ownershipPatch).length > 0) {
-          transaction.update(docRef, {
-            ...ownershipPatch,
-            updatedAt: serverTimestamp(),
-          });
-        }
         return;
       }
 
       transaction.update(docRef, {
-        ...ownershipPatch,
         timerStartedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -880,16 +815,9 @@ export async function stopEventTimer(uid, eventId) {
 
       const data = snapshot.data();
       assertOwnership(data, safeUid);
-      const ownershipPatch = buildOwnershipPatch(data, safeUid);
       const startedAt = data.timerStartedAt?.toDate?.();
 
       if (!startedAt) {
-        if (Object.keys(ownershipPatch).length > 0) {
-          transaction.update(docRef, {
-            ...ownershipPatch,
-            updatedAt: serverTimestamp(),
-          });
-        }
         return;
       }
 
@@ -897,7 +825,6 @@ export async function stopEventTimer(uid, eventId) {
       const elapsedSeconds = calculateElapsedSeconds(startedAt);
 
       transaction.update(docRef, {
-        ...ownershipPatch,
         trackedDurationSeconds: baseSeconds + elapsedSeconds,
         timerStartedAt: null,
         updatedAt: serverTimestamp(),
