@@ -122,6 +122,20 @@
     "actualOnly": "Actual time: {{minutes}} min",
     "detailsTitle": "Real-time tracking"
   },
+  "eventDetail": {
+    "title": "Event detail",
+    "back": "Back",
+    "openEditor": "Edit",
+    "loadError": "Unable to load event details.",
+    "date": "Date",
+    "timeWindow": "Time",
+    "category": "Category",
+    "actualTracked": "Actual tracked",
+    "expected": "Expected",
+    "timerDisabledRecurring": "Timer is not available on single recurring occurrences.",
+    "notes": "Notes",
+    "noNotes": "No notes available."
+  },
   "recurrence": {
     "title": "Recurrence",
     "none": "None",

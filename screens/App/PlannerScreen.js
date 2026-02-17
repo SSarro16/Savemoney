@@ -448,13 +448,10 @@ export default function PlannerScreen() {
     }
   };
 
-  const openEditEditor = (event) => {
-    navigation.navigate("EventEditor", {
-      mode: "edit",
+  const openEventDetail = (event) => {
+    navigation.navigate("EventDetail", {
       eventId: event.id,
       initialEvent: serializeEvent(event),
-      parentRecurringEventId: event.parentRecurringEventId || null,
-      occurrenceDateKey: event.occurrenceDateKey || null,
     });
   };
 
@@ -863,7 +860,7 @@ export default function PlannerScreen() {
         renderItem={({ item }) => (
           <EventListItem
             event={item}
-            onPress={() => openEditEditor(item)}
+            onPress={() => openEventDetail(item)}
             onStartTimer={() => handleStartTimer(item)}
             onStopTimer={() => handleStopTimer(item)}
             timerBusy={timerActionEventId === item.id}

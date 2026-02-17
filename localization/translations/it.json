@@ -122,6 +122,20 @@
     "actualOnly": "Tempo reale: {{minutes}} min",
     "detailsTitle": "Tracking tempo reale"
   },
+  "eventDetail": {
+    "title": "Dettaglio evento",
+    "back": "Indietro",
+    "openEditor": "Modifica",
+    "loadError": "Impossibile caricare i dettagli evento.",
+    "date": "Data",
+    "timeWindow": "Orario",
+    "category": "Categoria",
+    "actualTracked": "Tempo reale",
+    "expected": "Atteso",
+    "timerDisabledRecurring": "Timer non disponibile su occorrenze ricorrenti singole.",
+    "notes": "Note",
+    "noNotes": "Nessuna nota disponibile."
+  },
   "recurrence": {
     "title": "Ricorrenza",
     "none": "Nessuna",
