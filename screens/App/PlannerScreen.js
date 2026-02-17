@@ -187,8 +187,9 @@ export default function PlannerScreen() {
   const { compactMode, textScale } = useContext(CustomizationContext);
   const { t, language } = useTranslation();
 
+  const initialToday = useMemo(() => startOfDay(new Date()), []);
   const [viewMode, setViewMode] = useState("week");
-  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
+  const [selectedDate, setSelectedDate] = useState(initialToday);
   const [events, setEvents] = useState([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -198,7 +199,7 @@ export default function PlannerScreen() {
   const [liveTick, setLiveTick] = useState(Date.now());
   const [weekPagerWidth, setWeekPagerWidth] = useState(0);
   const weekPagerRef = useRef(null);
-  const weekPagerIndexRef = useRef(WEEK_PAGER_CENTER_INDEX);
+  const weekPagerIndexRef = useRef(0);
   const hasAlignedWeekPagerRef = useRef(false);
   const hasLoadedOnceRef = useRef(false);
   const eventsRequestIdRef = useRef(0);
@@ -210,7 +211,7 @@ export default function PlannerScreen() {
       ),
     [],
   );
-  const anchorWeekStart = useMemo(() => startOfWeek(startOfDay(new Date())), []);
+  const anchorWeekStart = useMemo(() => startOfWeek(initialToday), [initialToday]);
 
   const range = useMemo(() => getRange(viewMode, selectedDate), [selectedDate, viewMode]);
   const rangeStartMs = range.start.getTime();
