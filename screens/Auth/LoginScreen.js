@@ -1,5 +1,5 @@
-import { useContext, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 
@@ -10,11 +10,66 @@ import { AuthContext } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LanguageContext";
 import {
   extractGoogleIdToken,
+  getGoogleAuthPlatformStatus,
   getGoogleAuthRequestConfig,
-  isGoogleAuthConfigured,
 } from "../../services/googleAuthService";
 
 WebBrowser.maybeCompleteAuthSession();
+
+function resolveGoogleHint(reason, t) {
+  if (reason === "missing_ios_client_id") {
+    return t("auth.googleMissingIosClientId");
+  }
+  if (reason === "missing_android_client_id") {
+    return t("auth.googleMissingAndroidClientId");
+  }
+  if (reason === "missing_web_client_id") {
+    return t("auth.googleMissingWebClientId");
+  }
+  return t("auth.googleSetupHint");
+}
+
+function GoogleLoginBridge({
+  config,
+  onGoogleIdToken,
+  setGoogleAction,
+  setBridgeReady,
+  t,
+}) {
+  const [googleRequest, _googleResponse, promptGoogleAsync] = Google.useAuthRequest(config);
+
+  useEffect(() => {
+    setBridgeReady(true);
+    setGoogleAction(() => async () => {
+      if (!googleRequest) {
+        throw new Error(t("auth.googleUnavailable"));
+      }
+
+      const result = await promptGoogleAsync();
+      if (result?.type === "cancel" || result?.type === "dismiss") {
+        return;
+      }
+
+      if (result?.type !== "success") {
+        throw new Error(t("auth.googleFailed"));
+      }
+
+      const idToken = extractGoogleIdToken(result);
+      if (!idToken) {
+        throw new Error(t("auth.googleMissingToken"));
+      }
+
+      await onGoogleIdToken(idToken);
+    });
+
+    return () => {
+      setBridgeReady(false);
+      setGoogleAction(null);
+    };
+  }, [googleRequest, onGoogleIdToken, promptGoogleAsync, setBridgeReady, setGoogleAction, t]);
+
+  return null;
+}
 
 export default function LoginScreen() {
   const authContext = useContext(AuthContext);
@@ -23,19 +78,21 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [googleAction, setGoogleAction] = useState(null);
+  const [shouldMountGoogleBridge, setShouldMountGoogleBridge] = useState(false);
+  const [isGoogleBridgeReady, setIsGoogleBridgeReady] = useState(false);
+  const [pendingGoogleRequest, setPendingGoogleRequest] = useState(false);
+
   const googleConfig = useMemo(() => getGoogleAuthRequestConfig(), []);
-  const isGoogleEnabled = useMemo(
-    () => isGoogleAuthConfigured(googleConfig),
+  const googleStatus = useMemo(
+    () => getGoogleAuthPlatformStatus(googleConfig, Platform.OS),
     [googleConfig],
   );
-  const authRequestConfig = useMemo(
-    () =>
-      isGoogleEnabled
-        ? googleConfig
-        : { webClientId: "missing-google-client-id.apps.googleusercontent.com" },
-    [googleConfig, isGoogleEnabled],
+  const isGoogleEnabled = googleStatus.enabled;
+  const googleHintText = useMemo(
+    () => resolveGoogleHint(googleStatus.reason, t),
+    [googleStatus.reason, t],
   );
-  const [googleRequest, _googleResponse, promptGoogleAsync] = Google.useAuthRequest(authRequestConfig);
 
   const loginHandler = async ({ email, password }) => {
     setIsSubmitting(true);
@@ -52,40 +109,53 @@ export default function LoginScreen() {
 
   const loginWithGoogleHandler = async () => {
     if (!isGoogleEnabled) {
-      setError(t("auth.googleNotConfigured"));
+      setError(googleHintText);
       return;
     }
 
-    if (!googleRequest) {
-      setError(t("auth.googleUnavailable"));
-      return;
-    }
-
-    setIsGoogleSubmitting(true);
     setError(null);
-
-    try {
-      const result = await promptGoogleAsync();
-      if (result?.type === "cancel" || result?.type === "dismiss") {
-        return;
-      }
-
-      if (result?.type !== "success") {
-        throw new Error(t("auth.googleFailed"));
-      }
-
-      const idToken = extractGoogleIdToken(result);
-      if (!idToken) {
-        throw new Error(t("auth.googleMissingToken"));
-      }
-
-      await authContext.loginWithGoogleIdToken(idToken);
-    } catch (googleError) {
-      setError(googleError.message || t("errors.somethingWrong"));
-    } finally {
-      setIsGoogleSubmitting(false);
+    if (!shouldMountGoogleBridge) {
+      setShouldMountGoogleBridge(true);
+      setPendingGoogleRequest(true);
+      return;
     }
+
+    if (!isGoogleBridgeReady) {
+      setPendingGoogleRequest(true);
+      return;
+    }
+
+    setPendingGoogleRequest(true);
   };
+
+  useEffect(() => {
+    if (!pendingGoogleRequest || !googleAction || isGoogleSubmitting) {
+      return;
+    }
+
+    let isMounted = true;
+    const executeGoogleFlow = async () => {
+      setPendingGoogleRequest(false);
+      setIsGoogleSubmitting(true);
+      try {
+        await googleAction();
+      } catch (googleError) {
+        if (isMounted) {
+          setError(googleError?.message || t("errors.somethingWrong"));
+        }
+      } finally {
+        if (isMounted) {
+          setIsGoogleSubmitting(false);
+        }
+      }
+    };
+
+    executeGoogleFlow();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [googleAction, isGoogleSubmitting, pendingGoogleRequest, t]);
 
   if (error) {
     return <ErrorOverlay message={error} onRetry={() => setError(null)} retryLabel="Back" />;
@@ -108,7 +178,18 @@ export default function LoginScreen() {
         isSubmitting={isSubmitting}
         isGoogleSubmitting={isGoogleSubmitting}
         isGoogleEnabled={isGoogleEnabled}
+        googleHintText={googleHintText}
       />
+
+      {shouldMountGoogleBridge && isGoogleEnabled && (
+        <GoogleLoginBridge
+          config={googleConfig}
+          onGoogleIdToken={authContext.loginWithGoogleIdToken}
+          setGoogleAction={setGoogleAction}
+          setBridgeReady={setIsGoogleBridgeReady}
+          t={t}
+        />
+      )}
     </View>
   );
 }
