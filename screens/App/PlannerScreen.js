@@ -47,6 +47,7 @@ const MONTH_LABELS = {
 const DAYS_IN_WEEK = 7;
 const WEEK_PAGER_WINDOW = 120;
 const WEEK_PAGER_CENTER_INDEX = WEEK_PAGER_WINDOW;
+const VALID_VIEW_MODES = new Set(["day", "week", "month"]);
 
 function toDateString(date) {
   return formatDate(date, "yyyy-MM-dd");
@@ -418,7 +419,12 @@ export default function PlannerScreen() {
   };
 
   const handleViewModeChange = useCallback((nextMode) => {
+    if (!VALID_VIEW_MODES.has(nextMode)) {
+      return;
+    }
     isWeekPagerUserScrollingRef.current = false;
+    isWeekPagerProgrammaticScrollRef.current = false;
+    setSelectedDate((currentDate) => startOfDay(currentDate || new Date()));
     setViewMode(nextMode);
   }, []);
 
