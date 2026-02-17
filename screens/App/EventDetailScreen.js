@@ -1,8 +1,12 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text as RNText } from "react-native";
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text as RNText } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
-import { Button, Paragraph, Separator, TamaguiProvider, Text, XStack, YStack } from "tamagui";
+import {
+  TamaguiProvider,
+  Text as TamaguiText,
+  View as TamaguiView,
+} from "@tamagui/core";
 
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { GlobalStyles } from "../../constants/styles";
@@ -12,6 +16,61 @@ import { getEventById, startEventTimer, stopEventTimer } from "../../services/ev
 import { formatDate, formatTime } from "../../utils/dates";
 
 const tamaguiConfig = require("../../tamagui.config");
+
+function Button({
+  children,
+  onPress,
+  disabled = false,
+  backgroundColor,
+  borderColor,
+  borderWidth = 1,
+  color,
+  fontWeight = "900",
+  size = "$3",
+}) {
+  const sizeStyle =
+    size === "$4"
+      ? { paddingVertical: 10, paddingHorizontal: 14 }
+      : { paddingVertical: 8, paddingHorizontal: 12 };
+
+  return (
+    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [pressed && styles.pressed]}>
+      <TamaguiView
+        style={[
+          styles.buttonBase,
+          sizeStyle,
+          {
+            backgroundColor,
+            borderColor,
+            borderWidth,
+            opacity: disabled ? 0.6 : 1,
+          },
+        ]}
+      >
+        {typeof children === "string" ? (
+          <TamaguiText style={{ color, fontWeight }}>{children}</TamaguiText>
+        ) : (
+          children
+        )}
+      </TamaguiView>
+    </Pressable>
+  );
+}
+
+function YStack(props) {
+  return <TamaguiView {...props} />;
+}
+
+function XStack({ style, ...props }) {
+  return <TamaguiView {...props} style={[styles.row, style]} />;
+}
+
+function Separator({ borderColor }) {
+  return <TamaguiView style={{ height: 1, backgroundColor: borderColor }} />;
+}
+
+const Text = TamaguiText;
+const Paragraph = TamaguiText;
 
 function toSafeDate(value, fallback = null) {
   if (!value) {
@@ -431,6 +490,17 @@ export default function EventDetailScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  row: {
+    flexDirection: "row",
+  },
+  buttonBase: {
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pressed: {
+    opacity: 0.9,
   },
   scrollContent: {
     paddingHorizontal: 16,
