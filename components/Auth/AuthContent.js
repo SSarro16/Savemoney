@@ -12,15 +12,22 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Button as PaperButton,
+  HelperText,
+  MD3DarkTheme,
+  MD3LightTheme,
+  PaperProvider,
+  SegmentedButtons,
+  Surface,
+  TextInput,
+} from "react-native-paper";
 
 import AppLogo from "../ui/AppLogo";
 import DateTimePickerModal from "../ui/DateTimePickerModal";
 import { GlobalStyles } from "../../constants/styles";
 import { CustomizationContext } from "../../context/CustomizationContext";
 import { useTranslation } from "../../context/LanguageContext";
-import Button from "../ui/Button";
-import Card from "../ui/Card";
-import TextField from "../ui/TextField";
 
 export default function AuthContent({
   isLogin,
@@ -34,7 +41,7 @@ export default function AuthContent({
   const colors = GlobalStyles.colors;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { compactMode, textScale } = useContext(CustomizationContext);
+  const { textScale } = useContext(CustomizationContext);
   const { t, language } = useTranslation();
 
   const [firstName, setFirstName] = useState("");
@@ -59,24 +66,29 @@ export default function AuthContent({
   const passwordInputRef = useRef(null);
   const confirmPasswordInputRef = useRef(null);
 
-  const subtitle = useMemo(
-    () =>
-      isLogin
-        ? t("auth.loginSubtitle")
-        : t("auth.signupSubtitle"),
-    [isLogin, t],
+  const isDarkTheme = colors.textTitle === "#ffffff";
+  const basePaperTheme = isDarkTheme ? MD3DarkTheme : MD3LightTheme;
+  const paperTheme = useMemo(
+    () => ({
+      ...basePaperTheme,
+      roundness: 14,
+      colors: {
+        ...basePaperTheme.colors,
+        primary: colors.accent500,
+        onPrimary: colors.textOnAccentStrong,
+        background: colors.bg,
+        surface: colors.surface,
+        surfaceVariant: colors.surface2,
+        onSurface: colors.textTitle,
+        onSurfaceVariant: colors.textMuted,
+        outline: colors.white18,
+        error: colors.error500,
+      },
+    }),
+    [basePaperTheme, colors],
   );
-  const scheduleRows = useMemo(
-    () => [t("auth.scheduleRowOne"), t("auth.scheduleRowTwo"), t("auth.scheduleRowThree")],
-    [t],
-  );
-  const firstNameError = firstNameInvalid ? t("auth.firstNameInvalid") : "";
-  const lastNameError = lastNameInvalid ? t("auth.lastNameInvalid") : "";
-  const genderError = genderInvalid ? t("auth.genderInvalid") : "";
-  const dateOfBirthError = dateOfBirthInvalid ? t("auth.dateOfBirthInvalid") : "";
-  const emailError = emailInvalid ? t("auth.emailInvalid") : "";
-  const passwordError = passwordInvalid ? t("auth.passwordInvalid") : "";
-  const confirmPasswordError = confirmPasswordInvalid ? t("auth.confirmPasswordInvalid") : "";
+
+  const subtitle = isLogin ? t("auth.loginSubtitle") : t("auth.signupSubtitle");
   const dateOfBirthLabel = dateOfBirth
     ? dateOfBirth.toLocaleDateString(language === "it" ? "it-IT" : "en-US")
     : t("auth.dateOfBirthPlaceholder");
@@ -98,11 +110,8 @@ export default function AuthContent({
     const nextGenderInvalid =
       !isLogin && !(normalizedGender === "male" || normalizedGender === "female");
     const nextDateOfBirthInvalid =
-      !isLogin && (
-        !isValidDate
-        || parsedDate > maxBirthDate
-        || parsedDate < minBirthDate
-      );
+      !isLogin &&
+      (!isValidDate || parsedDate > maxBirthDate || parsedDate < minBirthDate);
     const nextEmailInvalid = !trimmedEmail.includes("@");
     const nextPasswordInvalid = trimmedPassword.length < 6;
     const nextConfirmPasswordInvalid = !isLogin && trimmedPassword !== trimmedConfirmPassword;
@@ -116,13 +125,13 @@ export default function AuthContent({
     setConfirmPasswordInvalid(nextConfirmPasswordInvalid);
 
     return (
-      !nextFirstNameInvalid
-      && !nextLastNameInvalid
-      && !nextGenderInvalid
-      && !nextDateOfBirthInvalid
-      && !nextEmailInvalid
-      && !nextPasswordInvalid
-      && !nextConfirmPasswordInvalid
+      !nextFirstNameInvalid &&
+      !nextLastNameInvalid &&
+      !nextGenderInvalid &&
+      !nextDateOfBirthInvalid &&
+      !nextEmailInvalid &&
+      !nextPasswordInvalid &&
+      !nextConfirmPasswordInvalid
     );
   };
 
@@ -155,27 +164,31 @@ export default function AuthContent({
   };
 
   return (
-    <SafeAreaView style={[styles.flex, { backgroundColor: colors.bg }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <Pressable onPress={Keyboard.dismiss} style={styles.flex}>
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContainer,
-              {
-                paddingTop: Math.max(insets.top, 8),
-                paddingBottom: Math.max(insets.bottom, 18),
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.header}>
-              <View style={[styles.brandingRow, { borderColor: colors.accent30, backgroundColor: colors.surface }]}>
-                <View style={[styles.brandOrb, styles.brandOrbTop, { borderColor: colors.accent18, backgroundColor: colors.accent12 }]} />
-                <View style={[styles.brandOrb, styles.brandOrbBottom, { borderColor: colors.white10, backgroundColor: colors.white08 }]} />
+    <PaperProvider theme={paperTheme}>
+      <SafeAreaView style={[styles.flex, { backgroundColor: colors.bg }]}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable onPress={Keyboard.dismiss} style={styles.flex}>
+            <ScrollView
+              contentContainerStyle={[
+                styles.scrollContainer,
+                {
+                  paddingTop: Math.max(insets.top, 10),
+                  paddingBottom: Math.max(insets.bottom, 18),
+                },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Surface
+                elevation={0}
+                style={[
+                  styles.headerCard,
+                  { borderColor: colors.accent30, backgroundColor: colors.surface },
+                ]}
+              >
                 <View style={[styles.brandingLogoWrap, { borderColor: colors.accent30, backgroundColor: colors.accent18 }]}>
                   <AppLogo size={36} borderRadius={13} />
                 </View>
@@ -183,302 +196,241 @@ export default function AuthContent({
                   <Text style={[styles.brandingTitle, { color: colors.textTitle }]}>Savetime</Text>
                   <Text style={[styles.brandingSubtitle, { color: colors.textMuted }]}>{t("common.motto")}</Text>
                 </View>
-                <View style={[styles.brandingBadge, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
-                  <Ionicons name="time-outline" size={14} color={colors.textTitle} />
-                </View>
-              </View>
+              </Surface>
 
               <Text style={[styles.title, { color: colors.textTitle, fontSize: 26 * textScale }]}>
                 {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
               </Text>
-              <Text style={[styles.subtitle, { color: colors.textMuted, fontSize: 13 * textScale }]}>
+              <Text style={[styles.subtitle, { color: colors.textMuted }]}>
                 {subtitle}
               </Text>
-            </View>
 
-            <View style={[styles.scheduleCard, { borderColor: colors.white10, backgroundColor: colors.surface }]}>
-              <View style={styles.scheduleHeaderRow}>
-                <View style={[styles.scheduleIconWrap, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.accent500} />
-                </View>
-                <Text style={[styles.scheduleTitle, { color: colors.textTitle }]}>{t("auth.scheduleCardTitle")}</Text>
-              </View>
-              {scheduleRows.map((item) => (
-                <View key={item} style={styles.scheduleRow}>
-                  <View style={[styles.scheduleDot, { backgroundColor: colors.accent500 }]} />
-                  <Text style={[styles.scheduleRowText, { color: colors.textBody }]}>{item}</Text>
-                </View>
-              ))}
-            </View>
+              <Surface
+                elevation={0}
+                style={[styles.formCard, { borderColor: colors.white12, backgroundColor: colors.surface2 }]}
+              >
+                {!isLogin && (
+                  <>
+                    <TextInput
+                      mode="outlined"
+                      label={t("auth.firstNameLabel")}
+                      value={firstName}
+                      onChangeText={(value) => {
+                        setFirstName(value);
+                        if (firstNameInvalid) setFirstNameInvalid(false);
+                      }}
+                      error={firstNameInvalid}
+                      autoCapitalize="words"
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => lastNameInputRef.current?.focus?.()}
+                      left={<TextInput.Icon icon="account-outline" />}
+                      style={styles.input}
+                      textColor={colors.textTitle}
+                    />
+                    <HelperText type="error" visible={firstNameInvalid}>
+                      {t("auth.firstNameInvalid")}
+                    </HelperText>
 
-            <Card style={[styles.formCard, { backgroundColor: colors.surface2 }]}>
-            <Text style={[styles.formLegend, { color: colors.textMuted }]}>{t("auth.formLegend")}</Text>
-            {!isLogin && (
-              <>
-                <TextField
-                  label={t("auth.firstNameLabel")}
-                  value={firstName}
+                    <TextInput
+                      ref={lastNameInputRef}
+                      mode="outlined"
+                      label={t("auth.lastNameLabel")}
+                      value={lastName}
+                      onChangeText={(value) => {
+                        setLastName(value);
+                        if (lastNameInvalid) setLastNameInvalid(false);
+                      }}
+                      error={lastNameInvalid}
+                      autoCapitalize="words"
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => emailInputRef.current?.focus?.()}
+                      left={<TextInput.Icon icon="account-multiple-outline" />}
+                      style={styles.input}
+                      textColor={colors.textTitle}
+                    />
+                    <HelperText type="error" visible={lastNameInvalid}>
+                      {t("auth.lastNameInvalid")}
+                    </HelperText>
+
+                    <SegmentedButtons
+                      value={gender}
+                      onValueChange={(value) => {
+                        setGender(value);
+                        if (genderInvalid) setGenderInvalid(false);
+                      }}
+                      buttons={[
+                        { value: "male", label: t("auth.genderMale") },
+                        { value: "female", label: t("auth.genderFemale") },
+                      ]}
+                      style={styles.segmented}
+                    />
+                    <HelperText type="error" visible={genderInvalid}>
+                      {t("auth.genderInvalid")}
+                    </HelperText>
+
+                    <Pressable
+                      onPress={() => setIsDatePickerOpen(true)}
+                      style={[
+                        styles.dateField,
+                        {
+                          borderColor: dateOfBirthInvalid ? colors.error500 : colors.white18,
+                          backgroundColor: colors.surface,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={18}
+                        color={dateOfBirthInvalid ? colors.error500 : colors.textMuted}
+                      />
+                      <Text style={[styles.dateFieldText, { color: dateOfBirth ? colors.textTitle : colors.textMuted }]}>
+                        {dateOfBirthLabel}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    <HelperText type={dateOfBirthInvalid ? "error" : "info"} visible>
+                      {dateOfBirthInvalid ? t("auth.dateOfBirthInvalid") : t("auth.dateOfBirthHint")}
+                    </HelperText>
+                  </>
+                )}
+
+                <TextInput
+                  ref={emailInputRef}
+                  mode="outlined"
+                  label={t("auth.emailLabel")}
+                  value={email}
                   onChangeText={(value) => {
-                    setFirstName(value);
-                    if (firstNameInvalid) {
-                      setFirstNameInvalid(false);
-                    }
+                    setEmail(value);
+                    if (emailInvalid) setEmailInvalid(false);
                   }}
-                  invalid={firstNameInvalid}
-                  errorText={firstNameError}
-                  helperText={t("auth.firstNameHint")}
-                  leftIcon="person-outline"
-                  placeholder={t("auth.firstNamePlaceholder")}
+                  error={emailInvalid}
+                  keyboardType="email-address"
+                  autoComplete="email"
                   returnKeyType="next"
                   blurOnSubmit={false}
-                  onSubmitEditing={() => lastNameInputRef.current?.focus()}
-                  autoCapitalize="words"
-                  textContentType="givenName"
-                  autoFocus={!isLogin}
+                  onSubmitEditing={() => passwordInputRef.current?.focus?.()}
+                  left={<TextInput.Icon icon="email-outline" />}
+                  style={styles.input}
+                  textColor={colors.textTitle}
                 />
+                <HelperText type="error" visible={emailInvalid}>
+                  {t("auth.emailInvalid")}
+                </HelperText>
 
-                <TextField
-                  ref={lastNameInputRef}
-                  label={t("auth.lastNameLabel")}
-                  value={lastName}
+                <TextInput
+                  ref={passwordInputRef}
+                  mode="outlined"
+                  label={t("auth.passwordLabel")}
+                  value={password}
                   onChangeText={(value) => {
-                    setLastName(value);
-                    if (lastNameInvalid) {
-                      setLastNameInvalid(false);
+                    setPassword(value);
+                    if (passwordInvalid) setPasswordInvalid(false);
+                    if (confirmPasswordInvalid) setConfirmPasswordInvalid(false);
+                  }}
+                  error={passwordInvalid}
+                  secureTextEntry
+                  autoComplete="password"
+                  returnKeyType={isLogin ? "done" : "next"}
+                  blurOnSubmit={isLogin}
+                  onSubmitEditing={() => {
+                    if (isLogin) {
+                      submitHandler();
+                    } else {
+                      confirmPasswordInputRef.current?.focus?.();
                     }
                   }}
-                  invalid={lastNameInvalid}
-                  errorText={lastNameError}
-                  helperText={t("auth.lastNameHint")}
-                  leftIcon="people-outline"
-                  placeholder={t("auth.lastNamePlaceholder")}
-                  returnKeyType="next"
-                  blurOnSubmit={false}
-                  onSubmitEditing={() => emailInputRef.current?.focus()}
-                  autoCapitalize="words"
-                  textContentType="familyName"
+                  left={<TextInput.Icon icon="lock-outline" />}
+                  style={styles.input}
+                  textColor={colors.textTitle}
                 />
+                <HelperText type="error" visible={passwordInvalid}>
+                  {t("auth.passwordInvalid")}
+                </HelperText>
 
-                <View style={styles.selectionGroup}>
-                  <Text style={[styles.selectionLabel, { color: genderInvalid ? colors.error500 : colors.textBody }]}>
-                    {t("auth.genderLabel")}
-                  </Text>
-                  <View style={styles.genderRow}>
-                    {["male", "female"].map((option) => {
-                      const isSelected = gender === option;
-                      const textKey = option === "male" ? "auth.genderMale" : "auth.genderFemale";
+                {!isLogin && (
+                  <>
+                    <TextInput
+                      ref={confirmPasswordInputRef}
+                      mode="outlined"
+                      label={t("auth.confirmPasswordLabel")}
+                      value={confirmPassword}
+                      onChangeText={(value) => {
+                        setConfirmPassword(value);
+                        if (confirmPasswordInvalid) setConfirmPasswordInvalid(false);
+                      }}
+                      error={confirmPasswordInvalid}
+                      secureTextEntry
+                      autoComplete="password"
+                      returnKeyType="done"
+                      onSubmitEditing={submitHandler}
+                      left={<TextInput.Icon icon="lock-check-outline" />}
+                      style={styles.input}
+                      textColor={colors.textTitle}
+                    />
+                    <HelperText type="error" visible={confirmPasswordInvalid}>
+                      {t("auth.confirmPasswordInvalid")}
+                    </HelperText>
+                  </>
+                )}
 
-                      return (
-                        <Pressable
-                          key={option}
-                          onPress={() => {
-                            setGender(option);
-                            if (genderInvalid) {
-                              setGenderInvalid(false);
-                            }
-                          }}
-                          style={[
-                            styles.genderChip,
-                            isSelected
-                              ? {
-                                  borderColor: colors.accent35,
-                                  backgroundColor: colors.accent12,
-                                }
-                              : {
-                                  borderColor: colors.white12,
-                                  backgroundColor: colors.primary800,
-                                },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.genderChipText,
-                              { color: isSelected ? colors.textTitle : colors.textBody },
-                            ]}
-                          >
-                            {t(textKey)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  {!!genderError && (
-                    <Text style={[styles.selectionFeedback, { color: colors.error500 }]}>{genderError}</Text>
-                  )}
-                </View>
+                <PaperButton
+                  mode="contained"
+                  onPress={submitHandler}
+                  disabled={isSubmitting}
+                  buttonColor={colors.accent500}
+                  textColor={colors.textOnAccentStrong}
+                  style={styles.primaryButton}
+                >
+                  {isSubmitting
+                    ? t("auth.submitting")
+                    : isLogin
+                      ? t("auth.login")
+                      : t("auth.signup")}
+                </PaperButton>
 
-                <View style={styles.selectionGroup}>
-                  <Text style={[styles.selectionLabel, { color: dateOfBirthInvalid ? colors.error500 : colors.textBody }]}>
-                    {t("auth.dateOfBirthLabel")}
-                  </Text>
-                  <Pressable
-                    onPress={() => setIsDatePickerOpen(true)}
-                    style={[
-                      styles.dateField,
-                      dateOfBirthInvalid
-                        ? { borderColor: colors.error500 }
-                        : { borderColor: colors.white18 },
-                      { backgroundColor: colors.primary800 },
-                    ]}
-                  >
-                    <Ionicons name="calendar-outline" size={18} color={dateOfBirthInvalid ? colors.error500 : colors.textMuted} />
-                    <Text style={[styles.dateFieldText, { color: dateOfBirth ? colors.textTitle : colors.textMuted }]}>
-                      {dateOfBirthLabel}
-                    </Text>
-                    <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-                  </Pressable>
-                  <Text style={[styles.selectionFeedback, { color: dateOfBirthInvalid ? colors.error500 : colors.textFaint }]}>
-                    {dateOfBirthInvalid ? dateOfBirthError : t("auth.dateOfBirthHint")}
-                  </Text>
-                </View>
-              </>
-            )}
+                <PaperButton
+                  mode="outlined"
+                  icon="google"
+                  onPress={onGoogleAuthenticate}
+                  disabled={!onGoogleAuthenticate || isGoogleSubmitting || !isGoogleEnabled || isSubmitting}
+                  style={styles.googleButton}
+                  textColor={colors.textTitle}
+                >
+                  {isGoogleSubmitting ? t("auth.googleSubmitting") : t("auth.googleCta")}
+                </PaperButton>
 
-            <TextField
-              ref={emailInputRef}
-              label={t("auth.emailLabel")}
-              value={email}
-              onChangeText={(value) => {
-                setEmail(value);
-                if (emailInvalid) {
-                  setEmailInvalid(false);
-                }
-              }}
-              invalid={emailInvalid}
-              errorText={emailError}
-              helperText={t("auth.emailHint")}
-              keyboardType="email-address"
-              leftIcon="mail-outline"
-              placeholder="name@example.com"
-              returnKeyType="next"
-              blurOnSubmit={false}
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-              autoComplete="email"
-              textContentType="username"
-              autoFocus={isLogin}
-            />
+                {!isGoogleEnabled && (
+                  <HelperText type="info" visible style={{ color: colors.textMuted }}>
+                    {googleHintText || t("auth.googleSetupHint")}
+                  </HelperText>
+                )}
+              </Surface>
 
-            <TextField
-              ref={passwordInputRef}
-              label={t("auth.passwordLabel")}
-              value={password}
-              onChangeText={(value) => {
-                setPassword(value);
-                if (passwordInvalid) {
-                  setPasswordInvalid(false);
-                }
-                if (confirmPasswordInvalid) {
-                  setConfirmPasswordInvalid(false);
-                }
-              }}
-              invalid={passwordInvalid}
-              errorText={passwordError}
-              helperText={t("auth.passwordHint")}
-              secureTextEntry
-              showToggleSecure
-              leftIcon="lock-closed-outline"
-              placeholder={t("auth.passwordHint")}
-              returnKeyType={isLogin ? "done" : "next"}
-              blurOnSubmit={isLogin}
-              autoComplete="password"
-              textContentType="password"
-              onSubmitEditing={() => {
-                if (isLogin) {
-                  submitHandler();
-                } else {
-                  confirmPasswordInputRef.current?.focus();
-                }
-              }}
-            />
+              <Pressable onPress={switchModeHandler} style={styles.switchWrap} hitSlop={8}>
+                <Text style={[styles.switchText, { color: colors.textBody }]}>
+                  {isLogin ? t("auth.switchToSignup") : t("auth.switchToLogin")}
+                </Text>
+              </Pressable>
+            </ScrollView>
+          </Pressable>
+        </KeyboardAvoidingView>
 
-            {!isLogin && (
-              <TextField
-                ref={confirmPasswordInputRef}
-                label={t("auth.confirmPasswordLabel")}
-                value={confirmPassword}
-                onChangeText={(value) => {
-                  setConfirmPassword(value);
-                  if (confirmPasswordInvalid) {
-                    setConfirmPasswordInvalid(false);
-                  }
-                }}
-                invalid={confirmPasswordInvalid}
-                errorText={confirmPasswordError}
-                helperText={t("auth.confirmPasswordHint")}
-                secureTextEntry
-                showToggleSecure
-                leftIcon="lock-open-outline"
-                placeholder={t("auth.confirmPasswordHint")}
-                returnKeyType="done"
-                autoComplete="password"
-                textContentType="password"
-                onSubmitEditing={submitHandler}
-              />
-            )}
-
-            <View style={[styles.actions, { marginTop: compactMode ? 8 : 10 }]}>
-              <Button onPress={submitHandler} disabled={isSubmitting}>
-                {isSubmitting
-                  ? t("auth.submitting")
-                  : isLogin
-                    ? t("auth.login")
-                    : t("auth.signup")}
-              </Button>
-            </View>
-            <View style={styles.altAuthWrap}>
-              <View style={[styles.altAuthDivider, { backgroundColor: colors.white12 }]} />
-              <Text style={[styles.altAuthLabel, { color: colors.textMuted }]}>{t("auth.orDivider")}</Text>
-              <View style={[styles.altAuthDivider, { backgroundColor: colors.white12 }]} />
-            </View>
-            <Pressable
-              onPress={onGoogleAuthenticate}
-              disabled={!onGoogleAuthenticate || isGoogleSubmitting || !isGoogleEnabled || isSubmitting}
-              style={[
-                styles.googleButton,
-                {
-                  borderColor: colors.white12,
-                  backgroundColor: colors.surface,
-                },
-                (!onGoogleAuthenticate || isGoogleSubmitting || !isGoogleEnabled || isSubmitting)
-                  ? styles.googleButtonDisabled
-                  : null,
-              ]}
-            >
-              <Ionicons name="logo-google" size={16} color={colors.textTitle} />
-              <Text style={[styles.googleButtonText, { color: colors.textTitle }]}>
-                {isGoogleSubmitting ? t("auth.googleSubmitting") : t("auth.googleCta")}
-              </Text>
-            </Pressable>
-            {!isGoogleEnabled && (
-              <Text style={[styles.googleHintText, { color: colors.textMuted }]}>
-                {googleHintText || t("auth.googleSetupHint")}
-              </Text>
-            )}
-
-            <Pressable onPress={switchModeHandler} style={styles.switchWrap} hitSlop={8}>
-              <Text style={[styles.switchText, { color: colors.textBody }]}> 
-                {isLogin
-                  ? t("auth.switchToSignup")
-                  : t("auth.switchToLogin")}
-              </Text>
-            </Pressable>
-            </Card>
-          </ScrollView>
-        </Pressable>
-      </KeyboardAvoidingView>
-      <DateTimePickerModal
-        visible={isDatePickerOpen}
-        mode="date"
-        value={dateOfBirth || new Date("2000-01-01T00:00:00.000Z")}
-        title={t("auth.dateOfBirthTitle")}
-        onCancel={() => setIsDatePickerOpen(false)}
-        onConfirm={(selectedDate) => {
-          setDateOfBirth(selectedDate);
-          setDateOfBirthInvalid(false);
-          setIsDatePickerOpen(false);
-        }}
-      />
-    </SafeAreaView>
+        <DateTimePickerModal
+          visible={isDatePickerOpen}
+          mode="date"
+          value={dateOfBirth || new Date("2000-01-01T00:00:00.000Z")}
+          title={t("auth.dateOfBirthTitle")}
+          onCancel={() => setIsDatePickerOpen(false)}
+          onConfirm={(selectedDate) => {
+            setDateOfBirth(selectedDate);
+            setDateOfBirthInvalid(false);
+            setIsDatePickerOpen(false);
+          }}
+        />
+      </SafeAreaView>
+    </PaperProvider>
   );
 }
 
@@ -488,41 +440,18 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: "center",
     paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingVertical: 16,
   },
-  header: {
-    marginBottom: 12,
-  },
-  brandingRow: {
-    position: "relative",
-    overflow: "hidden",
-    borderRadius: 18,
+  headerCard: {
     borderWidth: 1,
+    borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 12,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-  },
-  brandOrb: {
-    position: "absolute",
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  brandOrbTop: {
-    width: 80,
-    height: 80,
-    right: -20,
-    top: -30,
-  },
-  brandOrbBottom: {
-    width: 56,
-    height: 56,
-    left: 54,
-    bottom: -30,
   },
   brandingLogoWrap: {
     width: 42,
@@ -544,104 +473,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  brandingBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   title: {
-    fontSize: 26,
-    lineHeight: 30,
     fontWeight: "900",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "700",
-  },
-  scheduleCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
     marginBottom: 10,
-    gap: 8,
-  },
-  scheduleHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  scheduleIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scheduleTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  scheduleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  scheduleDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-  },
-  scheduleRowText: {
-    fontSize: 11,
-    fontWeight: "800",
   },
   formCard: {
-    paddingBottom: 12,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 12,
   },
-  formLegend: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-    marginBottom: 4,
+  input: {
+    marginTop: 2,
   },
-  selectionGroup: {
-    marginVertical: 4,
-  },
-  selectionLabel: {
-    marginBottom: 5,
-    fontWeight: "900",
-    fontSize: 11,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  genderRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  genderChip: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingVertical: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  genderChipText: {
-    fontSize: 13,
-    fontWeight: "800",
+  segmented: {
+    marginTop: 4,
+    marginBottom: 2,
   },
   dateField: {
+    marginTop: 4,
     borderWidth: 1.5,
     borderRadius: 14,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -649,59 +507,16 @@ const styles = StyleSheet.create({
   },
   dateFieldText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
-  selectionFeedback: {
-    minHeight: 16,
-    marginTop: 5,
-    fontSize: 10.5,
-    fontWeight: "700",
-    lineHeight: 14,
-  },
-  actions: {
-    marginTop: 12,
-  },
-  altAuthWrap: {
-    marginTop: 12,
-    marginBottom: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  altAuthDivider: {
-    flex: 1,
-    height: 1,
-  },
-  altAuthLabel: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
+  primaryButton: {
+    marginTop: 8,
+    borderRadius: 14,
   },
   googleButton: {
-    borderWidth: 1,
+    marginTop: 8,
     borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  googleButtonText: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  googleButtonDisabled: {
-    opacity: 0.55,
-  },
-  googleHintText: {
-    marginTop: 6,
-    textAlign: "center",
-    fontSize: 10.5,
-    fontWeight: "700",
-    lineHeight: 14,
   },
   switchWrap: {
     marginTop: 12,
