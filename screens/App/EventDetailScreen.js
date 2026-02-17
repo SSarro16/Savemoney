@@ -1,12 +1,16 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text as RNText } from "react-native";
+import { Animated, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import {
-  TamaguiProvider,
-  Text as TamaguiText,
-  View as TamaguiView,
-} from "@tamagui/core";
+  ActivityIndicator,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  IconButton,
+  Text,
+} from "react-native-paper";
 
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 import { GlobalStyles } from "../../constants/styles";
@@ -14,63 +18,6 @@ import { AuthContext } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LanguageContext";
 import { getEventById, startEventTimer, stopEventTimer } from "../../services/eventsService";
 import { formatDate, formatTime } from "../../utils/dates";
-
-const tamaguiConfig = require("../../tamagui.config");
-
-function Button({
-  children,
-  onPress,
-  disabled = false,
-  backgroundColor,
-  borderColor,
-  borderWidth = 1,
-  color,
-  fontWeight = "900",
-  size = "$3",
-}) {
-  const sizeStyle =
-    size === "$4"
-      ? { paddingVertical: 10, paddingHorizontal: 14 }
-      : { paddingVertical: 8, paddingHorizontal: 12 };
-
-  return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [pressed && styles.pressed]}>
-      <TamaguiView
-        style={[
-          styles.buttonBase,
-          sizeStyle,
-          {
-            backgroundColor,
-            borderColor,
-            borderWidth,
-            opacity: disabled ? 0.6 : 1,
-          },
-        ]}
-      >
-        {typeof children === "string" ? (
-          <TamaguiText style={{ color, fontWeight }}>{children}</TamaguiText>
-        ) : (
-          children
-        )}
-      </TamaguiView>
-    </Pressable>
-  );
-}
-
-function YStack(props) {
-  return <TamaguiView {...props} />;
-}
-
-function XStack({ style, ...props }) {
-  return <TamaguiView {...props} style={[styles.row, style]} />;
-}
-
-function Separator({ borderColor }) {
-  return <TamaguiView style={{ height: 1, backgroundColor: borderColor }} />;
-}
-
-const Text = TamaguiText;
-const Paragraph = TamaguiText;
 
 function toSafeDate(value, fallback = null) {
   if (!value) {
@@ -117,11 +64,31 @@ function serializeEventForEditor(event) {
     return null;
   }
 
+  const recurrence =
+    event?.recurrence && typeof event.recurrence === "object"
+      ? {
+          ...event.recurrence,
+          untilAt: event.recurrence.untilAt?.toISOString?.() || null,
+        }
+      : null;
+
   return {
-    ...event,
+    id: event.id,
+    title: event.title || "",
+    allDay: Boolean(event.allDay),
+    category: event.category || "General",
+    expectedDurationMinutes: event.expectedDurationMinutes ?? null,
+    notes: event.notes || "",
+    location: event.location || "",
     startAt: event.startAt?.toISOString?.() || null,
     endAt: event.endAt?.toISOString?.() || null,
+    trackedDurationSeconds: event.trackedDurationSeconds ?? 0,
     timerStartedAt: event.timerStartedAt?.toISOString?.() || null,
+    isTimerRunning: Boolean(event.isTimerRunning),
+    recurrence,
+    parentRecurringEventId: event.parentRecurringEventId || null,
+    isRecurringOccurrence: Boolean(event.isRecurringOccurrence),
+    occurrenceDateKey: event.occurrenceDateKey || null,
   };
 }
 
@@ -185,7 +152,7 @@ export default function EventDetailScreen() {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.04,
+          toValue: 1.03,
           duration: 600,
           useNativeDriver: true,
         }),
@@ -287,9 +254,9 @@ export default function EventDetailScreen() {
   if (!event) {
     return (
       <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]}>
-        <RNText style={{ color: colors.error500, textAlign: "center", marginTop: 24 }}>
+        <Text style={{ color: colors.error500, textAlign: "center", marginTop: 24 }}>
           {loadError || t("eventDetail.loadError")}
-        </RNText>
+        </Text>
       </SafeAreaView>
     );
   }
@@ -306,147 +273,109 @@ export default function EventDetailScreen() {
       style={[styles.root, { backgroundColor: colors.bg, paddingTop: Math.max(insets.top, 8) }]}
       edges={["left", "right"]}
     >
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
-        <YStack f={1} backgroundColor={colors.bg}>
-          <XStack
-            ai="center"
-            jc="space-between"
-            paddingHorizontal={16}
-            paddingBottom={10}
-            gap={8}
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <IconButton
+            icon="arrow-left"
+            iconColor={colors.textTitle}
+            size={20}
+            style={[styles.headerIconButton, { backgroundColor: colors.white08 }]}
+            onPress={() => navigation.goBack()}
+          />
+          <Text style={[styles.headerTitle, { color: colors.textTitle }]}>
+            {t("eventDetail.title")}
+          </Text>
+          <Button
+            mode="outlined"
+            onPress={openEditorHandler}
+            style={[styles.headerActionButton, { borderColor: colors.accent30 }]}
+            textColor={colors.textTitle}
           >
-            <Button
-              size="$3"
-              backgroundColor={colors.white08}
-              borderColor={colors.white12}
-              borderWidth={1}
-              color={colors.textTitle}
-              onPress={() => navigation.goBack()}
-            >
-              {t("eventDetail.back")}
-            </Button>
-            <Text color={colors.textTitle} fontWeight="900" fontSize={17}>
-              {t("eventDetail.title")}
-            </Text>
-            <Button
-              size="$3"
-              backgroundColor={colors.accent18}
-              borderColor={colors.accent30}
-              borderWidth={1}
-              color={colors.textTitle}
-              onPress={openEditorHandler}
-            >
-              {t("eventDetail.openEditor")}
-            </Button>
-          </XStack>
+            {t("eventDetail.openEditor")}
+          </Button>
+        </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            <YStack
-              borderWidth={1}
-              borderColor={colors.white12}
-              backgroundColor={colors.surface}
-              borderRadius={18}
-              padding={14}
-              gap={8}
-            >
-              <Text color={colors.textTitle} fontWeight="900" fontSize={24}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <Card
+            mode="contained"
+            style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.white12 }]}
+          >
+            <Card.Content style={styles.cardContent}>
+              <Text style={[styles.eventTitle, { color: colors.textTitle }]}>
                 {event.title || "Untitled"}
               </Text>
-              <XStack flexWrap="wrap" gap={8}>
-                <YStack
-                  borderWidth={1}
-                  borderColor={colors.white12}
-                  backgroundColor={colors.white08}
-                  borderRadius={999}
-                  paddingHorizontal={10}
-                  paddingVertical={6}
-                >
-                  <Text color={colors.textBody} fontSize={11} fontWeight="800">
-                    {`${t("eventDetail.date")}: ${formatDate(event.startAt, "dd MMM yyyy")}`}
-                  </Text>
-                </YStack>
-                <YStack
-                  borderWidth={1}
-                  borderColor={colors.white12}
-                  backgroundColor={colors.white08}
-                  borderRadius={999}
-                  paddingHorizontal={10}
-                  paddingVertical={6}
-                >
-                  <Text color={colors.textBody} fontSize={11} fontWeight="800">
-                    {`${t("eventDetail.timeWindow")}: ${formatTime(event.startAt)} - ${formatTime(event.endAt)}`}
-                  </Text>
-                </YStack>
-              </XStack>
-              <XStack gap={8} flexWrap="wrap">
-                <YStack
-                  borderWidth={1}
-                  borderColor={colors.accent30}
-                  backgroundColor={colors.accent12}
-                  borderRadius={999}
-                  paddingHorizontal={10}
-                  paddingVertical={6}
-                >
-                  <Text color={colors.textBody} fontSize={11} fontWeight="800">
-                    {`${t("eventDetail.category")}: ${event.category || "General"}`}
-                  </Text>
-                </YStack>
-                {Array.isArray(event.tags) &&
-                  event.tags.map((tag) => (
-                    <YStack
+              <View style={styles.chipsRow}>
+                <Chip compact style={[styles.metaChip, { backgroundColor: colors.white08 }]}>
+                  {`${t("eventDetail.date")}: ${formatDate(event.startAt, "dd MMM yyyy")}`}
+                </Chip>
+                <Chip compact style={[styles.metaChip, { backgroundColor: colors.white08 }]}>
+                  {`${formatTime(event.startAt)} - ${formatTime(event.endAt)}`}
+                </Chip>
+                <Chip compact style={[styles.metaChip, { backgroundColor: colors.accent12 }]}>
+                  {`${t("eventDetail.category")}: ${event.category || "General"}`}
+                </Chip>
+              </View>
+              {Array.isArray(event.tags) && event.tags.length > 0 && (
+                <View style={styles.tagsRow}>
+                  {event.tags.map((tag) => (
+                    <Chip
                       key={String(tag)}
-                      borderWidth={1}
-                      borderColor={colors.white12}
-                      backgroundColor={colors.white08}
-                      borderRadius={999}
-                      paddingHorizontal={10}
-                      paddingVertical={6}
+                      compact
+                      style={[styles.tagChip, { backgroundColor: colors.white08 }]}
                     >
-                      <Text color={colors.textBody} fontSize={11} fontWeight="800">
-                        {`#${String(tag)}`}
-                      </Text>
-                    </YStack>
+                      {`#${String(tag)}`}
+                    </Chip>
                   ))}
-              </XStack>
-            </YStack>
+                </View>
+              )}
+            </Card.Content>
+          </Card>
 
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <YStack
-                marginTop={12}
-                borderWidth={1}
-                borderColor={event.isTimerRunning ? colors.accent30 : colors.white12}
-                backgroundColor={event.isTimerRunning ? colors.accent12 : colors.surface2}
-                borderRadius={18}
-                padding={16}
-                gap={10}
-              >
-                <Text color={colors.textTitle} fontWeight="900" fontSize={16}>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <Card
+              mode="contained"
+              style={[
+                styles.card,
+                styles.timerCard,
+                {
+                  borderColor: event.isTimerRunning ? colors.accent30 : colors.white12,
+                  backgroundColor: event.isTimerRunning ? colors.accent12 : colors.surface2,
+                },
+              ]}
+            >
+              <Card.Content style={styles.cardContent}>
+                <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>
                   {t("timer.detailsTitle")}
                 </Text>
-                <Text color={colors.textTitle} fontWeight="900" fontSize={42}>
+                <Text style={[styles.timerText, { color: colors.textTitle }]}>
                   {timerDurationText}
                 </Text>
-                <Paragraph color={colors.textMuted} fontSize={12}>
+                <Text style={[styles.timerMeta, { color: colors.textMuted }]}>
                   {`${t("eventDetail.actualTracked")}: ${Math.round(liveTrackedSeconds / 60)} min | ${t("eventDetail.expected")}: ${expectedLabel}`}
-                </Paragraph>
+                </Text>
 
                 {isRecurringOccurrence ? (
-                  <Paragraph color={colors.textMuted} fontSize={12}>
+                  <Text style={[styles.timerMeta, { color: colors.textMuted }]}>
                     {t("eventDetail.timerDisabledRecurring")}
-                  </Paragraph>
+                  </Text>
                 ) : (
                   <Button
-                    size="$4"
+                    mode="contained"
                     onPress={toggleTimerHandler}
                     disabled={isTimerUpdating}
-                    backgroundColor={event.isTimerRunning ? colors.danger20 : colors.accent18}
-                    borderColor={event.isTimerRunning ? colors.danger30 : colors.accent30}
-                    borderWidth={1}
-                    color={event.isTimerRunning ? colors.error500 : colors.accent500}
-                    fontWeight="900"
+                    style={[
+                      styles.timerButton,
+                      {
+                        backgroundColor: event.isTimerRunning ? colors.danger20 : colors.accent18,
+                      },
+                    ]}
+                    textColor={event.isTimerRunning ? colors.error500 : colors.accent500}
                   >
                     {isTimerUpdating ? (
-                      <ActivityIndicator size="small" color={event.isTimerRunning ? colors.error500 : colors.accent500} />
+                      <ActivityIndicator
+                        size="small"
+                        color={event.isTimerRunning ? colors.error500 : colors.accent500}
+                      />
                     ) : event.isTimerRunning ? (
                       t("timer.stop")
                     ) : (
@@ -454,35 +383,32 @@ export default function EventDetailScreen() {
                     )}
                   </Button>
                 )}
-              </YStack>
-            </Animated.View>
+              </Card.Content>
+            </Card>
+          </Animated.View>
 
-            <YStack
-              marginTop={12}
-              borderWidth={1}
-              borderColor={colors.white12}
-              backgroundColor={colors.surface2}
-              borderRadius={18}
-              padding={14}
-              gap={8}
-            >
-              <Text color={colors.textTitle} fontWeight="900" fontSize={16}>
+          <Card
+            mode="contained"
+            style={[styles.card, { backgroundColor: colors.surface2, borderColor: colors.white12 }]}
+          >
+            <Card.Content style={styles.cardContent}>
+              <Text style={[styles.sectionTitle, { color: colors.textTitle }]}>
                 {t("eventDetail.notes")}
               </Text>
-              <Separator borderColor={colors.white12} />
-              <Paragraph color={colors.textBody} fontSize={13}>
+              <Divider style={{ backgroundColor: colors.white12, marginVertical: 8 }} />
+              <Text style={[styles.notesText, { color: colors.textBody }]}>
                 {event.notes || t("eventDetail.noNotes")}
-              </Paragraph>
-            </YStack>
+              </Text>
+            </Card.Content>
+          </Card>
 
-            {!!loadError && (
-              <Paragraph color={colors.error500} fontWeight="800" marginTop={10}>
-                {loadError}
-              </Paragraph>
-            )}
-          </ScrollView>
-        </YStack>
-      </TamaguiProvider>
+          {!!loadError && (
+            <Text style={[styles.errorText, { color: colors.error500 }]}>
+              {loadError}
+            </Text>
+          )}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -491,19 +417,87 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  row: {
+  container: {
+    flex: 1,
+  },
+  headerRow: {
     flexDirection: "row",
-  },
-  buttonBase: {
-    borderRadius: 12,
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    gap: 6,
   },
-  pressed: {
-    opacity: 0.9,
+  headerIconButton: {
+    margin: 0,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  headerActionButton: {
+    borderRadius: 12,
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
+    gap: 12,
+  },
+  card: {
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  cardContent: {
+    gap: 8,
+  },
+  eventTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  metaChip: {
+    borderRadius: 999,
+  },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tagChip: {
+    borderRadius: 999,
+  },
+  timerCard: {
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  timerText: {
+    fontSize: 40,
+    fontWeight: "900",
+  },
+  timerMeta: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  timerButton: {
+    marginTop: 4,
+    borderRadius: 12,
+  },
+  notesText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  errorText: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: "800",
   },
 });
