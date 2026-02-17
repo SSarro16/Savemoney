@@ -2,7 +2,7 @@ import { useCallback, useContext, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { DrawerActions, useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import AppLogo from "../../components/ui/AppLogo";
 import Card from "../../components/ui/Card";
@@ -217,6 +217,16 @@ export default function InsightsScreen() {
     }, [loadInsights]),
   );
 
+  const openDrawer = useCallback(() => {
+    const parentNavigator = navigation.getParent();
+    if (parentNavigator?.openDrawer) {
+      parentNavigator.openDrawer();
+      return;
+    }
+
+    navigation.dispatch(DrawerActions.openDrawer());
+  }, [navigation]);
+
   const nowMs = Date.now();
   const summary = useMemo(() => resolveSummary(events, nowMs), [events, nowMs]);
   const categories = useMemo(() => resolveCategoryBreakdown(events, nowMs), [events, nowMs]);
@@ -249,7 +259,7 @@ export default function InsightsScreen() {
             size={22}
             color={colors.textTitle}
             variant="soft"
-            onPress={() => navigation.getParent()?.openDrawer()}
+            onPress={openDrawer}
           />
           <Text style={[styles.headerTitle, { color: colors.textTitle }]}>{t("insights.title")}</Text>
           <View style={[styles.headerLogoWrap, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
