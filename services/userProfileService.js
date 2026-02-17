@@ -235,6 +235,71 @@ export async function getUserProfile(uid) {
   }
 }
 
+export async function ensureUserProfileBase(uid, authData = {}) {
+  const safeUid = ensureUid(uid);
+
+  try {
+    const docRef = userDocument(safeUid);
+    const snapshot = await getDoc(docRef);
+
+    const safeEmail = normalizeText(authData.email);
+    const safeDisplayName = normalizeText(authData.displayName)
+      || buildDisplayName("", "", safeEmail, "");
+    const safePhotoURL = normalizeText(authData.photoURL);
+    const safeTimezone = resolveTimezone("");
+
+    if (!snapshot.exists()) {
+      await setDoc(docRef, {
+        uid: safeUid,
+        email: safeEmail,
+        displayName: safeDisplayName,
+        photoURL: safePhotoURL,
+        timezone: safeTimezone,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      return getUserProfile(safeUid);
+    }
+
+    const current = snapshot.data();
+    const patch = {
+      updatedAt: serverTimestamp(),
+    };
+    let shouldUpdate = false;
+
+    if (!normalizeText(current.uid)) {
+      patch.uid = safeUid;
+      shouldUpdate = true;
+    }
+    if (!normalizeText(current.timezone)) {
+      patch.timezone = safeTimezone;
+      shouldUpdate = true;
+    }
+    if (safeEmail && normalizeText(current.email) !== safeEmail) {
+      patch.email = safeEmail;
+      shouldUpdate = true;
+    }
+    if (safeDisplayName && normalizeText(current.displayName) !== safeDisplayName) {
+      patch.displayName = safeDisplayName;
+      shouldUpdate = true;
+    }
+    if (safePhotoURL && normalizeText(current.photoURL) !== safePhotoURL) {
+      patch.photoURL = safePhotoURL;
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      await updateDoc(docRef, patch);
+      return getUserProfile(safeUid);
+    }
+
+    return toProfile(safeUid, current);
+  } catch (error) {
+    throw toProfileError(error, PROFILE_ERROR_MESSAGES.save);
+  }
+}
+
 export async function saveUserProfile(uid, email, payload) {
   const safeUid = ensureUid(uid);
 
