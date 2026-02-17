@@ -3,6 +3,7 @@ import { useContext } from "react";
 
 import { GlobalStyles } from "../constants/styles";
 import { LanguageContext } from "../context/LanguageContext";
+import EventDetailScreen from "../screens/App/EventDetailScreen";
 import EventEditorScreen from "../screens/App/EventEditorScreen";
 import PlannerScreen from "../screens/App/PlannerScreen";
 
@@ -22,6 +23,16 @@ export default function PlannerStack() {
       }}
     >
       <Stack.Screen name="PlannerHome" component={PlannerScreen} />
+      <Stack.Screen
+        name="EventDetail"
+        component={EventDetailScreen}
+        options={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: colors.bg,
+          },
+        }}
+      />
       <Stack.Screen
         name="EventEditor"
         component={EventEditorScreen}

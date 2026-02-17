@@ -3,6 +3,21 @@ module.exports = function (api) {
 
   return {
     presets: ["babel-preset-expo"],
-    plugins: ["react-native-reanimated/plugin"],
+    plugins: [
+      [
+        "transform-inline-environment-variables",
+        {
+          include: ["TAMAGUI_TARGET"],
+        },
+      ],
+      [
+        "@tamagui/babel-plugin",
+        {
+          components: ["tamagui"],
+          config: "./tamagui.config.js",
+        },
+      ],
+      "react-native-reanimated/plugin",
+    ],
   };
 };
