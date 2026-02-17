@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -380,9 +380,10 @@ export default function PlannerScreen() {
   );
 
   const monthRows = monthWeeks.length || 5;
+  const isMonthView = viewMode === "month";
   const monthCalendarHeight =
-    (compactMode ? 56 : 62) * monthRows + (compactMode ? 94 : 108);
-  const calendarHeight = viewMode === "month" ? monthCalendarHeight : compactMode ? 136 : 156;
+    (compactMode ? 46 : 52) * monthRows + (compactMode ? 74 : 86);
+  const calendarHeight = isMonthView ? monthCalendarHeight : compactMode ? 136 : 156;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
   const headerTopPadding = Math.max(insets.top, 8);
 
@@ -852,35 +853,67 @@ export default function PlannerScreen() {
         </View>
       </View>
 
-      <FlatList
-        style={styles.eventsList}
-        data={selectedDayEvents}
-        keyExtractor={(item) => item.id}
-        extraData={`${liveTick}-${timerActionEventId || ""}`}
-        renderItem={({ item }) => (
-          <EventListItem
-            event={item}
-            onPress={() => openEventDetail(item)}
-            onStartTimer={() => handleStartTimer(item)}
-            onStopTimer={() => handleStopTimer(item)}
-            timerBusy={timerActionEventId === item.id}
-            timerDisabled={Boolean(item.isRecurringOccurrence)}
-          />
-        )}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.eventsListContent,
-          {
-            paddingHorizontal: LAYOUT.horizontalPadding,
-            paddingBottom: listBottomPadding,
-          },
-        ]}
-        ListEmptyComponent={
-          <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}> 
-            <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
-          </Card>
-        }
-      />
+      {isMonthView ? (
+        <ScrollView
+          style={styles.eventsList}
+          contentContainerStyle={[
+            styles.eventsListContent,
+            {
+              paddingHorizontal: LAYOUT.horizontalPadding,
+              paddingBottom: listBottomPadding,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {selectedDayEvents.length === 0 ? (
+            <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
+              <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
+            </Card>
+          ) : (
+            selectedDayEvents.map((item) => (
+              <EventListItem
+                key={item.id}
+                event={item}
+                onPress={() => openEventDetail(item)}
+                onStartTimer={() => handleStartTimer(item)}
+                onStopTimer={() => handleStopTimer(item)}
+                timerBusy={timerActionEventId === item.id}
+                timerDisabled={Boolean(item.isRecurringOccurrence)}
+              />
+            ))
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          style={styles.eventsList}
+          data={selectedDayEvents}
+          keyExtractor={(item) => item.id}
+          extraData={`${liveTick}-${timerActionEventId || ""}`}
+          renderItem={({ item }) => (
+            <EventListItem
+              event={item}
+              onPress={() => openEventDetail(item)}
+              onStartTimer={() => handleStartTimer(item)}
+              onStopTimer={() => handleStopTimer(item)}
+              timerBusy={timerActionEventId === item.id}
+              timerDisabled={Boolean(item.isRecurringOccurrence)}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.eventsListContent,
+            {
+              paddingHorizontal: LAYOUT.horizontalPadding,
+              paddingBottom: listBottomPadding,
+            },
+          ]}
+          ListEmptyComponent={
+            <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
+              <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
+            </Card>
+          }
+        />
+      )}
 
       <Pressable
         onPress={openCreateEditor}
@@ -1084,8 +1117,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   calendarCard: {
-    marginBottom: 14,
-    padding: 8,
+    marginBottom: 10,
+    padding: 7,
   },
   monthWrap: {
     flex: 1,
@@ -1094,66 +1127,66 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   monthNavButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   monthHeaderText: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "900",
     textTransform: "capitalize",
   },
   monthWeekHeaderRow: {
     flexDirection: "row",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   monthWeekHeaderCell: {
     flex: 1,
     alignItems: "center",
   },
   monthWeekHeaderText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   monthGrid: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   monthWeekRow: {
     flexDirection: "row",
-    gap: 6,
+    gap: 4,
   },
   monthDayCell: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 40,
     borderWidth: 1,
-    borderRadius: 13,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
-    gap: 1,
+    paddingVertical: 4,
+    gap: 0,
   },
   monthDayNumber: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "900",
-    lineHeight: 22,
+    lineHeight: 18,
   },
   monthOutsideHint: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     textTransform: "uppercase",
   },
   monthDayDot: {
-    marginTop: 3,
-    width: 5,
-    height: 5,
+    marginTop: 2,
+    width: 4,
+    height: 4,
     borderRadius: 999,
   },
   dayWeekWrap: {
