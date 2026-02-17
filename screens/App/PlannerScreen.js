@@ -3,6 +3,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-n
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { Chip, FAB } from "react-native-paper";
 
 import EventListItem from "../../components/calendar/EventListItem";
 import ViewToggle from "../../components/calendar/ViewToggle";
@@ -138,6 +139,14 @@ function getLiveTrackedSeconds(event, nowMs) {
 }
 
 function serializeEvent(event) {
+  const recurrence =
+    event?.recurrence && typeof event.recurrence === "object"
+      ? {
+          ...event.recurrence,
+          untilAt: event.recurrence.untilAt?.toISOString?.() || null,
+        }
+      : null;
+
   return {
     id: event.id,
     title: event.title,
@@ -155,7 +164,7 @@ function serializeEvent(event) {
     isTimerRunning: Boolean(event.isTimerRunning),
     plannedVsActualMinutes: event.plannedVsActualMinutes ?? 0,
     expectedVsActualMinutes: event.expectedVsActualMinutes ?? null,
-    recurrence: event.recurrence || null,
+    recurrence,
     parentRecurringEventId: event.parentRecurringEventId || null,
     isRecurringOccurrence: Boolean(event.isRecurringOccurrence),
     occurrenceDateKey: event.occurrenceDateKey || null,
@@ -200,6 +209,8 @@ export default function PlannerScreen() {
   const [weekPagerWidth, setWeekPagerWidth] = useState(0);
   const weekPagerRef = useRef(null);
   const weekPagerIndexRef = useRef(0);
+  const isWeekPagerUserScrollingRef = useRef(false);
+  const isWeekPagerProgrammaticScrollRef = useRef(false);
   const hasAlignedWeekPagerRef = useRef(false);
   const hasLoadedOnceRef = useRef(false);
   const eventsRequestIdRef = useRef(0);
@@ -261,6 +272,14 @@ export default function PlannerScreen() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const today = startOfDay(new Date());
+      setSelectedDate((currentDate) => (isSameDay(currentDate, today) ? currentDate : today));
+      return undefined;
+    }, []),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -382,8 +401,8 @@ export default function PlannerScreen() {
   const monthRows = monthWeeks.length || 5;
   const isMonthView = viewMode === "month";
   const monthCalendarHeight =
-    (compactMode ? 46 : 52) * monthRows + (compactMode ? 74 : 86);
-  const calendarHeight = isMonthView ? monthCalendarHeight : compactMode ? 136 : 156;
+    (compactMode ? 46 : 52) * monthRows + (compactMode ? 10 : 18);
+  const calendarHeight = isMonthView ? monthCalendarHeight : compactMode ? 70 : 100;
   const listBottomPadding = insets.bottom + LAYOUT.fabSize + LAYOUT.fabSpacing + 18;
   const headerTopPadding = Math.max(insets.top, 8);
 
@@ -397,6 +416,11 @@ export default function PlannerScreen() {
   const resetToToday = () => {
     setSelectedDate(startOfDay(new Date()));
   };
+
+  const handleViewModeChange = useCallback((nextMode) => {
+    isWeekPagerUserScrollingRef.current = false;
+    setViewMode(nextMode);
+  }, []);
 
   const shiftMonth = (delta) => {
     const monthAnchor = startOfMonth(selectedDate);
@@ -415,24 +439,42 @@ export default function PlannerScreen() {
 
   useEffect(() => {
     if (viewMode === "month" || weekPagerWidth <= 0 || !weekPagerRef.current) {
+      isWeekPagerProgrammaticScrollRef.current = false;
       return;
     }
 
     if (weekPagerIndexRef.current === selectedWeekPageIndex) {
+      isWeekPagerProgrammaticScrollRef.current = false;
       hasAlignedWeekPagerRef.current = true;
       return;
     }
 
+    const shouldAnimate = hasAlignedWeekPagerRef.current;
+    isWeekPagerProgrammaticScrollRef.current = shouldAnimate;
     weekPagerRef.current.scrollToIndex({
       index: selectedWeekPageIndex,
-      animated: hasAlignedWeekPagerRef.current,
+      animated: shouldAnimate,
       viewPosition: 0.5,
     });
+    if (!shouldAnimate) {
+      isWeekPagerProgrammaticScrollRef.current = false;
+    }
     weekPagerIndexRef.current = selectedWeekPageIndex;
     hasAlignedWeekPagerRef.current = true;
   }, [selectedWeekPageIndex, viewMode, weekPagerWidth]);
 
   const onWeekPagerMomentumEnd = (event) => {
+    if (isWeekPagerProgrammaticScrollRef.current) {
+      isWeekPagerProgrammaticScrollRef.current = false;
+      isWeekPagerUserScrollingRef.current = false;
+      return;
+    }
+
+    if (!isWeekPagerUserScrollingRef.current) {
+      return;
+    }
+    isWeekPagerUserScrollingRef.current = false;
+
     if (!weekPagerWidth) {
       return;
     }
@@ -496,6 +538,339 @@ export default function PlannerScreen() {
     }
   };
 
+  const topSectionContent = (
+    <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
+      <Card style={[styles.heroCard, { backgroundColor: colors.surface }]}>
+        <View style={[styles.heroAura, styles.heroAuraLarge, { borderColor: colors.accent18, backgroundColor: colors.accent12 }]} />
+        <View style={[styles.heroAura, styles.heroAuraSmall, { borderColor: colors.white10, backgroundColor: colors.white08 }]} />
+
+        <View style={styles.heroTopRow}>
+          <View style={[styles.heroIconWrap, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
+            <Ionicons name="time-outline" size={15} color={colors.accent500} />
+          </View>
+          <View style={styles.heroTextWrap}>
+            <Text style={[styles.heroTitle, { color: colors.textTitle }]}>{greetingLabel}</Text>
+            <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>{t("planner.homePanelSubtitle")}</Text>
+          </View>
+          <Chip
+            compact
+            icon={selectedDayMetrics.runningCount > 0 ? "timer-outline" : "clock-outline"}
+            style={[styles.heroStatusPill, { borderColor: colors.accent30, backgroundColor: colors.accent12 }]}
+            textStyle={[styles.heroStatusText, { color: colors.textBody }]}
+          >
+            {panelStatusLabel}
+          </Chip>
+        </View>
+
+        <View style={styles.heroMetricsRow}>
+          <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+            <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricEvents")}</Text>
+            <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.eventCount}</Text>
+          </View>
+          <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+            <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricPlanned")}</Text>
+            <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.plannedMinutes}m</Text>
+          </View>
+          <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
+            <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricTracked")}</Text>
+            <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.trackedMinutes}m</Text>
+          </View>
+        </View>
+
+        <View style={styles.mottoRow}>
+          <Chip
+            compact
+            mode="flat"
+            icon="hourglass"
+            style={[styles.mottoChip, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}
+            textStyle={[styles.mottoText, { color: colors.textMuted }]}
+          >
+            {t("common.motto")}
+          </Chip>
+        </View>
+      </Card>
+
+      <View style={[styles.controlsCard, { borderColor: colors.white10, backgroundColor: colors.white06 }]}>
+        <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
+          <ViewToggle value={viewMode} onChange={handleViewModeChange} />
+        </View>
+
+        <View style={styles.datePickerWrap}>
+          <Text style={[styles.datePickerLabel, { color: colors.textMuted }]}>
+            {t("planner.dateLabel")}
+          </Text>
+          <View style={styles.datePickerRow}>
+            <Pressable
+              onPress={() => setIsDatePickerOpen(true)}
+              style={[
+                styles.datePickerField,
+                { backgroundColor: colors.surface, borderColor: colors.white10 },
+              ]}
+            >
+              <Ionicons name="calendar-outline" size={16} color={colors.accent500} />
+              <Text style={[styles.datePickerText, { color: colors.textTitle }]} numberOfLines={1}>
+                {selectedDateLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+            </Pressable>
+
+            <Pressable
+              onPress={resetToToday}
+              accessibilityRole="button"
+              accessibilityLabel={t("planner.resetToTodayA11y")}
+              style={[
+                styles.todayIconButton,
+                isTodaySelected
+                  ? { backgroundColor: colors.accent18, borderColor: colors.accent35 }
+                  : { backgroundColor: colors.white08, borderColor: colors.white12 },
+              ]}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={16}
+                color={isTodaySelected ? colors.accent500 : colors.textBody}
+              />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      <Card
+        style={[
+          styles.calendarCard,
+          {
+            backgroundColor: colors.surface2,
+            height: calendarHeight,
+          },
+        ]}
+      >
+        {viewMode === "month" ? (
+          <View style={styles.monthWrap}>
+            <View style={styles.monthNavRow}>
+              <Pressable
+                onPress={() => shiftMonth(-1)}
+                style={({ pressed }) => [
+                  styles.monthNavButton,
+                  {
+                    borderColor: colors.white10,
+                    backgroundColor: colors.white08,
+                  },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons name="chevron-back" size={16} color={colors.textBody} />
+              </Pressable>
+              <Text style={[styles.monthHeaderText, { color: colors.textTitle }]}>
+                {`${getMonthLabel(selectedDate, language)} ${formatDate(selectedDate, "yyyy")}`}
+              </Text>
+              <Pressable
+                onPress={() => shiftMonth(1)}
+                style={({ pressed }) => [
+                  styles.monthNavButton,
+                  {
+                    borderColor: colors.white10,
+                    backgroundColor: colors.white08,
+                  },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons name="chevron-forward" size={16} color={colors.textBody} />
+              </Pressable>
+            </View>
+
+            <View style={styles.monthWeekHeaderRow}>
+              {monthWeekdayLabels.map((label, index) => (
+                <View key={`${label}-${index}`} style={styles.monthWeekHeaderCell}>
+                  <Text style={[styles.monthWeekHeaderText, { color: colors.textMuted }]}>{label}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.monthGrid}>
+              {monthWeeks.map((week, rowIndex) => (
+                <View key={`week-${rowIndex}`} style={styles.monthWeekRow}>
+                  {week.map((date) => {
+                    const key = toDateString(date);
+                    const isSelected = isSameDay(date, selectedDate);
+                    const isCurrentMonth = isSameMonth(date, selectedDate);
+                    const dayCount = eventsByDateMap[key] || 0;
+
+                    return (
+                      <Pressable
+                        key={key}
+                        onPress={() => setSelectedDate(startOfDay(date))}
+                        style={({ pressed }) => [
+                          styles.monthDayCell,
+                          isSelected
+                            ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                            : {
+                                backgroundColor: isCurrentMonth ? colors.white08 : colors.white06,
+                                borderColor: colors.white10,
+                              },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.monthDayNumber,
+                            {
+                              color: isSelected
+                                ? colors.textOnAccentStrong
+                                : isCurrentMonth
+                                  ? colors.textBody
+                                  : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          {formatDate(date, "d")}
+                        </Text>
+                        {!isCurrentMonth && (
+                          <Text
+                            style={[
+                              styles.monthOutsideHint,
+                              { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                            ]}
+                          >
+                            {getMonthLabel(date, language)}
+                          </Text>
+                        )}
+                        {!!dayCount && (
+                          <View
+                            style={[
+                              styles.monthDayDot,
+                              {
+                                backgroundColor: isSelected
+                                  ? colors.textOnAccentStrong
+                                  : colors.accent500,
+                              },
+                            ]}
+                          />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View
+            style={styles.dayWeekWrap}
+            onLayout={(event) => {
+              const nextWidth = Math.round(event.nativeEvent.layout.width);
+              if (nextWidth > 0 && nextWidth !== weekPagerWidth) {
+                setWeekPagerWidth(nextWidth);
+              }
+            }}
+          >
+            <FlatList
+              ref={weekPagerRef}
+              data={weekOffsets}
+              horizontal
+              pagingEnabled
+              keyExtractor={(item) => `week-${item}`}
+              showsHorizontalScrollIndicator={false}
+              getItemLayout={
+                weekPagerWidth > 0
+                  ? (_data, index) => ({
+                      length: weekPagerWidth,
+                      offset: weekPagerWidth * index,
+                      index,
+                    })
+                  : undefined
+              }
+                onScrollToIndexFailed={() => {}}
+                onScrollBeginDrag={() => {
+                  isWeekPagerUserScrollingRef.current = true;
+                }}
+                onMomentumScrollEnd={onWeekPagerMomentumEnd}
+                renderItem={({ item }) => {
+                const weekDates = buildWeekDaysByOffset(item);
+
+                return (
+                  <View style={[styles.weekPage, { width: weekPagerWidth || 1 }]}>
+                    <View style={styles.dayStrip}>
+                      {weekDates.map((date) => {
+                        const isSelected = isSameDay(date, selectedDate);
+                        const key = toDateString(date);
+                        const dayCount = eventsByDateMap[key] || 0;
+
+                        return (
+                          <Pressable
+                            key={key}
+                            onPress={() => setSelectedDate(startOfDay(date))}
+                            style={[
+                              styles.dayChip,
+                              { minHeight: compactMode ? 74 : 82 },
+                              isSelected
+                                ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
+                                : { backgroundColor: colors.white08, borderColor: colors.white12 },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.dayChipLabel,
+                                { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                              ]}
+                            >
+                              {getWeekdayLabel(date, language)}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.dayChipDate,
+                                { color: isSelected ? colors.textOnAccentStrong : colors.textBody },
+                              ]}
+                            >
+                              {formatDate(date, "d")}
+                            </Text>
+                            {!isSameMonth(date, selectedDate) && (
+                              <Text
+                                style={[
+                                  styles.dayChipMonth,
+                                  { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
+                                ]}
+                              >
+                                {getMonthLabel(date, language)}
+                              </Text>
+                            )}
+                            {!!dayCount && (
+                              <View
+                                style={[
+                                  styles.dayDot,
+                                  {
+                                    backgroundColor: isSelected
+                                      ? colors.textOnAccentStrong
+                                      : colors.accent500,
+                                  },
+                                ]}
+                              />
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          </View>
+        )}
+      </Card>
+
+      <View style={styles.eventsHeader}>
+        <Text style={[styles.eventsTitle, { color: colors.textTitle, fontSize: 19 * textScale }]}>
+          {eventsTitle}
+        </Text>
+        <Text style={[styles.eventsSubtitle, { color: colors.textMuted }]}>{eventsCountLabel}</Text>
+        {!!actionError && (
+          <Text style={[styles.actionErrorText, { color: colors.error500 }]} numberOfLines={2}>
+            {actionError}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+
   if (isInitialLoading) {
     return <LoadingOverlay message={t("planner.loading")} />;
   }
@@ -535,344 +910,48 @@ export default function PlannerScreen() {
         </View>
       </View>
 
-      <View style={[styles.topSection, { paddingHorizontal: LAYOUT.horizontalPadding }]}>
-        <Card style={[styles.heroCard, { backgroundColor: colors.surface }]}>
-          <View style={[styles.heroAura, styles.heroAuraLarge, { borderColor: colors.accent18, backgroundColor: colors.accent12 }]} />
-          <View style={[styles.heroAura, styles.heroAuraSmall, { borderColor: colors.white10, backgroundColor: colors.white08 }]} />
-
-          <View style={styles.heroTopRow}>
-            <View style={[styles.heroIconWrap, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
-              <Ionicons name="time-outline" size={15} color={colors.accent500} />
-            </View>
-            <View style={styles.heroTextWrap}>
-              <Text style={[styles.heroTitle, { color: colors.textTitle }]}>{greetingLabel}</Text>
-              <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>{t("planner.homePanelSubtitle")}</Text>
-            </View>
-            <View style={[styles.heroStatusPill, { borderColor: colors.accent30, backgroundColor: colors.accent12 }]}>
-              <Text style={[styles.heroStatusText, { color: colors.textBody }]}>{panelStatusLabel}</Text>
-            </View>
-          </View>
-
-          <View style={styles.heroMetricsRow}>
-            <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
-              <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricEvents")}</Text>
-              <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.eventCount}</Text>
-            </View>
-            <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
-              <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricPlanned")}</Text>
-              <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.plannedMinutes}m</Text>
-            </View>
-            <View style={[styles.heroMetricCard, { borderColor: colors.white10, backgroundColor: colors.white08 }]}>
-              <Text style={[styles.heroMetricLabel, { color: colors.textMuted }]}>{t("planner.metricTracked")}</Text>
-              <Text style={[styles.heroMetricValue, { color: colors.textTitle }]}>{selectedDayMetrics.trackedMinutes}m</Text>
-            </View>
-          </View>
-
-          <View style={styles.mottoRow}>
-            <View style={[styles.mottoChip, { borderColor: colors.white10, backgroundColor: colors.surface2 }]}>
-              <Ionicons name="hourglass-outline" size={14} color={colors.accent500} />
-              <Text style={[styles.mottoText, { color: colors.textMuted }]}>{t("common.motto")}</Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={[styles.controlsCard, { borderColor: colors.white10, backgroundColor: colors.white06 }]}>
-          <View style={[styles.toggleWrap, { marginBottom: compactMode ? 8 : 10 }]}>
-            <ViewToggle value={viewMode} onChange={setViewMode} />
-          </View>
-
-          <View style={styles.datePickerWrap}>
-            <Text style={[styles.datePickerLabel, { color: colors.textMuted }]}>
-              {t("planner.dateLabel")}
-            </Text>
-            <View style={styles.datePickerRow}>
-              <Pressable
-                onPress={() => setIsDatePickerOpen(true)}
-                style={[
-                  styles.datePickerField,
-                  { backgroundColor: colors.surface, borderColor: colors.white10 },
-                ]}
-              >
-                <Ionicons name="calendar-outline" size={16} color={colors.accent500} />
-                <Text style={[styles.datePickerText, { color: colors.textTitle }]} numberOfLines={1}>
-                  {selectedDateLabel}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
-              </Pressable>
-
-              <Pressable
-                onPress={resetToToday}
-                accessibilityRole="button"
-                accessibilityLabel={t("planner.resetToTodayA11y")}
-                style={[
-                  styles.todayIconButton,
-                  isTodaySelected
-                    ? { backgroundColor: colors.accent18, borderColor: colors.accent35 }
-                    : { backgroundColor: colors.white08, borderColor: colors.white12 },
-                ]}
-              >
-                <Ionicons
-                  name="refresh-outline"
-                  size={16}
-                  color={isTodaySelected ? colors.accent500 : colors.textBody}
-                />
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
-        <Card
-          style={[
-            styles.calendarCard,
-            {
-              backgroundColor: colors.surface2,
-              height: calendarHeight,
-            },
-          ]}
-        >
-          {viewMode === "month" ? (
-            <View style={styles.monthWrap}>
-              <View style={styles.monthNavRow}>
-                <Pressable
-                  onPress={() => shiftMonth(-1)}
-                  style={({ pressed }) => [
-                    styles.monthNavButton,
-                    {
-                      borderColor: colors.white10,
-                      backgroundColor: colors.white08,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Ionicons name="chevron-back" size={16} color={colors.textBody} />
-                </Pressable>
-                <Text style={[styles.monthHeaderText, { color: colors.textTitle }]}>
-                  {`${getMonthLabel(selectedDate, language)} ${formatDate(selectedDate, "yyyy")}`}
-                </Text>
-                <Pressable
-                  onPress={() => shiftMonth(1)}
-                  style={({ pressed }) => [
-                    styles.monthNavButton,
-                    {
-                      borderColor: colors.white10,
-                      backgroundColor: colors.white08,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Ionicons name="chevron-forward" size={16} color={colors.textBody} />
-                </Pressable>
-              </View>
-
-              <View style={styles.monthWeekHeaderRow}>
-                {monthWeekdayLabels.map((label, index) => (
-                  <View key={`${label}-${index}`} style={styles.monthWeekHeaderCell}>
-                    <Text style={[styles.monthWeekHeaderText, { color: colors.textMuted }]}>{label}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={styles.monthGrid}>
-                {monthWeeks.map((week, rowIndex) => (
-                  <View key={`week-${rowIndex}`} style={styles.monthWeekRow}>
-                    {week.map((date) => {
-                      const key = toDateString(date);
-                      const isSelected = isSameDay(date, selectedDate);
-                      const isCurrentMonth = isSameMonth(date, selectedDate);
-                      const dayCount = eventsByDateMap[key] || 0;
-
-                      return (
-                        <Pressable
-                          key={key}
-                          onPress={() => setSelectedDate(startOfDay(date))}
-                          style={({ pressed }) => [
-                            styles.monthDayCell,
-                            isSelected
-                              ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
-                              : {
-                                  backgroundColor: isCurrentMonth ? colors.white08 : colors.white06,
-                                  borderColor: colors.white10,
-                                },
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.monthDayNumber,
-                              {
-                                color: isSelected
-                                  ? colors.textOnAccentStrong
-                                  : isCurrentMonth
-                                    ? colors.textBody
-                                    : colors.textMuted,
-                              },
-                            ]}
-                          >
-                            {formatDate(date, "d")}
-                          </Text>
-                          {!isCurrentMonth && (
-                            <Text
-                              style={[
-                                styles.monthOutsideHint,
-                                { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
-                              ]}
-                            >
-                              {getMonthLabel(date, language)}
-                            </Text>
-                          )}
-                          {!!dayCount && (
-                            <View
-                              style={[
-                                styles.monthDayDot,
-                                {
-                                  backgroundColor: isSelected
-                                    ? colors.textOnAccentStrong
-                                    : colors.accent500,
-                                },
-                              ]}
-                            />
-                          )}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View
-              style={styles.dayWeekWrap}
-              onLayout={(event) => {
-                const nextWidth = Math.round(event.nativeEvent.layout.width);
-                if (nextWidth > 0 && nextWidth !== weekPagerWidth) {
-                  setWeekPagerWidth(nextWidth);
-                }
-              }}
-            >
-              <FlatList
-                ref={weekPagerRef}
-                data={weekOffsets}
-                horizontal
-                pagingEnabled
-                keyExtractor={(item) => `week-${item}`}
-                showsHorizontalScrollIndicator={false}
-                getItemLayout={
-                  weekPagerWidth > 0
-                    ? (_data, index) => ({
-                        length: weekPagerWidth,
-                        offset: weekPagerWidth * index,
-                        index,
-                      })
-                    : undefined
-                }
-                onScrollToIndexFailed={() => {}}
-                onMomentumScrollEnd={onWeekPagerMomentumEnd}
-                renderItem={({ item }) => {
-                  const weekDates = buildWeekDaysByOffset(item);
-
-                  return (
-                    <View style={[styles.weekPage, { width: weekPagerWidth || 1 }]}>
-                      <View style={styles.dayStrip}>
-                        {weekDates.map((date) => {
-                          const isSelected = isSameDay(date, selectedDate);
-                          const key = toDateString(date);
-                          const dayCount = eventsByDateMap[key] || 0;
-
-                          return (
-                            <Pressable
-                              key={key}
-                              onPress={() => setSelectedDate(startOfDay(date))}
-                              style={[
-                                styles.dayChip,
-                                { minHeight: compactMode ? 74 : 82 },
-                                isSelected
-                                  ? { backgroundColor: colors.accent500, borderColor: colors.accent30 }
-                                  : { backgroundColor: colors.white08, borderColor: colors.white12 },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.dayChipLabel,
-                                  { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
-                                ]}
-                              >
-                                {getWeekdayLabel(date, language)}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.dayChipDate,
-                                  { color: isSelected ? colors.textOnAccentStrong : colors.textBody },
-                                ]}
-                              >
-                                {formatDate(date, "d")}
-                              </Text>
-                              {!isSameMonth(date, selectedDate) && (
-                                <Text
-                                  style={[
-                                    styles.dayChipMonth,
-                                    { color: isSelected ? colors.textOnAccentStrong : colors.textMuted },
-                                  ]}
-                                >
-                                  {getMonthLabel(date, language)}
-                                </Text>
-                              )}
-                              {!!dayCount && (
-                                <View
-                                  style={[
-                                    styles.dayDot,
-                                    {
-                                      backgroundColor: isSelected
-                                        ? colors.textOnAccentStrong
-                                        : colors.accent500,
-                                    },
-                                  ]}
-                                />
-                              )}
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  );
-                }}
-              />
-            </View>
-          )}
-        </Card>
-
-        <View style={styles.eventsHeader}>
-          <Text style={[styles.eventsTitle, { color: colors.textTitle, fontSize: 19 * textScale }]}>
-            {eventsTitle}
-          </Text>
-          <Text style={[styles.eventsSubtitle, { color: colors.textMuted }]}>{eventsCountLabel}</Text>
-          {!!actionError && (
-            <Text style={[styles.actionErrorText, { color: colors.error500 }]} numberOfLines={2}>
-              {actionError}
-            </Text>
-          )}
-        </View>
-      </View>
-
       {isMonthView ? (
         <ScrollView
           style={styles.eventsList}
           contentContainerStyle={[
             styles.eventsListContent,
             {
-              paddingHorizontal: LAYOUT.horizontalPadding,
               paddingBottom: listBottomPadding,
             },
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {selectedDayEvents.length === 0 ? (
-            <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
-              <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
-            </Card>
-          ) : (
-            selectedDayEvents.map((item) => (
+          {topSectionContent}
+          <View style={{ paddingHorizontal: LAYOUT.horizontalPadding }}>
+            {selectedDayEvents.length === 0 ? (
+              <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
+                <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
+              </Card>
+            ) : (
+              selectedDayEvents.map((item) => (
+                <EventListItem
+                  key={item.id}
+                  event={item}
+                  onPress={() => openEventDetail(item)}
+                  onStartTimer={() => handleStartTimer(item)}
+                  onStopTimer={() => handleStopTimer(item)}
+                  timerBusy={timerActionEventId === item.id}
+                  timerDisabled={Boolean(item.isRecurringOccurrence)}
+                />
+              ))
+            )}
+          </View>
+        </ScrollView>
+      ) : (
+        <>
+          {topSectionContent}
+          <FlatList
+            style={styles.eventsList}
+            data={selectedDayEvents}
+            keyExtractor={(item) => item.id}
+            extraData={`${liveTick}-${timerActionEventId || ""}`}
+            renderItem={({ item }) => (
               <EventListItem
-                key={item.id}
                 event={item}
                 onPress={() => openEventDetail(item)}
                 onStartTimer={() => handleStartTimer(item)}
@@ -880,43 +959,29 @@ export default function PlannerScreen() {
                 timerBusy={timerActionEventId === item.id}
                 timerDisabled={Boolean(item.isRecurringOccurrence)}
               />
-            ))
-          )}
-        </ScrollView>
-      ) : (
-        <FlatList
-          style={styles.eventsList}
-          data={selectedDayEvents}
-          keyExtractor={(item) => item.id}
-          extraData={`${liveTick}-${timerActionEventId || ""}`}
-          renderItem={({ item }) => (
-            <EventListItem
-              event={item}
-              onPress={() => openEventDetail(item)}
-              onStartTimer={() => handleStartTimer(item)}
-              onStopTimer={() => handleStopTimer(item)}
-              timerBusy={timerActionEventId === item.id}
-              timerDisabled={Boolean(item.isRecurringOccurrence)}
-            />
-          )}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.eventsListContent,
-            {
-              paddingHorizontal: LAYOUT.horizontalPadding,
-              paddingBottom: listBottomPadding,
-            },
-          ]}
-          ListEmptyComponent={
-            <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
-              <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
-            </Card>
-          }
-        />
+            )}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.eventsListContent,
+              {
+                paddingHorizontal: LAYOUT.horizontalPadding,
+                paddingBottom: listBottomPadding,
+              },
+            ]}
+            ListEmptyComponent={
+              <Card style={[styles.emptyCard, { backgroundColor: colors.surface2 }]}>
+                <Text style={[styles.emptyText, { color: colors.textBody }]}>{t("planner.empty")}</Text>
+              </Card>
+            }
+          />
+        </>
       )}
 
-      <Pressable
+      <FAB
         onPress={openCreateEditor}
+        icon="plus"
+        customSize={LAYOUT.fabSize}
+        color={colors.textOnAccentStrong}
         style={[
           styles.fab,
           {
@@ -927,9 +992,7 @@ export default function PlannerScreen() {
             bottom: insets.bottom + LAYOUT.fabSpacing,
           },
         ]}
-      >
-        <Ionicons name="add" size={28} color={colors.textOnAccentStrong} />
-      </Pressable>
+      />
 
       <DateTimePickerModal
         visible={isDatePickerOpen}
@@ -1117,7 +1180,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   calendarCard: {
-    marginBottom: 10,
+    marginBottom: 5,
     padding: 7,
   },
   monthWrap: {
