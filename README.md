@@ -26,3 +26,7 @@ Per abilitare login/signup con Google:
    - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
    - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
 3. Riavvia Expo (`npx expo start -c`).
+
+## GitHub Workflow
+- Contributing guide: `CONTRIBUTING.md`
+- One-time setup (project automation + branch protection): `GITHUB_WORKFLOW_SETUP.md`

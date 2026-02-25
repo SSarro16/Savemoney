@@ -1,0 +1,44 @@
+name: Task
+description: Track a concrete implementation task.
+title: "[Task]: "
+labels:
+  - enhancement
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: Goal
+      description: One-line task objective.
+      placeholder: Implement planner event edit flow
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Task details
+      description: What needs to be implemented?
+      placeholder: Describe exact changes needed.
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Break down the work into small steps.
+      placeholder: |
+        - [ ] Step 1
+        - [ ] Step 2
+        - [ ] Step 3
+    validations:
+      required: true
+  - type: textarea
+    id: definition_of_done
+    attributes:
+      label: Definition of done
+      description: How do we know this task is complete?
+      placeholder: |
+        - [ ] Tests updated
+        - [ ] UX reviewed
+        - [ ] Docs updated (if needed)
+    validations:
+      required: true
