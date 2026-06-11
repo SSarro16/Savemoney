@@ -34,6 +34,7 @@ import {
 import { PAYMENT_METHOD } from "../util/expenses/expense-presets";
 import { maybeSendBudgetThresholdAlerts } from "../util/notifications/budget-alerts";
 import { logger } from "../util/logger";
+import { withFirebaseAuthRetry } from "../util/firebase-api-client";
 
 export const ExpensesContext = createContext({
   expenses: [],
@@ -46,11 +47,6 @@ export const ExpensesContext = createContext({
   undoDelete: () => {},
   canUndo: false,
 });
-
-function isAuthHttpError(error) {
-  const status = Number(error?.response?.status || 0);
-  return status === 401 || status === 403;
-}
 
 function sortByDateDesc(list) {
   return [...(list || [])].sort((a, b) => {
@@ -192,17 +188,10 @@ export default function ExpensesContextProvider({ children }) {
 
   const withAuthRetry = useCallback(
     async (request) => {
-      try {
-        return await request(token);
-      } catch (error) {
-        if (!isAuthHttpError(error)) throw error;
-
-        const refreshed = await refreshSessionRef.current?.(true).catch(() => null);
-        const nextToken = refreshed?.token;
-        if (!nextToken) throw error;
-
-        return await request(nextToken);
-      }
+      return await withFirebaseAuthRetry(request, {
+        token,
+        refreshSession: refreshSessionRef.current,
+      });
     },
     [token],
   );
