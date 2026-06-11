@@ -17,6 +17,7 @@ import {
   upsertCard,
   upsertCashWallet,
 } from "../util/payment-http";
+import { withFirebaseAuthRetry } from "../util/firebase-api-client";
 import {
   getCurrentLanguage,
   translateWithLanguage,
@@ -52,11 +53,6 @@ function normalizeCash(list) {
   return safe.map((w, idx) => ({ ...w, isDefault: idx === 0 }));
 }
 
-function isAuthHttpError(error) {
-  const status = Number(error?.response?.status || 0);
-  return status === 401 || status === 403;
-}
-
 function tt(key, params) {
   return translateWithLanguage(getCurrentLanguage(), key, params);
 }
@@ -85,17 +81,10 @@ export default function PaymentContextProvider({ children }) {
 
   const withAuthRetry = useCallback(
     async (request) => {
-      try {
-        return await request(token);
-      } catch (error) {
-        if (!isAuthHttpError(error)) throw error;
-
-        const refreshed = await refreshSessionRef.current?.(true).catch(() => null);
-        const nextToken = refreshed?.token;
-        if (!nextToken) throw error;
-
-        return await request(nextToken);
-      }
+      return await withFirebaseAuthRetry(request, {
+        token,
+        refreshSession: refreshSessionRef.current,
+      });
     },
     [token],
   );
