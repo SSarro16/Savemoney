@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   useState,
@@ -10,6 +9,11 @@ import {
 import LoadingOverlay from "../components/ui/LoadingOverlay";
 import { refreshIdToken } from "../util/auth";
 import { logger } from "../util/logger";
+import {
+  clearStoredAuthData,
+  getStoredAuthData,
+  setStoredAuthData,
+} from "../util/secure-auth-storage";
 
 export const AuthContext = createContext({
   token: null,
@@ -28,8 +32,6 @@ export const AuthContext = createContext({
   refreshSession: async (_force) => null,
   logout: async () => {},
 });
-
-const STORAGE_KEY = "authData";
 
 function normalizeProfile(input) {
   const source = input?.profile && typeof input.profile === "object" ? input.profile : input;
@@ -71,7 +73,7 @@ function AuthContextProvider({ children }) {
   const authenticate = useCallback(async (data) => {
     const next = withProfile(data || {});
     setAuthData(next);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    await setStoredAuthData(next);
   }, []);
 
   const setProfile = useCallback(
@@ -87,14 +89,14 @@ function AuthContextProvider({ children }) {
       });
 
       setAuthData(next);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      await setStoredAuthData(next);
     },
     [authData],
   );
 
   const logout = useCallback(async () => {
     setAuthData(null);
-    await AsyncStorage.multiRemove([STORAGE_KEY, "token", "userId"]); // pulizia anche legacy
+    await clearStoredAuthData();
   }, []);
 
   const refreshSession = useCallback(
@@ -113,7 +115,7 @@ function AuthContextProvider({ children }) {
           const fresh = await refreshIdToken(current.refreshToken);
           const merged = withProfile({ ...fresh, profile: current?.profile || current });
           setAuthData(merged);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          await setStoredAuthData(merged);
           return merged;
         } catch (error) {
           await logout();
@@ -139,18 +141,7 @@ function AuthContextProvider({ children }) {
       }, 2500);
 
       try {
-        // 1) Nuovo formato
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        let stored = raw ? JSON.parse(raw) : null;
-
-        // 2) Fallback legacy (token/userId separati)
-        if (!stored?.token || !stored?.userId) {
-          const [t, u] = await Promise.all([
-            AsyncStorage.getItem("token"),
-            AsyncStorage.getItem("userId"),
-          ]);
-          if (t && u) stored = { token: t, userId: u };
-        }
+        const stored = await getStoredAuthData();
 
         logger.debug("BOOTSTRAP read", {
           hasToken: !!stored?.token,
@@ -175,7 +166,7 @@ function AuthContextProvider({ children }) {
 
           const merged = withProfile({ ...fresh, profile: stored?.profile || stored });
           setAuthData(merged);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          await setStoredAuthData(merged);
         } else {
           if (!isActive) return;
           setAuthData(withProfile(stored));
