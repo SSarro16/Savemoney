@@ -15,13 +15,13 @@ import { PaymentContext } from "./payment-context";
 import { CustomizationContext } from "./customization-context";
 
 import {
-  fetchExpenses,
-  storeExpense,
-  updateExpense,
-  deleteExpense,
-  patchExpense,
-  upsertExpenseById,
-} from "../util/http";
+  createExpense,
+  loadExpenses,
+  patchStoredExpense,
+  removeExpense,
+  replaceExpense,
+  restoreExpense,
+} from "../util/expenses/expenses-service";
 
 import {
   normalizeExpense,
@@ -299,7 +299,9 @@ export default function ExpensesContextProvider({ children }) {
       if (!patches.length) return;
 
       await Promise.allSettled(
-        patches.map((p) => withAuthRetry((t) => patchExpense(userId, t, p.id, p.partial))),
+        patches.map((p) =>
+          patchStoredExpense(userId, withAuthRetry, p.id, p.partial),
+        ),
       );
     },
     [userId, budgetCtx?.budgetId, paymentCtx?.defaultCashWalletId, withAuthRetry],
@@ -308,7 +310,7 @@ export default function ExpensesContextProvider({ children }) {
   const fetchAndSetExpenses = useCallback(async () => {
     ensureAuth();
 
-    const expenses = await withAuthRetry((t) => fetchExpenses(userId, t));
+    const expenses = await loadExpenses(userId, withAuthRetry);
     await backfillExpensesIfNeeded(expenses);
 
     dispatch({ type: "SET", payload: sortByDateDesc(expenses.map(normalizeExpense)) });
@@ -356,7 +358,7 @@ export default function ExpensesContextProvider({ children }) {
           budgetId: budgetCtx?.budgetId || null,
         };
 
-        const id = await withAuthRetry((t) => storeExpense(userId, t, payload));
+        const id = await createExpense(userId, withAuthRetry, payload);
         dispatch({ type: "ADD", payload: normalizeExpense({ ...payload, id }) });
         recentAddsRef.current.set(fingerprint, { id, ts: Date.now() });
 
@@ -419,7 +421,7 @@ export default function ExpensesContextProvider({ children }) {
         budgetId: expenseData?.budgetId ?? budgetCtx?.budgetId ?? null,
       };
 
-      await withAuthRetry((t) => updateExpense(userId, t, id, payload));
+      await replaceExpense(userId, withAuthRetry, id, payload);
       dispatch({
         type: "UPDATE",
         payload: { id, data: normalizeExpense({ ...payload, id }) },
@@ -488,7 +490,7 @@ export default function ExpensesContextProvider({ children }) {
       const prev =
         expensesRef.current.find((e) => String(e?.id ?? "") === targetId) || null;
 
-      await withAuthRetry((t) => deleteExpense(userId, t, targetId));
+      await removeExpense(userId, withAuthRetry, targetId);
       dispatch({ type: "DELETE", payload: targetId });
 
       if (prev) {
@@ -556,11 +558,14 @@ export default function ExpensesContextProvider({ children }) {
       const commitDelete = async () => {
         op.status = "committing";
         try {
-          await withAuthRetry((t) => deleteExpense(userId, t, targetId));
+          await removeExpense(userId, withAuthRetry, targetId);
 
           if (op.undone) {
-            await withAuthRetry((t) =>
-              upsertExpenseById(userId, t, targetId, op.snapshot),
+            await restoreExpense(
+              userId,
+              withAuthRetry,
+              targetId,
+              op.snapshot,
             );
           } else {
             const prevMethodType = safePayMethod(
