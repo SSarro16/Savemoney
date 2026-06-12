@@ -11,13 +11,13 @@ import {
 import { AuthContext } from "./auth-context";
 import { ExpenseCategoriesContext } from "./expense-categories-context";
 import {
-  getBudgets,
-  getBudgetById,
-  getActiveBudgetId,
-  setActiveBudgetId,
-  createBudget,
-  upsertBudget,
-} from "../util/budget/budget-storage";
+  createStoredBudget,
+  loadActiveBudgetId,
+  loadBudgetById,
+  loadBudgets,
+  saveActiveBudgetId,
+  saveStoredBudget,
+} from "../util/budget/budget-service";
 import { logger } from "../util/logger";
 import { withFirebaseAuthRetry } from "../util/firebase-api-client";
 
@@ -122,7 +122,7 @@ function BudgetContextProvider({ children }) {
 
   const refreshBudgetsList = useCallback(async () => {
     ensureAuth();
-    const list = await withAuthRetry((t) => getBudgets(userId, t));
+    const list = await loadBudgets(userId, withAuthRetry);
     setBudgets(list);
     return list;
   }, [ensureAuth, userId, withAuthRetry]);
@@ -130,7 +130,7 @@ function BudgetContextProvider({ children }) {
   const selectBudget = useCallback(
     async (id) => {
       if (!id) return;
-      await setActiveBudgetId(id, userId);
+      await saveActiveBudgetId(id, userId);
       setBudgetId(id);
     },
     [setBudgetId, userId],
@@ -138,7 +138,7 @@ function BudgetContextProvider({ children }) {
 
   const createNewBudget = useCallback(
     async (name) => {
-      const b = await withAuthRetry((t) => createBudget({ name, userId, token: t }));
+      const b = await createStoredBudget(userId, withAuthRetry, name);
       const list = await refreshBudgetsList();
       setBudgets(list);
       setBudgetId(b.id);
@@ -212,19 +212,17 @@ function BudgetContextProvider({ children }) {
 
       let meta = budgets.find((b) => b.id === targetBudgetId) || null;
       if (!meta) {
-        meta = await withAuthRetry((t) => getBudgetById(userId, t, targetBudgetId));
+        meta = await loadBudgetById(userId, withAuthRetry, targetBudgetId);
       }
 
-      const next = await withAuthRetry((t) =>
-        upsertBudget(userId, t, {
-          id: targetBudgetId,
-          title: patchTitle || String(meta?.title || meta?.name || "Nuovo budget"),
-          total: nextTotal,
-          categories: nextCategories,
-          cashBalance: nextCashBalance,
-          createdAt: meta?.createdAt,
-        }),
-      );
+      const next = await saveStoredBudget(userId, withAuthRetry, {
+        id: targetBudgetId,
+        title: patchTitle || String(meta?.title || meta?.name || "Nuovo budget"),
+        total: nextTotal,
+        categories: nextCategories,
+        cashBalance: nextCashBalance,
+        createdAt: meta?.createdAt,
+      });
       setTotalState(nextTotal);
       setCategories(nextCategories);
       setCashBalanceState(nextCashBalance);
@@ -250,7 +248,7 @@ function BudgetContextProvider({ children }) {
     if (!budgetId) return;
 
     const data =
-      (await withAuthRetry((t) => getBudgetById(userId, t, budgetId))) ||
+      (await loadBudgetById(userId, withAuthRetry, budgetId)) ||
       budgets.find((b) => b.id === budgetId);
     if (!data) return;
 
@@ -270,10 +268,10 @@ function BudgetContextProvider({ children }) {
     (async () => {
       if (!userId || !token) return;
 
-      const list = await withAuthRetry((t) => getBudgets(userId, t));
+      const list = await loadBudgets(userId, withAuthRetry);
       if (!isMounted) return;
       setBudgets(list);
-      const storedActiveId = await getActiveBudgetId(userId);
+      const storedActiveId = await loadActiveBudgetId(userId);
       const hasStored = list.some(
         (budget) => String(budget?.id || "") === String(storedActiveId || ""),
       );
