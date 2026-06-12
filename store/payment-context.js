@@ -9,14 +9,14 @@ import {
 } from "react";
 import { AuthContext } from "./auth-context";
 import {
-  fetchCards,
-  fetchCashWallets,
-  removeCard,
-  removeCashWallet,
-  setDefaultCashWallet as setDefaultCashWalletHttp,
-  upsertCard,
-  upsertCashWallet,
-} from "../util/payment-http";
+  deleteStoredCard,
+  deleteStoredCashWallet,
+  loadCards,
+  loadCashWallets,
+  saveCard,
+  saveCashWallet,
+  saveDefaultCashWallet,
+} from "../util/payment/payment-service";
 import { withFirebaseAuthRetry } from "../util/firebase-api-client";
 import {
   getCurrentLanguage,
@@ -94,8 +94,8 @@ export default function PaymentContextProvider({ children }) {
     setLoading(true);
     try {
       const [cardsResult, cashResult] = await Promise.allSettled([
-        withAuthRetry((t) => fetchCards(userId, t)),
-        withAuthRetry((t) => fetchCashWallets(userId, t)),
+        loadCards(userId, withAuthRetry),
+        loadCashWallets(userId, withAuthRetry),
       ]);
 
       if (cardsResult.status === "fulfilled") {
@@ -128,7 +128,7 @@ export default function PaymentContextProvider({ children }) {
   const addCard = useCallback(
     async (card) => {
       ensureAuth();
-      await withAuthRetry((t) => upsertCard(userId, t, card));
+      await saveCard(userId, withAuthRetry, card);
       await refreshPayments();
     },
     [ensureAuth, userId, withAuthRetry, refreshPayments],
@@ -137,7 +137,7 @@ export default function PaymentContextProvider({ children }) {
   const updateCard = useCallback(
     async (id, card) => {
       ensureAuth();
-      await withAuthRetry((t) => upsertCard(userId, t, { ...card, id }));
+      await saveCard(userId, withAuthRetry, { ...card, id });
       await refreshPayments();
     },
     [ensureAuth, userId, withAuthRetry, refreshPayments],
@@ -146,7 +146,7 @@ export default function PaymentContextProvider({ children }) {
   const deleteCard = useCallback(
     async (id) => {
       ensureAuth();
-      await withAuthRetry((t) => removeCard(userId, t, id));
+      await deleteStoredCard(userId, withAuthRetry, id);
       await refreshPayments();
     },
     [ensureAuth, userId, withAuthRetry, refreshPayments],
@@ -155,7 +155,7 @@ export default function PaymentContextProvider({ children }) {
   const addCashWallet = useCallback(
     async (wallet) => {
       ensureAuth();
-      await withAuthRetry((t) => upsertCashWallet(userId, t, wallet));
+      await saveCashWallet(userId, withAuthRetry, wallet);
       await refreshPayments();
     },
     [ensureAuth, userId, withAuthRetry, refreshPayments],
@@ -164,7 +164,7 @@ export default function PaymentContextProvider({ children }) {
   const updateCashWallet = useCallback(
     async (id, wallet) => {
       ensureAuth();
-      await withAuthRetry((t) => upsertCashWallet(userId, t, { ...wallet, id }));
+      await saveCashWallet(userId, withAuthRetry, { ...wallet, id });
       await refreshPayments();
     },
     [ensureAuth, userId, withAuthRetry, refreshPayments],
@@ -173,7 +173,7 @@ export default function PaymentContextProvider({ children }) {
   const deleteCashWallet = useCallback(
     async (id) => {
       ensureAuth();
-      await withAuthRetry((t) => removeCashWallet(userId, t, id));
+      await deleteStoredCashWallet(userId, withAuthRetry, id);
       await refreshPayments();
     },
     [ensureAuth, userId, withAuthRetry, refreshPayments],
@@ -182,7 +182,7 @@ export default function PaymentContextProvider({ children }) {
   const setDefaultCashWallet = useCallback(
     async (id) => {
       ensureAuth();
-      await withAuthRetry((t) => setDefaultCashWalletHttp(userId, t, id, cashWallets));
+      await saveDefaultCashWallet(userId, withAuthRetry, id, cashWallets);
       await refreshPayments();
     },
     [ensureAuth, userId, cashWallets, withAuthRetry, refreshPayments],
@@ -211,13 +211,11 @@ export default function PaymentContextProvider({ children }) {
       if (!target) return;
 
       const nextBalance = Number(target.balance || 0) + delta;
-      await withAuthRetry((t) =>
-        upsertCashWallet(userId, t, {
-          ...target,
-          id: targetId,
-          balance: Number(nextBalance.toFixed(2)),
-        }),
-      );
+      await saveCashWallet(userId, withAuthRetry, {
+        ...target,
+        id: targetId,
+        balance: Number(nextBalance.toFixed(2)),
+      });
       await refreshPayments();
     },
     [
@@ -248,13 +246,11 @@ export default function PaymentContextProvider({ children }) {
       if (!target || !targetId) return;
 
       const nextBalance = Number(target.balance || 0) + delta;
-      await withAuthRetry((t) =>
-        upsertCard(userId, t, {
-          ...target,
-          id: targetId,
-          balance: Number(nextBalance.toFixed(2)),
-        }),
-      );
+      await saveCard(userId, withAuthRetry, {
+        ...target,
+        id: targetId,
+        balance: Number(nextBalance.toFixed(2)),
+      });
       await refreshPayments();
     },
     [ensureAuth, userId, cards, withAuthRetry, refreshPayments],
