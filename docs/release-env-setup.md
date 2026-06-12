@@ -5,29 +5,40 @@ Questa guida e aggiornata alla configurazione corrente del progetto:
 - validazione Sentry obbligatoria in EAS build tramite `SENTRY_REQUIRE_CONFIG=1`
 - plugin Sentry abilitato solo con config completa (`SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`)
 
-## 1) Variabili richieste
+## 1) Variabili supportate
 
 ### 1.1 Firebase public env (`EXPO_PUBLIC_*`)
 
-- `EXPO_PUBLIC_FIREBASE_WEB_API_KEY`
-- `EXPO_PUBLIC_FIREBASE_DB_URL`
-- `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
-- `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `EXPO_PUBLIC_FIREBASE_APP_ID`
-- `EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID`
+- `EXPO_PUBLIC_FIREBASE_WEB_API_KEY`: richiesta per login, registrazione e
+  refresh della sessione.
+- `EXPO_PUBLIC_FIREBASE_DB_URL`: richiesta per scegliere esplicitamente il
+  Realtime Database usato dall'app.
+
+`EXPO_PUBLIC_FIREBASE_API_KEY` e ancora accettata dal codice come alias legacy
+per la chiave API, ma le nuove configurazioni devono usare
+`EXPO_PUBLIC_FIREBASE_WEB_API_KEY`.
+
+Il codice contiene un fallback storico per il database quando
+`EXPO_PUBLIC_FIREBASE_DB_URL` manca. Non usarlo come default di configurazione:
+imposta sempre la variabile in locale e in ogni environment EAS per evitare di
+collegarsi per errore a un database inatteso.
+
+Le variabili `EXPO_PUBLIC_*` sono incluse nel bundle client e non devono
+contenere segreti.
 
 ### 1.2 Sentry runtime env
 
 - `EXPO_PUBLIC_SENTRY_DSN` (opzionale, ma necessario se vuoi invio eventi runtime)
 
-### 1.3 Sentry build env (obbligatorie per sourcemaps)
+### 1.3 Sentry build env (obbligatorie nelle build EAS)
 
 - `SENTRY_ORG`
 - `SENTRY_PROJECT`
 - `SENTRY_AUTH_TOKEN`
 - `SENTRY_URL` (opzionale, default `https://sentry.io/`)
+
+`SENTRY_AUTH_TOKEN` e un segreto build-time: impostalo nei secret CI/EAS, mai
+in un file committato o con prefisso `EXPO_PUBLIC_`.
 
 ## 2) Come funziona ora la config Sentry
 
@@ -47,23 +58,22 @@ Obiettivo:
 ```powershell
 $env:EXPO_PUBLIC_FIREBASE_WEB_API_KEY="..."
 $env:EXPO_PUBLIC_FIREBASE_DB_URL="https://<project>.europe-west1.firebasedatabase.app"
-$env:EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN="<project>.firebaseapp.com"
-$env:EXPO_PUBLIC_FIREBASE_PROJECT_ID="<project>"
-$env:EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET="<project>.appspot.com"
-$env:EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="..."
-$env:EXPO_PUBLIC_FIREBASE_APP_ID="..."
-$env:EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID="..."
 $env:EXPO_PUBLIC_SENTRY_DSN="..."
 
 $env:SENTRY_ORG="your-sentry-org-slug"
 $env:SENTRY_PROJECT="your-sentry-project-slug"
-$env:SENTRY_AUTH_TOKEN="sntrys_..."
+$env:SENTRY_AUTH_TOKEN="<set-in-ci-only>"
 $env:SENTRY_URL="https://sentry.io/"
 ```
 
 ### 3.2 Persistente in `.env`
 
-Aggiorna il file `.env` locale (non committato) usando `.env.example` come template.
+Copia le chiavi di `.env.example` in un file `.env` locale e valorizza solo
+quelle necessarie. `.env` e ignorato da Git e non deve essere committato.
+
+Non salvare `SENTRY_AUTH_TOKEN` nel `.env` condiviso: per le build usa i secret
+CI/EAS. Se devi verificare temporaneamente la config in locale, impostalo solo
+nella shell corrente.
 
 ## 4) Setup EAS (consigliato)
 
@@ -91,7 +101,9 @@ eas env:create --environment production --name SENTRY_PROJECT --value "<project-
 eas env:create --environment production --name SENTRY_AUTH_TOKEN --value "<auth-token>"
 ```
 
-Fai lo stesso anche per i `EXPO_PUBLIC_FIREBASE_*`.
+Configura anche `EXPO_PUBLIC_FIREBASE_WEB_API_KEY`,
+`EXPO_PUBLIC_FIREBASE_DB_URL` e, se usato, `EXPO_PUBLIC_SENTRY_DSN` per ciascun
+environment.
 
 ## 5) Verifica veloce
 
@@ -99,9 +111,12 @@ Fai lo stesso anche per i `EXPO_PUBLIC_FIREBASE_*`.
 
 ```bash
 npx expo config --json
+npx expo install --check
 ```
 
-Controlla che nei `plugins` sia presente:
+Senza la triade Sentry build, il comando locale deve restare valido e il plugin
+Sentry non viene aggiunto. Con la triade impostata, controlla che nei `plugins`
+sia presente:
 - `["@sentry/react-native/expo", { "organization": "...", "project": "...", ... }]`
 
 ### 5.2 Verifica env EAS
