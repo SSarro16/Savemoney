@@ -1,7 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AuthContext } from "./auth-context";
-import { fetchGoals, removeGoal, upsertGoal } from "../util/goals-storage";
 import { withFirebaseAuthRetry } from "../util/firebase-api-client";
+import {
+  deleteStoredGoal,
+  loadGoals,
+  saveStoredGoal,
+} from "../util/goals/goals-service";
 
 export const GoalsContext = createContext({
   goals: [],
@@ -50,7 +54,7 @@ export default function GoalsContextProvider({ children }) {
     ensureAuth();
     setLoading(true);
     try {
-      const list = await withAuthRetry((t) => fetchGoals(userId, t));
+      const list = await loadGoals(userId, withAuthRetry);
       setGoals(Array.isArray(list) ? list : []);
       setInitialized(true);
       return list;
@@ -71,7 +75,7 @@ export default function GoalsContextProvider({ children }) {
   const saveGoal = useCallback(
     async (goal) => {
       ensureAuth();
-      await withAuthRetry((t) => upsertGoal(userId, t, goal));
+      await saveStoredGoal(userId, withAuthRetry, goal);
       await refreshGoals();
     },
     [ensureAuth, userId, withAuthRetry, refreshGoals],
@@ -80,7 +84,7 @@ export default function GoalsContextProvider({ children }) {
   const deleteGoal = useCallback(
     async (id) => {
       ensureAuth();
-      await withAuthRetry((t) => removeGoal(userId, t, id));
+      await deleteStoredGoal(userId, withAuthRetry, id);
       await refreshGoals();
     },
     [ensureAuth, userId, withAuthRetry, refreshGoals],
@@ -93,13 +97,11 @@ export default function GoalsContextProvider({ children }) {
       if (!target) return;
 
       const nextAmount = Number(target.currentAmount || 0) + Number(delta || 0);
-      await withAuthRetry((t) =>
-        upsertGoal(userId, t, {
-          ...target,
-          id: target.id,
-          currentAmount: Number(nextAmount.toFixed(2)),
-        }),
-      );
+      await saveStoredGoal(userId, withAuthRetry, {
+        ...target,
+        id: target.id,
+        currentAmount: Number(nextAmount.toFixed(2)),
+      });
       await refreshGoals();
     },
     [ensureAuth, userId, goals, withAuthRetry, refreshGoals],
